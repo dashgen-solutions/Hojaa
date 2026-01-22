@@ -1,0 +1,128 @@
+"""
+Main FastAPI application.
+"""
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from app.core.config import settings
+from app.core.logger import get_logger, configure_logging
+from app.db.session import init_db
+from app.api.routes import (
+    upload, 
+    questions, 
+    chat, 
+    tree, 
+    sessions, 
+    auth, 
+    health,
+    question_management,
+    node_management
+)
+from app.models.schemas import HealthResponse
+from app.middleware.metrics import MetricsMiddleware
+
+# Configure logging
+configure_logging()
+logger = get_logger(__name__)
+
+# Create FastAPI app
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    description="AI-powered requirements discovery system with progressive questioning",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
+)
+
+# Add custom middleware
+app.add_middleware(MetricsMiddleware)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(health.router, prefix="/api")  # Health checks
+app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+app.include_router(upload.router, prefix="/api")
+app.include_router(questions.router, prefix="/api")
+app.include_router(question_management.router, prefix="/api/manage")  # Question management
+app.include_router(chat.router, prefix="/api")
+app.include_router(tree.router, prefix="/api")
+app.include_router(node_management.router, prefix="/api/manage")  # Node management
+app.include_router(sessions.router, prefix="/api")
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize application on startup."""
+    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
+    logger.info(f"Environment: {settings.environment}")
+    logger.info(f"LLM Provider: {settings.llm_provider}")
+    
+    # Initialize database
+    try:
+        init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {str(e)}")
+        raise
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown."""
+    logger.info("Shutting down application")
+
+
+@app.get("/", tags=["root"])
+async def root():
+    """Root endpoint."""
+    return {
+        "message": "Welcome to MoMetric Requirements Discovery API",
+        "version": settings.app_version,
+        "docs": "/api/docs"
+    }
+
+
+@app.get("/health", response_model=HealthResponse, tags=["health"])
+async def health_check():
+    """Health check endpoint."""
+    return HealthResponse(
+        status="healthy",
+        version=settings.app_version,
+        environment=settings.environment,
+        database="connected"
+    )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    """Global exception handler."""
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": "Internal server error",
+            "detail": str(exc) if settings.debug else "An unexpected error occurred"
+        }
+    )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    uvicorn.run(
+        "app.main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug,
+        log_level=settings.log_level.lower()
+    )

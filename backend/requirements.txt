@@ -1,0 +1,41 @@
+# FastAPI and Server
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Database
+sqlalchemy
+psycopg2-binary
+alembic
+asyncpg
+
+# Pydantic for validation
+pydantic
+pydantic-settings
+
+# LLM & AI
+openai
+anthropic
+pydantic-ai>=0.0.14
+pydantic-ai-slim[openai,anthropic]
+
+# Document Processing
+pypdf2
+python-docx
+
+# Utilities
+python-dotenv
+python-jose[cryptography]
+passlib==1.7.4
+bcrypt==4.0.1
+
+# Logging and monitoring
+structlog
+
+# Redis (optional for caching)
+redis
+
+# Testing
+pytest
+pytest-asyncio
+httpx
