@@ -94,6 +94,23 @@ export const healthCheck = async () => {
   return response.data;
 };
 
+// ===== Transcription API =====
+
+export const transcribeAudio = async (audioFile: File, language?: string) => {
+  const formData = new FormData();
+  formData.append('audio_file', audioFile);
+  if (language) {
+    formData.append('language', language);
+  }
+  
+  const response = await api.post('/api/transcription/transcribe', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
 // ===== Question Management API =====
 
 export const addQuestion = async (sessionId: string, questionText: string, category?: string) => {

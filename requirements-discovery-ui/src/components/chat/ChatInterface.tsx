@@ -7,9 +7,11 @@ import {
   CheckIcon,
   XMarkIcon,
 } from "@heroicons/react/24/solid";
+import { MicrophoneIcon, StopIcon } from "@heroicons/react/24/outline";
 import ChatMessage from "./ChatMessage";
 import LoadingDots from "./LoadingDots";
-import { startChat, sendMessage, confirmChat } from "@/lib/api";
+import { startChat, sendMessage, confirmChat, transcribeAudio } from "@/lib/api";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 
 interface Message {
   id: string;
@@ -32,8 +34,21 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Audio recording hook
+  const {
+    isRecording,
+    isProcessing,
+    audioBlob,
+    error: audioError,
+    startRecording,
+    stopRecording,
+    clearRecording,
+    getAudioFile,
+  } = useAudioRecorder();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -42,6 +57,41 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Handle audio transcription when recording stops
+  useEffect(() => {
+    const processAudio = async () => {
+      // Wait for blob to be available (not just isProcessing)
+      if (!isRecording && !isTranscribing && audioBlob) {
+        const audioFile = getAudioFile();
+        if (audioFile) {
+          try {
+            setIsTranscribing(true);
+            setError(null);
+            const result = await transcribeAudio(audioFile);
+            if (result.text) {
+              setInputMessage(result.text);
+            } else {
+              setError("No text was transcribed. Please try speaking again.");
+            }
+          } catch (err: any) {
+            setError(err.response?.data?.detail || err.message || "Failed to transcribe audio");
+          } finally {
+            setIsTranscribing(false);
+            clearRecording();
+          }
+        }
+      }
+    };
+
+    // Add a small delay to ensure blob is ready
+    if (audioBlob && !isRecording) {
+      const timer = setTimeout(() => {
+        processAudio();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [audioBlob, isRecording, isTranscribing]);
 
   // Start chat when node is selected
   useEffect(() => {
@@ -162,6 +212,19 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
 
   const handleSuggestionClick = (suggestion: string) => {
     handleSendMessage(suggestion);
+  };
+
+  const handleAudioRecord = async () => {
+    try {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        clearRecording();
+        await startRecording();
+      }
+    } catch (error) {
+      setError("Failed to start/stop recording. Please try again.");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -295,20 +358,72 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type your answer here... (Press Enter to send, Shift+Enter for new line)"
-              disabled={isLoading}
+              placeholder="Type your answer here or use voice... (Press Enter to send, Shift+Enter for new line)"
+              disabled={isLoading || isTranscribing}
               className="flex-1 bg-transparent text-sm text-secondary-900 placeholder:text-secondary-400 focus:outline-none resize-none min-h-[44px] max-h-[120px]"
               rows={2}
             />
             <button
+              type="button"
+              onClick={handleAudioRecord}
+              disabled={isLoading || isProcessing || isTranscribing}
+              className={`flex-shrink-0 p-2.5 rounded-lg border-2 transition-all ${
+                isRecording
+                  ? "bg-red-500 border-red-600 text-white hover:bg-red-600"
+                  : "bg-white border-primary-300 text-primary-600 hover:bg-primary-50"
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+              title={isRecording ? "Stop recording" : "Start voice recording"}
+            >
+              {isRecording ? (
+                <StopIcon className="w-5 h-5" />
+              ) : (
+                <MicrophoneIcon className="w-5 h-5" />
+              )}
+            </button>
+            <button
               type="submit"
-              disabled={!inputMessage.trim() || isLoading}
+              disabled={!inputMessage.trim() || isLoading || isTranscribing}
               className="flex-shrink-0 bg-primary-600 text-white p-2.5 rounded-lg hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
               title="Send message"
             >
               <PaperAirplaneIcon className="w-5 h-5" />
             </button>
           </div>
+          
+          {/* Recording/Transcribing Status */}
+          {(isRecording || isProcessing || isTranscribing) && (
+            <div className="flex items-center gap-2 mt-2 px-1 text-xs">
+              {isRecording && (
+                <span className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-red-700 font-medium">
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                  🔴 Recording... Speak now!
+                </span>
+              )}
+              {isProcessing && (
+                <span className="flex items-center gap-1">
+                  <div className="w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                  Processing audio...
+                </span>
+              )}
+              {isTranscribing && (
+                <span className="flex items-center gap-1">
+                  <div className="w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                  Transcribing...
+                </span>
+              )}
+            </div>
+          )}
+          
+          {/* Audio Error */}
+          {audioError && (
+            <div className="mt-2 px-1 p-2 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-xs text-red-700 font-medium mb-1">⚠️ Recording Error</p>
+              <p className="text-xs text-red-600">{audioError}</p>
+              <p className="text-xs text-red-500 mt-1">
+                💡 Tip: Make sure you've allowed microphone access in your browser settings.
+              </p>
+            </div>
+          )}
           
           {/* Hint Text */}
           <div className="flex items-center justify-between mt-2 px-1">

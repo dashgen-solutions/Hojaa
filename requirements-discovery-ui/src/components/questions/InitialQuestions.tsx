@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { CheckCircleIcon, SparklesIcon } from "@heroicons/react/24/solid";
-import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { getQuestions, submitAnswers, addQuestion, deleteQuestion, updateQuestion } from "@/lib/api";
+import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, MicrophoneIcon, StopIcon } from "@heroicons/react/24/outline";
+import { getQuestions, submitAnswers, addQuestion, deleteQuestion, updateQuestion, transcribeAudio } from "@/lib/api";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 
 interface InitialQuestionsProps {
   sessionId: string;
@@ -29,6 +30,20 @@ export default function InitialQuestions({ sessionId, onComplete }: InitialQuest
   const [editText, setEditText] = useState("");
   const [isAddingQuestion, setIsAddingQuestion] = useState(false);
   const [newQuestionText, setNewQuestionText] = useState("");
+  const [currentAnswerText, setCurrentAnswerText] = useState("");
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  
+  // Audio recording hook
+  const {
+    isRecording,
+    isProcessing,
+    audioBlob,
+    error: audioError,
+    startRecording,
+    stopRecording,
+    clearRecording,
+    getAudioFile,
+  } = useAudioRecorder();
 
   const fetchQuestions = async () => {
     try {
@@ -48,15 +63,64 @@ export default function InitialQuestions({ sessionId, onComplete }: InitialQuest
   }, [sessionId]);
 
   const handleAnswer = (answer: string) => {
+    if (!answer.trim()) return;
+    
     const updatedQuestions = [...questions];
     updatedQuestions[currentIndex].answer_text = answer;
     updatedQuestions[currentIndex].is_answered = true;
     setQuestions(updatedQuestions);
+    setCurrentAnswerText("");
 
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
   };
+
+  const handleAudioRecord = async () => {
+    try {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        clearRecording();
+        await startRecording();
+      }
+    } catch (error) {
+      setError("Failed to start/stop recording. Please try again.");
+    }
+  };
+
+  // Handle audio transcription when recording stops
+  useEffect(() => {
+    const processAudio = async () => {
+      // Wait for blob to be available (not just isProcessing)
+      if (!isRecording && !isTranscribing && audioBlob) {
+        const audioFile = getAudioFile();
+        if (audioFile) {
+          try {
+            setIsTranscribing(true);
+            setError(null);
+            const result = await transcribeAudio(audioFile);
+            if (result.text) {
+              setCurrentAnswerText(result.text);
+              handleAnswer(result.text);
+            } else {
+              setError("No text was transcribed. Please try speaking again.");
+            }
+          } catch (err: any) {
+            setError(err.response?.data?.detail || err.message || "Failed to transcribe audio");
+          } finally {
+            setIsTranscribing(false);
+            clearRecording();
+          }
+        }
+      }
+    };
+
+    // Process audio when blob becomes available
+    if (audioBlob && !isRecording) {
+      processAudio();
+    }
+  }, [audioBlob, isRecording, isTranscribing]);
 
   const handleComplete = async () => {
     try {
@@ -310,25 +374,70 @@ export default function InitialQuestions({ sessionId, onComplete }: InitialQuest
 
                 {idx === currentIndex && !q.is_answered && editingId !== q.id && (
                   <div className="mt-3">
-                    <textarea
-                      autoFocus
-                      placeholder="Type your answer here..."
-                      className="w-full px-4 py-3 border border-secondary-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                      rows={3}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && e.ctrlKey && e.currentTarget.value.trim()) {
-                          handleAnswer(e.currentTarget.value);
-                          e.currentTarget.value = "";
-                        }
-                      }}
-                      onBlur={(e) => {
-                        if (e.target.value.trim()) {
-                          handleAnswer(e.target.value);
-                        }
-                      }}
-                    />
-                    <p className="text-xs text-secondary-500 mt-1">
-                      Press Ctrl+Enter or click outside to submit
+                    <div className="flex gap-2 mb-2">
+                      <textarea
+                        autoFocus
+                        value={currentAnswerText}
+                        onChange={(e) => setCurrentAnswerText(e.target.value)}
+                        placeholder="Type your answer here or use voice..."
+                        className="flex-1 px-4 py-3 border border-secondary-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                        rows={3}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && e.ctrlKey && e.currentTarget.value.trim()) {
+                            handleAnswer(e.currentTarget.value);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={handleAudioRecord}
+                        disabled={isProcessing || isTranscribing}
+                        className={`flex-shrink-0 px-4 py-3 rounded-lg border-2 transition-all ${
+                          isRecording
+                            ? "bg-red-500 border-red-600 text-white hover:bg-red-600"
+                            : "bg-white border-primary-300 text-primary-600 hover:bg-primary-50"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title={isRecording ? "Stop recording" : "Start voice recording"}
+                      >
+                        {isRecording ? (
+                          <StopIcon className="w-5 h-5" />
+                        ) : (
+                          <MicrophoneIcon className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                    {(isRecording || isProcessing || isTranscribing) && (
+                      <div className="flex items-center gap-2 text-xs mb-1">
+                        {isRecording && (
+                          <span className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-red-700 font-medium">
+                            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                            🔴 Recording... Speak now!
+                          </span>
+                        )}
+                        {isProcessing && (
+                          <span className="flex items-center gap-1">
+                            <div className="w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                            Processing audio...
+                          </span>
+                        )}
+                        {isTranscribing && (
+                          <span className="flex items-center gap-1">
+                            <div className="w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                            Transcribing...
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {audioError && (
+                      <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-xs text-red-700 font-medium mb-1">⚠️ Recording Error</p>
+                        <p className="text-xs text-red-600">{audioError}</p>
+                        <p className="text-xs text-red-500 mt-1">
+                          💡 Tip: Make sure you've allowed microphone access in your browser settings.
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-xs text-secondary-500">
+                      Press Ctrl+Enter to submit, or click the microphone to record your answer
                     </p>
                   </div>
                 )}

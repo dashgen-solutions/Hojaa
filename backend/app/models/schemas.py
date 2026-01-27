@@ -246,5 +246,14 @@ class HealthResponse(BaseModel):
     database: str = "connected"
 
 
+# ===== Transcription Schemas =====
+
+class TranscriptionResponse(BaseModel):
+    """Response from audio transcription."""
+    text: str
+    language: str = "unknown"
+    success: bool = True
+
+
 # Enable forward references
 NodeResponse.model_rebuild()

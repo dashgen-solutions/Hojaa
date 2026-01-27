@@ -16,7 +16,8 @@ from app.api.routes import (
     auth, 
     health,
     question_management,
-    node_management
+    node_management,
+    transcription
 )
 from app.models.schemas import HealthResponse
 from app.middleware.metrics import MetricsMiddleware
@@ -57,6 +58,7 @@ app.include_router(chat.router, prefix="/api")
 app.include_router(tree.router, prefix="/api")
 app.include_router(node_management.router, prefix="/api/manage")  # Node management
 app.include_router(sessions.router, prefix="/api")
+app.include_router(transcription.router, prefix="/api")  # Audio transcription
 
 
 @app.on_event("startup")
