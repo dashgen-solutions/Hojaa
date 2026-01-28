@@ -166,7 +166,8 @@ agent_service = AIService()
 
 def create_requirements_agent(
     system_prompt: str,
-    result_type: Type[ResultType]
+    result_type: Type[ResultType],
+    deps_type: Type = None
 ) -> Agent[None, ResultType]:
     """
     Create an agent specialized for requirements discovery.
@@ -175,6 +176,7 @@ def create_requirements_agent(
     Args:
         system_prompt: Requirements-specific system prompt
         result_type: Pydantic model for output structure
+        deps_type: Optional dependency type for context injection
     
     Returns:
         Configured agent for requirements tasks
@@ -182,6 +184,7 @@ def create_requirements_agent(
     return agent_service.create_agent(
         system_prompt=system_prompt,
         result_type=result_type,
+        deps_type=deps_type,
         retries=3  # More retries for complex requirements
     )
 

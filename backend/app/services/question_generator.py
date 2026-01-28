@@ -27,7 +27,8 @@ class AIQuestionGenerator:
         # Create agent with dynamic system prompt based on user type
         self.agent = create_requirements_agent(
             system_prompt=self._get_base_system_prompt(),
-            result_type=QuestionGenerationOutput
+            result_type=QuestionGenerationOutput,
+            deps_type=DocumentContext
         )
         
         # Add dynamic system prompt handler
@@ -129,7 +130,9 @@ class AIQuestionGenerator:
             return db_questions
             
         except Exception as e:
+            import traceback
             logger.error(f"Error generating questions: {str(e)}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             db.rollback()
             # Fall back to default questions
             return await self._create_fallback_questions(session_id, user_type, db)
