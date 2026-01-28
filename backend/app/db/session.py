@@ -5,18 +5,35 @@ from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import StaticPool
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.engine.url import make_url
+import os
 from app.core.config import settings
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
 # Create database engine
-engine = create_engine(
-    settings.database_url,
-    pool_size=settings.database_pool_size,
-    max_overflow=settings.database_max_overflow,
-    echo=settings.debug,
-)
+#
+# SQLite needs special handling:
+# - pool_size/max_overflow are not meaningful for StaticPool
+# - check_same_thread must be disabled for multi-threaded ASGI servers
+if settings.database_url.startswith("sqlite"):
+    engine = create_engine(
+        settings.database_url,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        echo=settings.debug,
+    )
+else:
+    engine = create_engine(
+        settings.database_url,
+        pool_size=settings.database_pool_size,
+        max_overflow=settings.database_max_overflow,
+        echo=settings.debug,
+    )
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -42,5 +59,46 @@ def get_db() -> Generator[Session, None, None]:
 def init_db() -> None:
     """Initialize database tables."""
     logger.info("Initializing database tables")
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+        return
+    except OperationalError as e:
+        # If we're using Postgres and the database doesn't exist yet, optionally
+        # auto-create it (common local dev setup).
+        auto_create = os.getenv("MOMETRIC_AUTO_CREATE_DB", "1") == "1"
+        db_url = settings.database_url
+        if (
+            auto_create
+            and "does not exist" in str(e).lower()
+            and (db_url.startswith("postgresql://") or db_url.startswith("postgres://"))
+        ):
+            url = make_url(db_url)
+            target_db = url.database
+            if not target_db:
+                raise
+
+            logger.warning(f"Database '{target_db}' does not exist. Attempting to create it...")
+
+            # Connect to a server-level database to run CREATE DATABASE.
+            server_url = url.set(database="postgres")
+            admin_engine = create_engine(server_url, isolation_level="AUTOCOMMIT")
+            try:
+                with admin_engine.connect() as conn:
+                    conn.execute(text(f'CREATE DATABASE "{target_db}"'))
+                logger.info(f"Created database '{target_db}' successfully")
+            except OperationalError as create_err:
+                # If it was created concurrently or already exists, proceed.
+                if "already exists" not in str(create_err).lower():
+                    logger.error(f"Failed to create database '{target_db}': {create_err}")
+                    raise
+            finally:
+                admin_engine.dispose()
+
+            # Retry table creation now that the DB exists.
+            Base.metadata.create_all(bind=engine)
+            logger.info("Database tables created successfully")
+            return
+
+        # Anything else: re-raise so caller can handle/log.
+        raise

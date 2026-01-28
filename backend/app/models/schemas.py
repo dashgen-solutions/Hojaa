@@ -4,21 +4,24 @@ Pydantic models for request/response validation.
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from uuid import UUID
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ConfigDict
 
 
 # ===== Authentication Schemas =====
 
 class UserRegister(BaseModel):
     """Schema for user registration."""
-    email: EmailStr
+    # Use plain str to avoid requiring the optional `email-validator` dependency
+    # at import time. If you want strict email validation, install:
+    #   pip install "pydantic[email]"
+    email: str
     username: str = Field(..., min_length=3, max_length=100)
     password: str = Field(..., min_length=6, max_length=72)
 
 
 class UserLogin(BaseModel):
     """Schema for user login."""
-    email: EmailStr
+    email: str
     password: str
 
 

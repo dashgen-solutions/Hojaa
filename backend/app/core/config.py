@@ -1,9 +1,31 @@
 """
 Application configuration management using Pydantic Settings.
 """
-from typing import List
+from typing import List, Optional
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+
+
+def _get_env_file() -> Optional[str]:
+    """
+    Return an absolute path to a readable .env file, or None.
+
+    In some environments (sandboxed terminals / restricted FS), attempting to read
+    a gitignored `.env` can raise PermissionError / OSError. We treat that as
+    "no env file" so the app can still boot using process environment variables
+    and defaults.
+    """
+    env_path = Path(__file__).resolve().parents[2] / ".env"  # backend/.env
+    try:
+        if not env_path.is_file():
+            return None
+        # Validate readability explicitly (can raise PermissionError).
+        with open(env_path, "rb"):
+            pass
+        return str(env_path)
+    except OSError:
+        return None
 
 
 class Settings(BaseSettings):
@@ -20,12 +42,13 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, alias="PORT")
     
     # Database
-    database_url: str = Field(alias="DATABASE_URL")
+    # Defaults to a local sqlite DB so dev can start without external services.
+    database_url: str = Field(default="sqlite:///./mometric.db", alias="DATABASE_URL")
     database_pool_size: int = Field(default=10, alias="DATABASE_POOL_SIZE")
     database_max_overflow: int = Field(default=20, alias="DATABASE_MAX_OVERFLOW")
     
     # OpenAI
-    openai_api_key: str = Field(alias="OPENAI_API_KEY")
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o-mini", alias="OPENAI_MODEL")
     openai_temperature: float = Field(default=0.7, alias="OPENAI_TEMPERATURE")
     
@@ -59,12 +82,12 @@ class Settings(BaseSettings):
     log_format: str = Field(default="json", alias="LOG_FORMAT")
     
     # Security
-    secret_key: str = Field(alias="SECRET_KEY")
+    secret_key: str = Field(default="dev-secret-change-me", alias="SECRET_KEY")
     algorithm: str = Field(default="HS256", alias="ALGORITHM")
     access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_get_env_file(),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore"

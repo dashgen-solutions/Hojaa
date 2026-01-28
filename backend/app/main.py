@@ -71,10 +71,18 @@ async def startup_event():
     # Initialize database
     try:
         init_db()
+        app.state.db_ready = True
         logger.info("Database initialized successfully")
     except Exception as e:
+        app.state.db_ready = False
         logger.error(f"Database initialization failed: {str(e)}")
-        raise
+        # Don't crash the entire API if the DB isn't ready (e.g. Postgres not installed,
+        # database not created yet). Endpoints that need the DB will still fail until
+        # DATABASE_URL is fixed, but /api/docs and basic health can still load.
+        logger.warning(
+            "Continuing startup WITHOUT a working database. "
+            "Fix DATABASE_URL / create the database and restart the server."
+        )
 
 
 @app.on_event("shutdown")
@@ -100,7 +108,7 @@ async def health_check():
         status="healthy",
         version=settings.app_version,
         environment=settings.environment,
-        database="connected"
+        database="connected" if getattr(app.state, "db_ready", False) else "unavailable"
     )
 
 
