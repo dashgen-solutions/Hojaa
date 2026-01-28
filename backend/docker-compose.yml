@@ -22,15 +22,16 @@ services:
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/mometric_db
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-this-in-production}
       ENVIRONMENT: production
       DEBUG: "False"
-      CORS_ORIGINS: http://localhost:3000
+      CORS_ORIGINS: '["http://localhost:3000", "http://localhost:3001"]'
     depends_on:
       db:
         condition: service_healthy

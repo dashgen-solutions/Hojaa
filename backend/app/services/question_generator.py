@@ -27,8 +27,12 @@ class AIQuestionGenerator:
         # Create agent with dynamic system prompt based on user type
         self.agent = create_requirements_agent(
             system_prompt=self._get_base_system_prompt(),
+<<<<<<< HEAD
             result_type=QuestionGenerationOutput,
             deps_type=DocumentContext
+=======
+            output_type=QuestionGenerationOutput
+>>>>>>> 315c236 (UI-polish)
         )
         
         # Add dynamic system prompt handler

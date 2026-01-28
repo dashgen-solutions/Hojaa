@@ -3,7 +3,13 @@
 import { useState, useEffect } from "react";
 import RelationshipTreeNode from "./RelationshipTreeNode";
 import NodeDetailsModal from "./NodeDetailsModal";
-import { DocumentTextIcon, MagnifyingGlassMinusIcon, MagnifyingGlassPlusIcon } from "@heroicons/react/24/outline";
+import {
+  DocumentTextIcon,
+  MagnifyingGlassMinusIcon,
+  MagnifyingGlassPlusIcon,
+  ArrowPathIcon,
+  SparklesIcon,
+} from "@heroicons/react/24/outline";
 import { getTree } from "@/lib/api";
 
 interface TreeNodeData {
@@ -27,12 +33,17 @@ interface TreeVisualizationProps {
   selectedNodeId?: string | null;
 }
 
-export default function TreeVisualization({ sessionId, onNodeSelect, selectedNodeId }: TreeVisualizationProps) {
+export default function TreeVisualization({
+  sessionId,
+  onNodeSelect,
+  selectedNodeId,
+}: TreeVisualizationProps) {
   const [treeData, setTreeData] = useState<TreeNodeData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(100);
-  const [selectedNodeForModal, setSelectedNodeForModal] = useState<TreeNodeData | null>(null);
+  const [selectedNodeForModal, setSelectedNodeForModal] =
+    useState<TreeNodeData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchTree = async () => {
@@ -40,20 +51,25 @@ export default function TreeVisualization({ sessionId, onNodeSelect, selectedNod
       setIsLoading(true);
       setError(null);
       const response = await getTree(sessionId);
-      
-      // Convert backend format to frontend format
-      // Only auto-expand the root node, keep all children collapsed
+
       const convertNode = (node: any, depth: number = 0): TreeNodeData => ({
         id: node.id,
         question: node.question,
         answer: node.answer,
-        type: node.node_type === "ROOT" ? "root" : node.node_type === "FEATURE" ? "feature" : "detail",
+        type:
+          node.node_type === "ROOT"
+            ? "root"
+            : node.node_type === "FEATURE"
+            ? "feature"
+            : "detail",
         depth: node.depth,
-        isExpanded: depth === 0, // Only root is expanded by default
+        isExpanded: depth === 0,
         canExpand: node.can_expand,
-        children: node.children ? node.children.map((child: any) => convertNode(child, depth + 1)) : []
+        children: node.children
+          ? node.children.map((child: any) => convertNode(child, depth + 1))
+          : [],
       });
-      
+
       const convertedTree = convertNode(response.tree, 0);
       setTreeData(convertedTree);
     } catch (err: any) {
@@ -87,18 +103,17 @@ export default function TreeVisualization({ sessionId, onNodeSelect, selectedNod
   };
 
   const handleExpandNode = (nodeId: string) => {
-    // Don't reset zoom when expanding a node
     if (onNodeSelect) {
       onNodeSelect(nodeId);
     }
   };
 
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(150, prev + 10));
+    setZoom((prev) => Math.min(150, prev + 10));
   };
 
   const handleZoomOut = () => {
-    setZoom(prev => Math.max(50, prev - 10));
+    setZoom((prev) => Math.max(50, prev - 10));
   };
 
   const handleZoomReset = () => {
@@ -112,15 +127,20 @@ export default function TreeVisualization({ sessionId, onNodeSelect, selectedNod
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setTimeout(() => setSelectedNodeForModal(null), 300); // Clear after animation
+    setTimeout(() => setSelectedNodeForModal(null), 300);
   };
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading relationship map...</p>
+      <div className="h-full flex items-center justify-center bg-neutral-50">
+        <div className="text-center animate-fade-in">
+          <div className="relative w-16 h-16 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+          </div>
+          <p className="text-neutral-600 font-medium">
+            Loading requirements map...
+          </p>
         </div>
       </div>
     );
@@ -128,15 +148,17 @@ export default function TreeVisualization({ sessionId, onNodeSelect, selectedNod
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-gray-100 p-8">
-        <div className="text-center max-w-md">
-          <div className="text-red-600 text-5xl mb-4">⚠️</div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Map</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
+      <div className="h-full flex items-center justify-center bg-neutral-50 p-8">
+        <div className="text-center max-w-md animate-fade-in">
+          <div className="w-16 h-16 rounded-2xl bg-danger-100 flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+            Failed to Load Map
+          </h3>
+          <p className="text-neutral-500 mb-6">{error}</p>
+          <button onClick={() => fetchTree()} className="btn-primary">
+            <ArrowPathIcon className="w-4 h-4" />
             Retry
           </button>
         </div>
@@ -146,69 +168,72 @@ export default function TreeVisualization({ sessionId, onNodeSelect, selectedNod
 
   if (!treeData) {
     return (
-      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-gray-100">
-        <p className="text-gray-600">No data available</p>
+      <div className="h-full flex items-center justify-center bg-neutral-50">
+        <p className="text-neutral-500">No data available</p>
       </div>
     );
   }
 
   return (
     <div className="h-full flex flex-col bg-white">
-      {/* Modal */}
       <NodeDetailsModal
         node={selectedNodeForModal}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       />
-      
+
       {/* Header with Zoom Controls */}
-      <div className="border-b border-gray-200 bg-white shadow-sm flex-shrink-0">
+      <div className="border-b border-neutral-200/60 bg-white flex-shrink-0">
         <div className="p-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <DocumentTextIcon className="w-5 h-5 text-blue-600" />
+            <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-primary-100 flex items-center justify-center">
+                <DocumentTextIcon className="w-4 h-4 text-primary-600" />
+              </div>
               Requirements Map
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {selectedNodeId ? 'Chat open - Exploring feature' : 'Click + on any feature to explore'}
+            <p className="text-xs text-neutral-500 mt-1 ml-10">
+              {selectedNodeId
+                ? "Chat open - Exploring feature"
+                : "Click + on any feature to explore"}
             </p>
           </div>
-          
+
           {/* Zoom Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-neutral-100 rounded-xl p-1">
             <button
               onClick={handleZoomOut}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-white rounded-lg transition-all duration-200 hover:shadow-soft-sm"
               title="Zoom out"
             >
-              <MagnifyingGlassMinusIcon className="w-5 h-5 text-gray-600" />
+              <MagnifyingGlassMinusIcon className="w-4 h-4 text-neutral-600" />
             </button>
             <button
               onClick={handleZoomReset}
-              className="px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-white rounded-lg transition-all duration-200 min-w-[52px] hover:shadow-soft-sm"
               title="Reset zoom"
             >
               {zoom}%
             </button>
             <button
               onClick={handleZoomIn}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-white rounded-lg transition-all duration-200 hover:shadow-soft-sm"
               title="Zoom in"
             >
-              <MagnifyingGlassPlusIcon className="w-5 h-5 text-gray-600" />
+              <MagnifyingGlassPlusIcon className="w-4 h-4 text-neutral-600" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Tree Content - Scrollable Canvas with WHITE background */}
-      <div className="flex-1 overflow-auto p-8 bg-white">
-        <div 
+      {/* Tree Content */}
+      <div className="flex-1 overflow-auto p-8 bg-neutral-50/50">
+        <div
           className="inline-block min-w-full"
-          style={{ 
+          style={{
             transform: `scale(${zoom / 100})`,
-            transformOrigin: 'top center',
-            transition: 'transform 0.2s ease'
+            transformOrigin: "top center",
+            transition: "transform 0.2s ease-smooth",
           }}
         >
           <RelationshipTreeNode
@@ -225,19 +250,19 @@ export default function TreeVisualization({ sessionId, onNodeSelect, selectedNod
       </div>
 
       {/* Legend */}
-      <div className="border-t border-gray-200 bg-white p-3 shadow-lg flex-shrink-0">
+      <div className="border-t border-neutral-200/60 bg-white p-3 flex-shrink-0">
         <div className="flex items-center justify-center gap-6 text-xs">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-gradient-to-br from-blue-500 to-indigo-600"></div>
-            <span className="text-gray-700 font-medium">Project</span>
+            <div className="w-3 h-3 rounded-md bg-gradient-to-br from-primary-500 to-primary-600"></div>
+            <span className="text-neutral-600 font-medium">Project</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-gradient-to-br from-amber-500 to-orange-600"></div>
-            <span className="text-gray-700 font-medium">Feature</span>
+            <div className="w-3 h-3 rounded-md bg-gradient-to-br from-warning-500 to-warning-600"></div>
+            <span className="text-neutral-600 font-medium">Feature</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-gradient-to-br from-emerald-500 to-teal-600"></div>
-            <span className="text-gray-700 font-medium">Requirement</span>
+            <div className="w-3 h-3 rounded-md bg-gradient-to-br from-success-500 to-success-600"></div>
+            <span className="text-neutral-600 font-medium">Requirement</span>
           </div>
         </div>
       </div>

@@ -30,8 +30,12 @@ class AITreeBuilder:
         # Agent for initial tree building
         self.tree_agent = create_requirements_agent(
             system_prompt=self._get_tree_system_prompt(),
+<<<<<<< HEAD
             result_type=TreeStructureOutput,
             deps_type=UserContext
+=======
+            output_type=TreeStructureOutput
+>>>>>>> 315c236 (UI-polish)
         )
         
         # Add dynamic system prompt for tree agent
@@ -50,8 +54,12 @@ class AITreeBuilder:
         # Agent for extracting sub-requirements
         self.sub_req_agent = create_requirements_agent(
             system_prompt=self._get_sub_req_system_prompt(),
+<<<<<<< HEAD
             result_type=SubRequirementsOutput,
             deps_type=SubRequirementContext
+=======
+            output_type=SubRequirementsOutput
+>>>>>>> 315c236 (UI-polish)
         )
         
         # Add dynamic system prompt for sub-requirements

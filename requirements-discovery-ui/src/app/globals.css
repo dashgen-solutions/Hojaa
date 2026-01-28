@@ -2,14 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Geist Font */
-@font-face {
-  font-family: Geist;
-  src: url(https://fonts.cdnfonts.com/s/85546/Geist-Regular.woff) format("woff");
-  font-display: swap;
-  font-weight: 100 900;
-}
+/* Inter Font - Modern, highly legible */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* Base Styles */
 html,
 body {
   height: 100%;
@@ -21,36 +17,41 @@ body {
 }
 
 body {
-  @apply antialiased bg-secondary-50;
-  font-feature-settings: "ss02", "ss03", "ss04", "ss07", "ss09";
+  @apply antialiased bg-neutral-50 text-neutral-900;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ensure proper scrolling containers */
+/* Root container */
 #__next {
   height: 100%;
   width: 100%;
 }
 
-/* Custom Scrollbar */
+/* ==================== Custom Scrollbar ==================== */
 * {
   &::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
 
   &::-webkit-scrollbar-track {
     background: transparent;
-    border-radius: 4px;
+    border-radius: 100px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
-    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 100px;
+    border: 2px solid transparent;
+    background-clip: content-box;
     transition: background-color 0.2s ease;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.3);
+      background: rgba(0, 0, 0, 0.2);
+      background-clip: content-box;
     }
   }
 
@@ -59,76 +60,213 @@ body {
   }
 
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
 }
 
-/* Smooth scrolling for scrollable containers */
-.scrollbar-thin {
-  scrollbar-width: thin;
-}
+/* ==================== Component Layer ==================== */
+@layer components {
+  /* Modern Card */
+  .card {
+    @apply bg-white rounded-2xl border border-neutral-200/60 shadow-soft;
+  }
 
-/* Better mobile scrolling */
-@media (max-width: 768px) {
-  * {
-    -webkit-overflow-scrolling: touch;
+  .card-hover {
+    @apply transition-all duration-200 ease-smooth hover:shadow-soft-md hover:border-neutral-300/60;
+  }
+
+  /* Glass Effect */
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20;
+  }
+
+  .glass-dark {
+    @apply bg-neutral-900/70 backdrop-blur-xl border border-white/10;
+  }
+
+  /* Modern Button Base */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ease-smooth focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-soft-sm hover:shadow-soft;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300 focus:ring-neutral-500;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-neutral-600 hover:bg-neutral-100 focus:ring-neutral-500;
+  }
+
+  /* Modern Input */
+  .input {
+    @apply w-full px-4 py-3 text-sm bg-white border border-neutral-200 rounded-xl transition-all duration-200 ease-smooth placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500;
+  }
+
+  .input-error {
+    @apply border-danger-500 focus:ring-danger-500/20 focus:border-danger-500;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-100 text-primary-700;
+  }
+
+  .badge-success {
+    @apply badge bg-success-100 text-success-700;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning-100 text-warning-700;
+  }
+
+  .badge-neutral {
+    @apply badge bg-neutral-100 text-neutral-600;
+  }
+
+  /* Divider */
+  .divider {
+    @apply h-px bg-gradient-to-r from-transparent via-neutral-200 to-transparent;
+  }
+
+  /* Section Header */
+  .section-title {
+    @apply text-xs font-semibold uppercase tracking-wider text-neutral-500;
   }
 }
 
-/* Chat History Specific Styles */
+/* ==================== Utilities Layer ==================== */
+@layer utilities {
+  /* Text Gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-accent-500;
+  }
+
+  /* Subtle Background Pattern */
+  .bg-grid-pattern {
+    background-image:
+      linear-gradient(to right, rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Dot Pattern */
+  .bg-dot-pattern {
+    background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  /* Smooth focus ring */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:ring-offset-2;
+  }
+
+  /* Line clamp utilities */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
+
+/* ==================== Chat Styles ==================== */
 .chat-history {
-  min-height: 510px;
-  height: calc(100dvh - 282px);
+  min-height: 400px;
+  height: calc(100dvh - 300px);
 
   .chat-log:first-child {
     margin-top: auto;
   }
 }
 
-/* Animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* ==================== Tree Node Styles ==================== */
+.tree-node {
+  @apply transition-all duration-300 ease-smooth;
+}
+
+.tree-node:hover {
+  transform: translateY(-2px);
+}
+
+/* ==================== Loading Skeleton ==================== */
+.skeleton {
+  @apply relative overflow-hidden bg-neutral-200 rounded-lg;
+}
+
+.skeleton::after {
+  content: "";
+  @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent;
+  animation: shimmer 1.5s infinite;
 }
 
 @keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
   100% {
     transform: translateX(100%);
   }
 }
 
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(20px);
+/* ==================== Mobile Optimizations ==================== */
+@media (max-width: 768px) {
+  * {
+    -webkit-overflow-scrolling: touch;
   }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+
+  .btn {
+    @apply py-3;
+  }
+
+  .input {
+    @apply py-3.5;
   }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.5s ease-out forwards;
+/* ==================== Selection Styles ==================== */
+::selection {
+  @apply bg-primary-500/20 text-primary-900;
 }
 
-.animate-scale-in {
-  animation: scaleIn 0.3s ease-out forwards;
+/* ==================== Focus Visible ==================== */
+:focus-visible {
+  @apply outline-none ring-2 ring-primary-500/40 ring-offset-2;
 }
 
-/* Tree Node Styles */
-.tree-node {
-  transition: all 0.3s ease;
-}
-
-.tree-node:hover {
-  transform: scale(1.02);
+/* ==================== Reduce Motion ==================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

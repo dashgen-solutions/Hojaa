@@ -61,7 +61,7 @@ class AIService:
     def create_agent(
         self,
         system_prompt: str,
-        result_type: Type[ResultType],
+        output_type: Type[ResultType],
         deps_type: Type = None,
         retries: int = 2
     ) -> Agent[None, ResultType]:
@@ -70,7 +70,7 @@ class AIService:
         
         Args:
             system_prompt: System prompt defining agent behavior
-            result_type: Pydantic model for structured output validation
+            output_type: Pydantic model for structured output validation
             deps_type: Optional dependency type for dependency injection
             retries: Number of retries on validation failure (default: 2)
         
@@ -81,7 +81,7 @@ class AIService:
             ```python
             agent = ai_service.create_agent(
                 system_prompt="You are a helpful assistant",
-                result_type=MyOutputModel,
+                output_type=MyOutputModel,
                 deps_type=MyContextModel
             )
             result = await agent.run(user_prompt, deps=context)
@@ -91,13 +91,13 @@ class AIService:
         # Create agent with automatic retries on validation errors
         agent = Agent(
             self.model_name,
-            result_type=result_type,
+            output_type=output_type,
             deps_type=deps_type,
             retries=retries,
             system_prompt=system_prompt
         )
         
-        logger.info(f"Created agent with result_type={result_type.__name__}")
+        logger.info(f"Created agent with output_type={output_type.__name__}")
         return agent
     
     def create_streaming_agent(
@@ -166,8 +166,12 @@ agent_service = AIService()
 
 def create_requirements_agent(
     system_prompt: str,
+<<<<<<< HEAD
     result_type: Type[ResultType],
     deps_type: Type = None
+=======
+    output_type: Type[ResultType]
+>>>>>>> 315c236 (UI-polish)
 ) -> Agent[None, ResultType]:
     """
     Create an agent specialized for requirements discovery.
@@ -175,23 +179,31 @@ def create_requirements_agent(
     
     Args:
         system_prompt: Requirements-specific system prompt
+<<<<<<< HEAD
         result_type: Pydantic model for output structure
         deps_type: Optional dependency type for context injection
+=======
+        output_type: Pydantic model for output structure
+>>>>>>> 315c236 (UI-polish)
     
     Returns:
         Configured agent for requirements tasks
     """
     return agent_service.create_agent(
         system_prompt=system_prompt,
+<<<<<<< HEAD
         result_type=result_type,
         deps_type=deps_type,
+=======
+        output_type=output_type,
+>>>>>>> 315c236 (UI-polish)
         retries=3  # More retries for complex requirements
     )
 
 
 def create_conversation_agent(
     system_prompt: str,
-    result_type: Type[ResultType],
+    output_type: Type[ResultType],
     deps_type: Type = None
 ) -> Agent:
     """
@@ -200,7 +212,7 @@ def create_conversation_agent(
     
     Args:
         system_prompt: Conversation-specific system prompt
-        result_type: Pydantic model for structured conversation output
+        output_type: Pydantic model for structured conversation output
         deps_type: Context dependencies for the conversation
     
     Returns:
@@ -208,7 +220,7 @@ def create_conversation_agent(
     """
     return agent_service.create_agent(
         system_prompt=system_prompt,
-        result_type=result_type,
+        output_type=output_type,
         deps_type=deps_type,
         retries=2
     )

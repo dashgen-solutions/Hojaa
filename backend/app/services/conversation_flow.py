@@ -30,7 +30,7 @@ class AIConversationFlow:
         # Agent for starting conversations
         self.start_agent = create_conversation_agent(
             system_prompt=self._get_start_system_prompt(),
-            result_type=ConversationStartOutput,
+            output_type=ConversationStartOutput,
             deps_type=FeatureContext
         )
         
@@ -49,7 +49,7 @@ class AIConversationFlow:
         # Agent for continuing conversations
         self.continue_agent = create_conversation_agent(
             system_prompt=self._get_continue_system_prompt(),
-            result_type=ConversationNextOutput,
+            output_type=ConversationNextOutput,
             deps_type=ConversationContext
         )
         

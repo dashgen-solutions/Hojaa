@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  ChevronDownIcon, 
+import {
+  ChevronDownIcon,
   ChevronRightIcon,
   PlusIcon,
   CubeIcon,
@@ -13,7 +13,7 @@ import {
   EllipsisVerticalIcon,
   PencilIcon,
   TrashIcon,
-  XMarkIcon
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { updateNode, deleteNode, addNode } from "@/lib/api";
 
@@ -39,20 +39,20 @@ interface RelationshipTreeNodeProps {
   selectedNodeId?: string | null;
 }
 
-export default function RelationshipTreeNode({ 
-  node, 
+export default function RelationshipTreeNode({
+  node,
   sessionId,
-  onToggle, 
+  onToggle,
   onExpand,
   onNodeClick,
   onUpdate,
   isRoot = false,
-  selectedNodeId
+  selectedNodeId,
 }: RelationshipTreeNodeProps) {
   const hasChildren = node.children && node.children.length > 0;
   const isSelected = selectedNodeId === node.id;
   const hasAnswer = node.answer && node.answer.trim().length > 0;
-  
+
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editQuestion, setEditQuestion] = useState(node.question);
@@ -65,55 +65,55 @@ export default function RelationshipTreeNode({
     switch (node.type) {
       case "root":
         return {
-          gradient: "from-blue-500 via-indigo-500 to-purple-600",
-          border: "border-blue-400",
-          bg: "bg-gradient-to-br from-blue-50 to-indigo-50",
-          hoverBg: "hover:from-blue-100 hover:to-indigo-100",
+          gradient: "from-primary-500 to-primary-600",
+          border: "border-primary-300",
+          bg: "bg-primary-50/50",
+          hoverBg: "hover:bg-primary-50",
           icon: CubeIcon,
-          iconColor: "text-blue-600",
-          iconBg: "bg-gradient-to-br from-blue-100 to-indigo-100",
+          iconColor: "text-primary-600",
+          iconBg: "bg-primary-100",
           badge: "Project",
-          badgeColor: "bg-blue-600 text-white",
-          accentColor: "#3b82f6"
+          badgeColor: "bg-primary-600 text-white",
+          accentColor: "#8b5cf6",
         };
       case "feature":
         return {
-          gradient: "from-amber-500 via-orange-500 to-red-500",
-          border: "border-amber-400",
-          bg: "bg-gradient-to-br from-amber-50 to-orange-50",
-          hoverBg: "hover:from-amber-100 hover:to-orange-100",
+          gradient: "from-warning-500 to-warning-600",
+          border: "border-warning-300",
+          bg: "bg-warning-50/50",
+          hoverBg: "hover:bg-warning-50",
           icon: SparklesIcon,
-          iconColor: "text-amber-600",
-          iconBg: "bg-gradient-to-br from-amber-100 to-orange-100",
+          iconColor: "text-warning-600",
+          iconBg: "bg-warning-100",
           badge: "Feature",
-          badgeColor: "bg-amber-600 text-white",
-          accentColor: "#f59e0b"
+          badgeColor: "bg-warning-600 text-white",
+          accentColor: "#f59e0b",
         };
       case "detail":
         return {
-          gradient: "from-emerald-500 via-teal-500 to-cyan-600",
-          border: "border-emerald-400",
-          bg: "bg-gradient-to-br from-emerald-50 to-teal-50",
-          hoverBg: "hover:from-emerald-100 hover:to-teal-100",
+          gradient: "from-success-500 to-success-600",
+          border: "border-success-300",
+          bg: "bg-success-50/50",
+          hoverBg: "hover:bg-success-50",
           icon: DocumentCheckIcon,
-          iconColor: "text-emerald-600",
-          iconBg: "bg-gradient-to-br from-emerald-100 to-teal-100",
+          iconColor: "text-success-600",
+          iconBg: "bg-success-100",
           badge: "Requirement",
-          badgeColor: "bg-emerald-600 text-white",
-          accentColor: "#10b981"
+          badgeColor: "bg-success-600 text-white",
+          accentColor: "#10b981",
         };
       default:
         return {
-          gradient: "from-gray-500 to-gray-600",
-          border: "border-gray-400",
-          bg: "bg-gradient-to-br from-gray-50 to-slate-50",
-          hoverBg: "hover:from-gray-100 hover:to-slate-100",
+          gradient: "from-neutral-500 to-neutral-600",
+          border: "border-neutral-300",
+          bg: "bg-neutral-50/50",
+          hoverBg: "hover:bg-neutral-50",
           icon: DocumentCheckIcon,
-          iconColor: "text-gray-600",
-          iconBg: "bg-gradient-to-br from-gray-100 to-slate-100",
+          iconColor: "text-neutral-600",
+          iconBg: "bg-neutral-100",
           badge: "Item",
-          badgeColor: "bg-gray-600 text-white",
-          accentColor: "#6b7280"
+          badgeColor: "bg-neutral-600 text-white",
+          accentColor: "#6b7280",
         };
     }
   };
@@ -155,8 +155,10 @@ export default function RelationshipTreeNode({
       if (onUpdate) onUpdate();
     } catch (error: any) {
       console.error("Error deleting node:", error);
-      // Extract error message from API response
-      const errorMessage = error?.response?.data?.detail || error?.message || "Failed to delete node";
+      const errorMessage =
+        error?.response?.data?.detail ||
+        error?.message ||
+        "Failed to delete node";
       alert(errorMessage);
     }
   };
@@ -180,42 +182,39 @@ export default function RelationshipTreeNode({
     }
   };
 
-  // Render edit form if editing
+  // Render edit form
   if (isEditing) {
     return (
-      <div className="p-4 border-2 border-primary-500 rounded-lg bg-white shadow-lg space-y-3 min-w-[280px] max-w-[380px] mb-4">
+      <div className="card p-4 border-2 border-primary-400 shadow-soft-md space-y-3 min-w-[280px] max-w-[380px] mb-4 animate-fade-in">
         <div>
-          <label className="text-xs font-medium text-secondary-700 mb-1 block">
+          <label className="text-xs font-medium text-neutral-700 mb-1.5 block">
             Node Title
           </label>
           <input
             type="text"
             value={editQuestion}
             onChange={(e) => setEditQuestion(e.target.value)}
-            className="w-full px-3 py-2 border border-secondary-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="input"
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-secondary-700 mb-1 block">
+          <label className="text-xs font-medium text-neutral-700 mb-1.5 block">
             Description
           </label>
           <textarea
             value={editAnswer}
             onChange={(e) => setEditAnswer(e.target.value)}
-            className="w-full px-3 py-2 border border-secondary-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+            className="input resize-none"
             rows={3}
           />
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={handleSaveEdit}
-            className="flex-1 bg-success-600 hover:bg-success-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-          >
+          <button onClick={handleSaveEdit} className="btn-primary flex-1 py-2">
             Save
           </button>
           <button
             onClick={() => setIsEditing(false)}
-            className="px-4 py-2 border border-secondary-300 rounded-lg text-secondary-700 hover:bg-secondary-50 text-sm font-medium"
+            className="btn-secondary py-2"
           >
             Cancel
           </button>
@@ -224,12 +223,12 @@ export default function RelationshipTreeNode({
     );
   }
 
-  // Render add child form if adding
+  // Render add child form
   if (isAddingChild) {
     return (
-      <div className="p-4 border-2 border-success-500 rounded-lg bg-white shadow-lg space-y-3 min-w-[280px] max-w-[380px] mb-4">
+      <div className="card p-4 border-2 border-success-400 shadow-soft-md space-y-3 min-w-[280px] max-w-[380px] mb-4 animate-fade-in">
         <div>
-          <label className="text-xs font-medium text-secondary-700 mb-1 block">
+          <label className="text-xs font-medium text-neutral-700 mb-1.5 block">
             New Child Node Title
           </label>
           <input
@@ -237,19 +236,19 @@ export default function RelationshipTreeNode({
             value={newChildQuestion}
             onChange={(e) => setNewChildQuestion(e.target.value)}
             placeholder="Enter node title..."
-            className="w-full px-3 py-2 border border-secondary-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success-500"
+            className="input"
             autoFocus
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-secondary-700 mb-1 block">
+          <label className="text-xs font-medium text-neutral-700 mb-1.5 block">
             Description (optional)
           </label>
           <textarea
             value={newChildAnswer}
             onChange={(e) => setNewChildAnswer(e.target.value)}
             placeholder="Enter description..."
-            className="w-full px-3 py-2 border border-secondary-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success-500 resize-none"
+            className="input resize-none"
             rows={2}
           />
         </div>
@@ -257,7 +256,7 @@ export default function RelationshipTreeNode({
           <button
             onClick={handleAddChild}
             disabled={!newChildQuestion.trim()}
-            className="flex-1 bg-success-600 hover:bg-success-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+            className="btn bg-success-600 hover:bg-success-700 disabled:opacity-50 text-white flex-1 py-2"
           >
             <PlusIcon className="w-4 h-4" />
             Add Child
@@ -268,7 +267,7 @@ export default function RelationshipTreeNode({
               setNewChildQuestion("");
               setNewChildAnswer("");
             }}
-            className="px-4 py-2 border border-secondary-300 rounded-lg text-secondary-700 hover:bg-secondary-50 text-sm font-medium flex items-center justify-center"
+            className="btn-secondary py-2 px-3"
           >
             <XMarkIcon className="w-4 h-4" />
           </button>
@@ -279,97 +278,107 @@ export default function RelationshipTreeNode({
 
   return (
     <div className="flex flex-col items-center">
-      {/* Connection line TO this node from parent (if not root) */}
+      {/* Connection line to this node from parent */}
       {!isRoot && (
-        <div className="relative w-full flex justify-center" style={{ height: '50px', marginBottom: '10px' }}>
-          {/* Vertical line coming down to this node - BLACK, stops BEFORE the card */}
-          <div className="w-1 bg-black absolute left-1/2 -translate-x-1/2" style={{ height: '50px', top: '0px' }} />
-          
-          {/* Connection dot at top where line starts */}
-          <div className="absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-black border-2 border-white shadow-md z-10" style={{ top: '0px' }} />
+        <div
+          className="relative w-full flex justify-center"
+          style={{ height: "50px", marginBottom: "10px" }}
+        >
+          <div
+            className="w-0.5 bg-neutral-300 absolute left-1/2 -translate-x-1/2"
+            style={{ height: "50px", top: "0px" }}
+          />
+          <div
+            className="absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-neutral-400 border-2 border-white shadow-sm z-10"
+            style={{ top: "0px" }}
+          />
         </div>
       )}
 
-      {/* Compact Node Card - Now with proper z-index */}
+      {/* Node Card */}
       <div className="relative group z-20">
         {/* Glow effect on hover */}
         {!isSelected && (
-          <div 
-            className="absolute -inset-1 bg-gradient-to-r opacity-0 group-hover:opacity-30 blur-lg transition-opacity duration-500 rounded-2xl"
-            style={{ background: `linear-gradient(135deg, ${style.accentColor}40, ${style.accentColor}20)` }}
+          <div
+            className="absolute -inset-1 opacity-0 group-hover:opacity-20 blur-lg transition-opacity duration-500 rounded-2xl"
+            style={{
+              background: `linear-gradient(135deg, ${style.accentColor}40, ${style.accentColor}20)`,
+            }}
           />
         )}
 
         {/* Selected glow effect */}
         {isSelected && (
-          <div 
-            className="absolute -inset-2 bg-gradient-to-r from-blue-400 to-purple-400 opacity-50 blur-xl animate-pulse rounded-2xl"
-          />
+          <div className="absolute -inset-2 bg-gradient-to-r from-primary-400 to-primary-500 opacity-30 blur-xl animate-pulse rounded-2xl" />
         )}
 
         <div
           className={`
-            relative bg-white border-2 ${isSelected ? 'border-blue-500 shadow-2xl' : style.border + ' shadow-lg'}
-            rounded-2xl ${style.hoverBg} hover:shadow-2xl 
-            transform hover:-translate-y-1 transition-all duration-300 ease-out
-            ${isRoot ? 'min-w-[320px]' : 'min-w-[280px]'} max-w-[380px]
-            overflow-visible ${hasAnswer ? 'cursor-pointer' : ''}
+            relative bg-white border-2 ${
+              isSelected
+                ? "border-primary-500 shadow-soft-lg"
+                : style.border + " shadow-soft"
+            }
+            rounded-2xl ${style.hoverBg} hover:shadow-soft-md
+            transform hover:-translate-y-0.5 transition-all duration-300 ease-smooth
+            ${isRoot ? "min-w-[320px]" : "min-w-[280px]"} max-w-[380px]
+            overflow-visible ${hasAnswer ? "cursor-pointer" : ""}
           `}
           onClick={handleNodeClick}
         >
-          {/* Animated top gradient bar */}
-          <div className={`h-1.5 bg-gradient-to-r ${style.gradient} relative overflow-hidden`}>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-40 group-hover:translate-x-full transition-all duration-1000 ease-out" 
-                 style={{ animation: isSelected ? 'shimmer 2s infinite' : 'none' }} />
-          </div>
-          
+          {/* Top gradient bar */}
+          <div
+            className={`h-1 bg-gradient-to-r ${style.gradient} rounded-t-xl`}
+          />
+
           {/* Selected badge */}
           {isSelected && (
-            <div className="absolute -top-3 -right-3 z-10">
+            <div className="absolute -top-2.5 -right-2.5 z-10">
               <div className="relative">
-                <div className="absolute inset-0 bg-blue-500 blur-md animate-pulse" />
-                <div className="relative bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
-                  <div className="w-2 h-2 bg-white rounded-full animate-ping absolute" />
-                  <div className="w-2 h-2 bg-white rounded-full" />
+                <div className="absolute inset-0 bg-primary-500 blur-md animate-pulse" />
+                <div className="relative bg-gradient-to-br from-primary-500 to-primary-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-soft-sm flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                   <span>Active</span>
                 </div>
               </div>
             </div>
           )}
-          
-          {/* Compact Card Content */}
+
+          {/* Card Content */}
           <div className="p-4">
-            {/* Header row */}
             <div className="flex items-center gap-3">
               {/* Icon */}
-              <div className={`${style.iconBg} rounded-xl p-2 flex-shrink-0 transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}>
+              <div
+                className={`${style.iconBg} rounded-xl p-2 flex-shrink-0 transform group-hover:scale-105 transition-all duration-300`}
+              >
                 <Icon className={`w-5 h-5 ${style.iconColor}`} />
               </div>
-              
+
               {/* Title and badges */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-gray-900 leading-tight tracking-tight truncate">
+                <h3 className="text-sm font-semibold text-neutral-900 leading-tight truncate">
                   {node.question}
                 </h3>
-                
+
                 {/* Inline badges */}
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  {/* Only show type badge for root node (Project) */}
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
                   {node.type === "root" && (
-                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${style.badgeColor}`}>
+                    <span
+                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.badgeColor}`}
+                    >
                       {style.badge}
                     </span>
                   )}
-                  
+
                   {hasChildren && (
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 border border-gray-200 flex items-center gap-1">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 border border-neutral-200 flex items-center gap-1">
                       <CheckCircleIcon className="w-3 h-3" />
                       {node.children!.length}
                     </span>
                   )}
-                  
+
                   {hasAnswer && (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-100 flex items-center gap-1">
                       <InformationCircleIcon className="w-3 h-3" />
                       Details
                     </span>
@@ -377,9 +386,9 @@ export default function RelationshipTreeNode({
                 </div>
               </div>
 
-              {/* Action buttons column */}
-              <div className="flex flex-col gap-2 flex-shrink-0">
-                {/* Node Management Menu - Show for all non-root nodes */}
+              {/* Action buttons */}
+              <div className="flex flex-col gap-1.5 flex-shrink-0">
+                {/* Node Management Menu */}
                 {sessionId && !isRoot && (
                   <div className="relative z-50">
                     <button
@@ -387,21 +396,21 @@ export default function RelationshipTreeNode({
                         e.stopPropagation();
                         setShowMenu(!showMenu);
                       }}
-                      className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-all duration-300 hover:scale-110 shadow-sm hover:shadow-md"
+                      className="p-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-500 transition-all duration-200"
                       title="Node actions"
                     >
                       <EllipsisVerticalIcon className="w-4 h-4" />
                     </button>
 
                     {showMenu && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-secondary-200 z-50 max-h-64 overflow-y-auto">
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-soft-lg border border-neutral-200 z-50 overflow-hidden animate-fade-in">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setIsEditing(true);
                             setShowMenu(false);
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-secondary-700 hover:bg-secondary-50 flex items-center gap-2 rounded-t-lg"
+                          className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
                         >
                           <PencilIcon className="w-4 h-4" />
                           Edit Node
@@ -412,18 +421,18 @@ export default function RelationshipTreeNode({
                             setIsAddingChild(true);
                             setShowMenu(false);
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-secondary-700 hover:bg-secondary-50 flex items-center gap-2"
+                          className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
                         >
                           <PlusIcon className="w-4 h-4" />
                           Add Child
                         </button>
-                        <hr className="my-1 border-secondary-200" />
+                        <div className="border-t border-neutral-100 my-1" />
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteNode(false);
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2"
+                          className="w-full px-4 py-2.5 text-left text-sm text-warning-600 hover:bg-warning-50 flex items-center gap-2 transition-colors"
                         >
                           <TrashIcon className="w-4 h-4" />
                           Delete (Keep Children)
@@ -433,7 +442,7 @@ export default function RelationshipTreeNode({
                             e.stopPropagation();
                             handleDeleteNode(true);
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
+                          className="w-full px-4 py-2.5 text-left text-sm text-danger-600 hover:bg-danger-50 flex items-center gap-2 transition-colors"
                         >
                           <TrashIcon className="w-4 h-4" />
                           Delete (With Children)
@@ -443,21 +452,21 @@ export default function RelationshipTreeNode({
                   </div>
                 )}
 
-                {/* Explore button - Show on ALL nodes that can expand */}
+                {/* Explore button */}
                 {node.canExpand && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       if (onExpand) onExpand(node.id);
                     }}
-                    className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 hover:scale-110 hover:rotate-12 shadow-md hover:shadow-xl group/btn"
+                    className="p-1.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-all duration-200 shadow-soft-sm hover:shadow-soft"
                     title="Explore this node further"
                   >
-                    <PlusIcon className="w-4 h-4 group-hover/btn:rotate-90 transition-transform duration-300" />
+                    <PlusIcon className="w-4 h-4" />
                   </button>
                 )}
-                
-                {/* Expand/Collapse button - More prominent */}
+
+                {/* Expand/Collapse button */}
                 {hasChildren && (
                   <button
                     onClick={(e) => {
@@ -465,28 +474,28 @@ export default function RelationshipTreeNode({
                       onToggle(node.id);
                     }}
                     className={`
-                      p-2.5 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl 
-                      hover:scale-110 border-2 group/toggle
-                      ${node.isExpanded 
-                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-indigo-400 text-white' 
-                        : 'bg-gradient-to-br from-slate-700 to-gray-800 hover:from-slate-800 hover:to-gray-900 border-slate-600 text-white'
+                      p-2 rounded-lg transition-all duration-200 shadow-soft-sm hover:shadow-soft
+                      ${
+                        node.isExpanded
+                          ? "bg-primary-600 hover:bg-primary-700 text-white"
+                          : "bg-neutral-700 hover:bg-neutral-800 text-white"
                       }
                     `}
-                    title={node.isExpanded ? "Collapse children" : "Expand children"}
+                    title={node.isExpanded ? "Collapse" : "Expand"}
                   >
                     {node.isExpanded ? (
-                      <ChevronDownIcon className="w-5 h-5 group-hover/toggle:scale-110 transition-transform" />
+                      <ChevronDownIcon className="w-4 h-4" />
                     ) : (
-                      <ChevronRightIcon className="w-5 h-5 group-hover/toggle:scale-110 transition-transform" />
+                      <ChevronRightIcon className="w-4 h-4" />
                     )}
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Expandable hint - Show only if node has no children yet */}
+            {/* Expandable hint */}
             {node.canExpand && !hasChildren && (
-              <div className="mt-3 flex items-center gap-2 text-xs font-medium text-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
+              <div className="mt-3 flex items-center gap-2 text-xs font-medium text-warning-700 bg-warning-50 px-2.5 py-1.5 rounded-lg border border-warning-100">
                 <SparklesIcon className="w-3.5 h-3.5" />
                 <span>Click + to explore this node</span>
               </div>
@@ -495,76 +504,83 @@ export default function RelationshipTreeNode({
         </div>
       </div>
 
-      {/* Children with connection system - lines BEHIND nodes */}
+      {/* Children */}
       {node.isExpanded && hasChildren && (
         <div className="relative mt-8 animate-fade-in">
-          {/* Main vertical trunk from this node going down - BLACK, behind everything */}
-          <div 
-            className="absolute left-1/2 -translate-x-1/2 w-1 bg-black z-0" 
-            style={{ top: '0px', height: '40px' }} 
+          {/* Vertical trunk */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 w-0.5 bg-neutral-300 z-0"
+            style={{ top: "0px", height: "40px" }}
           />
-          
-          {/* Connection point at top of this section - BLACK */}
-          <div 
-            className="absolute left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-black border-2 border-white shadow-lg z-10"
-            style={{ top: '-2px' }}
+
+          {/* Connection point */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-neutral-400 border-2 border-white shadow-sm z-10"
+            style={{ top: "-2px" }}
           />
-          
-          {/* Horizontal distribution line connecting all children - BLACK, behind nodes */}
+
+          {/* Horizontal distribution line */}
           {node.children!.length > 1 ? (
-            <div 
-              className="absolute left-1/2 -translate-x-1/2 h-1 bg-black z-0"
-              style={{ 
-                top: '40px',
-                width: `${(node.children!.length - 1) * 320 + 80}px`
+            <div
+              className="absolute left-1/2 -translate-x-1/2 h-0.5 bg-neutral-300 z-0"
+              style={{
+                top: "40px",
+                width: `${(node.children!.length - 1) * 320 + 80}px`,
               }}
             />
           ) : (
-            /* Single child - just extend the vertical line down */
-            <div 
-              className="absolute left-1/2 -translate-x-1/2 w-1 bg-black z-0"
-              style={{ 
-                top: '40px',
-                height: '60px'
+            <div
+              className="absolute left-1/2 -translate-x-1/2 w-0.5 bg-neutral-300 z-0"
+              style={{
+                top: "40px",
+                height: "60px",
               }}
             />
           )}
 
-          {/* Junction dots where horizontal meets verticals - BLACK */}
+          {/* Junction dots */}
           {node.children!.length > 1 ? (
             <>
               {node.children!.map((child, index) => {
                 const totalWidth = (node.children!.length - 1) * 320 + 80;
-                const spacing = node.children!.length > 1 ? totalWidth / (node.children!.length - 1) : 0;
-                const leftPosition = index === 0 ? 0 : 
-                                   index === node.children!.length - 1 ? totalWidth :
-                                   spacing * index;
-                
+                const spacing =
+                  node.children!.length > 1
+                    ? totalWidth / (node.children!.length - 1)
+                    : 0;
+                const leftPosition =
+                  index === 0
+                    ? 0
+                    : index === node.children!.length - 1
+                    ? totalWidth
+                    : spacing * index;
+
                 return (
-                  <div 
+                  <div
                     key={`junction-${child.id}`}
-                    className="absolute w-3 h-3 rounded-full bg-black border-2 border-white shadow-md z-10"
-                    style={{ 
-                      top: '38.5px',
-                      left: `calc(50% - ${totalWidth / 2}px + ${leftPosition}px - 6px)`
+                    className="absolute w-2.5 h-2.5 rounded-full bg-neutral-400 border-2 border-white shadow-sm z-10"
+                    style={{
+                      top: "38.5px",
+                      left: `calc(50% - ${totalWidth / 2}px + ${leftPosition}px - 5px)`,
                     }}
                   />
                 );
               })}
             </>
           ) : (
-            /* Single child - dot at end of vertical line */
-            <div 
-              className="absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-black border-2 border-white shadow-md z-10"
-              style={{ top: '98.5px' }}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-neutral-400 border-2 border-white shadow-sm z-10"
+              style={{ top: "98.5px" }}
             />
           )}
 
-          {/* Children Nodes - each will render their own incoming connection */}
-          <div className="flex items-start justify-center gap-10" style={{ marginTop: '100px' }}>
+          {/* Children Nodes */}
+          <div
+            className="flex items-start justify-center gap-10"
+            style={{ marginTop: "100px" }}
+          >
             {node.children!.map((child, index) => (
-              <div 
-                key={child.id} 
+              <div
+                key={child.id}
                 className="relative animate-fade-in"
                 style={{ animationDelay: `${index * 100}ms` }}
               >

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { ArrowRightIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -15,7 +16,6 @@ export default function RegisterPage() {
   const { register, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       router.push("/sessions");
@@ -26,7 +26,6 @@ export default function RegisterPage() {
     event.preventDefault();
     setError("");
 
-    // Validation
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -61,162 +60,194 @@ export default function RegisterPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-secondary-600">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+        <div className="text-center animate-fade-in">
+          <div className="relative w-16 h-16 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+          </div>
+          <p className="text-neutral-500 font-medium">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50">
-      <div className="container mx-auto px-4 py-6 max-w-md">
-        {/* Logo and Title */}
-        <div className="text-center mb-4">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-primary-600 to-primary-400 rounded-2xl mb-2">
-            <span className="text-white font-bold text-xl">M</span>
+    <div className="min-h-screen bg-neutral-50 flex flex-col">
+      {/* Header */}
+      <header className="p-4">
+        <Link href="/" className="inline-flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-soft-sm">
+            <span className="text-white font-bold text-sm">M</span>
           </div>
-          <h1 className="text-2xl font-bold text-secondary-900 mb-1">
-            Create Your Account
-          </h1>
-          <p className="text-sm text-secondary-600">
-            Start discovering requirements with AI
-          </p>
-        </div>
+          <span className="text-lg font-semibold text-neutral-900">
+            MoMetric
+          </span>
+        </Link>
+      </header>
 
-        {/* Register Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-5">
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-
-            {/* Email Field */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-xs font-medium text-secondary-700 mb-1"
-              >
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-3 py-2 text-sm border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                placeholder="you@example.com"
-                disabled={isLoading}
-              />
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md animate-fade-in-up">
+          {/* Logo and Title */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mb-4 shadow-glow">
+              <SparklesIcon className="w-8 h-8 text-white" />
             </div>
-
-            {/* Username Field */}
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-xs font-medium text-secondary-700 mb-1"
-              >
-                Username
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                minLength={3}
-                maxLength={100}
-                className="w-full px-3 py-2 text-sm border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                placeholder="Choose a username"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-xs font-medium text-secondary-700 mb-1"
-              >
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                maxLength={72}
-                className="w-full px-3 py-2 text-sm border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                placeholder="6-72 characters"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Confirm Password Field */}
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-xs font-medium text-secondary-700 mb-1"
-              >
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                maxLength={72}
-                className="w-full px-3 py-2 text-sm border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                placeholder="Re-enter your password"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-primary-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 mt-3"
-            >
-              {isLoading ? "Creating Account..." : "Create Account"}
-            </button>
-          </form>
-
-          {/* Login Link */}
-          <div className="mt-3 pt-3 border-t border-secondary-100 text-center">
-            <p className="text-xs text-secondary-600">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="text-primary-600 font-medium hover:text-primary-700 transition-colors"
-              >
-                Sign in
-              </Link>
+            <h1 className="text-2xl font-bold text-neutral-900 mb-2">
+              Create your account
+            </h1>
+            <p className="text-neutral-500">
+              Start discovering requirements with AI
             </p>
           </div>
 
-          {/* Guest Access */}
-          <div className="mt-2 text-center">
-            <Link
-              href="/"
-              className="text-xs text-secondary-500 hover:text-secondary-700 transition-colors"
-            >
-              Continue as guest
-            </Link>
+          {/* Register Form */}
+          <div className="card p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 bg-danger-50 border border-danger-200 text-danger-700 rounded-xl text-sm animate-fade-in">
+                  {error}
+                </div>
+              )}
+
+              {/* Email Field */}
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-neutral-700 mb-1.5"
+                >
+                  Email Address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="input"
+                  placeholder="you@example.com"
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Username Field */}
+              <div>
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-neutral-700 mb-1.5"
+                >
+                  Username
+                </label>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  minLength={3}
+                  maxLength={100}
+                  className="input"
+                  placeholder="Choose a username"
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Password Field */}
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-neutral-700 mb-1.5"
+                >
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  maxLength={72}
+                  className="input"
+                  placeholder="6-72 characters"
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Confirm Password Field */}
+              <div>
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-neutral-700 mb-1.5"
+                >
+                  Confirm Password
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  maxLength={72}
+                  className="input"
+                  placeholder="Re-enter your password"
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full btn-primary py-3"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Creating Account...
+                  </>
+                ) : (
+                  <>
+                    Create Account
+                    <ArrowRightIcon className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-4 my-6">
+              <div className="flex-1 divider"></div>
+              <span className="text-xs text-neutral-400 font-medium">or</span>
+              <div className="flex-1 divider"></div>
+            </div>
+
+            {/* Login Link */}
+            <div className="text-center">
+              <p className="text-sm text-neutral-600">
+                Already have an account?{" "}
+                <Link
+                  href="/login"
+                  className="text-primary-600 font-medium hover:text-primary-700 transition-colors"
+                >
+                  Sign in
+                </Link>
+              </p>
+            </div>
+
+            {/* Guest Access */}
+            <div className="mt-4 text-center">
+              <Link
+                href="/"
+                className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors"
+              >
+                Continue as guest
+              </Link>
+            </div>
           </div>
         </div>
-        
-        {/* Bottom padding for scroll */}
-        <div className="h-4"></div>
       </div>
     </div>
   );

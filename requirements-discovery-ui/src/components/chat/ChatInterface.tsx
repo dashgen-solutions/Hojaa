@@ -10,7 +10,12 @@ import {
 import { MicrophoneIcon, StopIcon } from "@heroicons/react/24/outline";
 import ChatMessage from "./ChatMessage";
 import LoadingDots from "./LoadingDots";
-import { startChat, sendMessage, confirmChat, transcribeAudio } from "@/lib/api";
+import {
+  startChat,
+  sendMessage,
+  confirmChat,
+  transcribeAudio,
+} from "@/lib/api";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 
 interface Message {
@@ -27,7 +32,12 @@ interface ChatInterfaceProps {
   onClose?: () => void;
 }
 
-export default function ChatInterface({ sessionId, selectedNodeId, contextMessage, onClose }: ChatInterfaceProps) {
+export default function ChatInterface({
+  sessionId,
+  selectedNodeId,
+  contextMessage,
+  onClose,
+}: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -38,7 +48,6 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Audio recording hook
   const {
     isRecording,
     isProcessing,
@@ -58,10 +67,8 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
     scrollToBottom();
   }, [messages]);
 
-  // Handle audio transcription when recording stops
   useEffect(() => {
     const processAudio = async () => {
-      // Wait for blob to be available (not just isProcessing)
       if (!isRecording && !isTranscribing && audioBlob) {
         const audioFile = getAudioFile();
         if (audioFile) {
@@ -75,7 +82,11 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
               setError("No text was transcribed. Please try speaking again.");
             }
           } catch (err: any) {
-            setError(err.response?.data?.detail || err.message || "Failed to transcribe audio");
+            setError(
+              err.response?.data?.detail ||
+                err.message ||
+                "Failed to transcribe audio"
+            );
           } finally {
             setIsTranscribing(false);
             clearRecording();
@@ -84,7 +95,6 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
       }
     };
 
-    // Add a small delay to ensure blob is ready
     if (audioBlob && !isRecording) {
       const timer = setTimeout(() => {
         processAudio();
@@ -93,23 +103,22 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
     }
   }, [audioBlob, isRecording, isTranscribing]);
 
-  // Start chat when node is selected
   useEffect(() => {
     const initChat = async () => {
       if (selectedNodeId && sessionId) {
         try {
           setIsLoading(true);
           setError(null);
-          
+
           const response = await startChat(sessionId, selectedNodeId);
-          
+
           setConversationId(response.conversation_id);
-          
+
           setMessages([
             {
               id: "context-" + selectedNodeId,
               role: "system",
-              content: `🎯 Now exploring: **${response.context}**`,
+              content: `Now exploring: **${response.context}**`,
               timestamp: new Date(),
             },
             {
@@ -119,7 +128,7 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
               timestamp: new Date(),
             },
           ]);
-          
+
           setSuggestions(response.suggestions || []);
         } catch (err: any) {
           setError(err.response?.data?.error || "Failed to start chat");
@@ -129,7 +138,7 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
         }
       }
     };
-    
+
     initChat();
   }, [selectedNodeId, sessionId]);
 
@@ -151,7 +160,7 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
 
     try {
       const response = await sendMessage(conversationId, content.trim());
-      
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -161,13 +170,13 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
 
       setMessages((prev) => [...prev, assistantMessage]);
       setSuggestions(response.suggestions || []);
-      
-      // Check if conversation is complete
+
       if (response.is_complete) {
         const completeMessage: Message = {
           id: (Date.now() + 2).toString(),
           role: "system",
-          content: "✅ Conversation complete! You can now confirm to add these details to the tree.",
+          content:
+            "Conversation complete! You can now confirm to add these details to the tree.",
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, completeMessage]);
@@ -182,23 +191,22 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
 
   const handleConfirmRequirements = async () => {
     if (!conversationId) return;
-    
+
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const response = await confirmChat(conversationId);
-      
+
       const successMessage: Message = {
         id: Date.now().toString(),
         role: "system",
-        content: `✅ ${response.message} - ${response.new_children.length} new nodes added to the tree!`,
+        content: `${response.message} - ${response.new_children.length} new nodes added to the tree!`,
         timestamp: new Date(),
       };
-      
+
       setMessages((prev) => [...prev, successMessage]);
-      
-      // Refresh the page to show updated tree
+
       setTimeout(() => {
         window.location.reload();
       }, 2000);
@@ -237,15 +245,16 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
   if (!selectedNodeId) {
     return (
       <div className="h-full flex items-center justify-center bg-white">
-        <div className="text-center max-w-md px-6">
-          <div className="w-16 h-16 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <SparklesIcon className="w-8 h-8 text-secondary-400" />
+        <div className="text-center max-w-md px-6 animate-fade-in">
+          <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <SparklesIcon className="w-8 h-8 text-neutral-400" />
           </div>
-          <h3 className="text-lg font-semibold text-secondary-900 mb-2">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-2">
             Select a feature to expand
           </h3>
-          <p className="text-sm text-secondary-600">
-            Click the ➕ button on any feature node in the tree to start exploring it in detail through AI-powered conversation.
+          <p className="text-sm text-neutral-500">
+            Click the + button on any feature node in the tree to start
+            exploring it in detail through AI-powered conversation.
           </p>
         </div>
       </div>
@@ -254,12 +263,14 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
 
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden">
-      {/* Chat Header - Fixed at top */}
-      <div className="flex-shrink-0 border-b border-secondary-200 p-4 bg-white relative z-10">
-        <div className="bg-warning-50 border border-warning-200 rounded-lg p-4">
+      {/* Chat Header */}
+      <div className="flex-shrink-0 border-b border-neutral-200/60 p-4 bg-white relative z-10">
+        <div className="bg-warning-50 border border-warning-200 rounded-xl p-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2 text-warning-700 min-w-0 flex-1">
-              <SparklesIcon className="w-5 h-5 flex-shrink-0" />
+              <div className="w-8 h-8 rounded-lg bg-warning-100 flex items-center justify-center flex-shrink-0">
+                <SparklesIcon className="w-4 h-4" />
+              </div>
               <span className="text-sm font-semibold truncate">
                 Feature Exploration Active
               </span>
@@ -269,9 +280,9 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
                 <button
                   onClick={handleConfirmRequirements}
                   disabled={isLoading}
-                  className="flex items-center gap-1.5 bg-success-600 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-success-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                  className="btn bg-success-600 hover:bg-success-700 text-white text-xs py-2 px-3 disabled:opacity-50"
                 >
-                  <CheckIcon className="w-4 h-4 flex-shrink-0" />
+                  <CheckIcon className="w-4 h-4" />
                   <span className="hidden md:inline">Confirm & Add</span>
                   <span className="md:hidden">Add</span>
                 </button>
@@ -279,7 +290,7 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
               {onClose && (
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-lg transition-colors border border-transparent hover:border-red-200 flex-shrink-0"
+                  className="p-2 hover:bg-danger-50 text-neutral-500 hover:text-danger-600 rounded-lg transition-all border border-transparent hover:border-danger-200"
                   title="Close chat"
                 >
                   <XMarkIcon className="w-5 h-5" />
@@ -288,31 +299,29 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
             </div>
           </div>
         </div>
-        
+
         {/* Error Message */}
         {error && (
-          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mt-3 p-3 bg-danger-50 border border-danger-200 rounded-xl text-danger-700 text-sm animate-fade-in">
             {error}
           </div>
         )}
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto px-4">
         <div className="py-4 md:py-6 space-y-4 md:space-y-6">
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
 
           {isLoading && (
-            <div className="flex items-start gap-3">
-              <div className="flex-none bg-secondary-100 rounded-full flex items-center justify-center w-10 h-10">
-                <div className="w-6 h-6 bg-gradient-to-br from-primary-600 to-primary-400 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">M</span>
-                </div>
+            <div className="flex items-start gap-3 animate-fade-in">
+              <div className="flex-none w-9 h-9 rounded-xl bg-primary-100 flex items-center justify-center">
+                <span className="text-primary-600 font-bold text-xs">M</span>
               </div>
               <div className="flex-1 max-w-[75%]">
-                <div className="inline-block bg-secondary-100 px-4 py-3 rounded-2xl border border-secondary-200">
+                <div className="inline-block bg-neutral-100 px-4 py-3 rounded-2xl border border-neutral-200">
                   <LoadingDots />
                 </div>
               </div>
@@ -325,8 +334,8 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
 
       {/* Suggestions */}
       {!isLoading && suggestions.length > 0 && (
-        <div className="flex-none bg-secondary-50 border-t border-secondary-200 px-4 py-3">
-          <div className="text-xs font-medium text-secondary-600 mb-2">
+        <div className="flex-none bg-neutral-50 border-t border-neutral-200/60 px-4 py-3">
+          <div className="text-xs font-medium text-neutral-500 mb-2">
             Quick suggestions:
           </div>
           <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
@@ -334,10 +343,10 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
               <button
                 key={index}
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-lg bg-white hover:bg-primary-50 border border-secondary-200 hover:border-primary-300 transition-all"
+                className="inline-flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-lg bg-white hover:bg-primary-50 border border-neutral-200 hover:border-primary-300 transition-all duration-200"
               >
                 <SparklesIcon className="w-3.5 h-3.5 text-primary-500" />
-                <span className="text-secondary-700">{suggestion}</span>
+                <span className="text-neutral-700">{suggestion}</span>
               </button>
             ))}
           </div>
@@ -345,7 +354,7 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
       )}
 
       {/* Input Area */}
-      <div className="flex-none bg-white border-t border-secondary-200 px-4 py-4">
+      <div className="flex-none bg-white border-t border-neutral-200/60 px-4 py-4">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -353,24 +362,24 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
           }}
           className="w-full"
         >
-          <div className="flex items-end gap-3 bg-secondary-50 rounded-xl border border-secondary-200 p-3 focus-within:border-primary-400 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
+          <div className="flex items-end gap-2 bg-neutral-50 rounded-xl border border-neutral-200 p-3 focus-within:border-primary-400 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
             <textarea
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type your answer here or use voice... (Press Enter to send, Shift+Enter for new line)"
+              placeholder="Type your answer here... (Enter to send)"
               disabled={isLoading || isTranscribing}
-              className="flex-1 bg-transparent text-sm text-secondary-900 placeholder:text-secondary-400 focus:outline-none resize-none min-h-[44px] max-h-[120px]"
+              className="flex-1 bg-transparent text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none resize-none min-h-[44px] max-h-[120px]"
               rows={2}
             />
             <button
               type="button"
               onClick={handleAudioRecord}
               disabled={isLoading || isProcessing || isTranscribing}
-              className={`flex-shrink-0 p-2.5 rounded-lg border-2 transition-all ${
+              className={`flex-shrink-0 w-10 h-10 rounded-xl border-2 transition-all duration-200 flex items-center justify-center ${
                 isRecording
-                  ? "bg-red-500 border-red-600 text-white hover:bg-red-600"
-                  : "bg-white border-primary-300 text-primary-600 hover:bg-primary-50"
+                  ? "bg-danger-500 border-danger-600 text-white animate-pulse"
+                  : "bg-white border-neutral-200 text-neutral-500 hover:border-primary-300 hover:text-primary-600"
               } disabled:opacity-40 disabled:cursor-not-allowed`}
               title={isRecording ? "Stop recording" : "Start voice recording"}
             >
@@ -383,56 +392,58 @@ export default function ChatInterface({ sessionId, selectedNodeId, contextMessag
             <button
               type="submit"
               disabled={!inputMessage.trim() || isLoading || isTranscribing}
-              className="flex-shrink-0 bg-primary-600 text-white p-2.5 rounded-lg hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              className="flex-shrink-0 w-10 h-10 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-soft-sm hover:shadow-soft"
               title="Send message"
             >
               <PaperAirplaneIcon className="w-5 h-5" />
             </button>
           </div>
-          
+
           {/* Recording/Transcribing Status */}
           {(isRecording || isProcessing || isTranscribing) && (
-            <div className="flex items-center gap-2 mt-2 px-1 text-xs">
+            <div className="flex items-center gap-2 mt-2 px-1">
               {isRecording && (
-                <span className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-red-700 font-medium">
-                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                  🔴 Recording... Speak now!
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-danger-50 border border-danger-200 rounded-lg text-danger-700 text-xs font-medium">
+                  <span className="w-2 h-2 bg-danger-500 rounded-full animate-pulse"></span>
+                  Recording... Speak now
                 </span>
               )}
               {isProcessing && (
-                <span className="flex items-center gap-1">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-lg text-primary-700 text-xs font-medium">
                   <div className="w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
                   Processing audio...
                 </span>
               )}
               {isTranscribing && (
-                <span className="flex items-center gap-1">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-lg text-primary-700 text-xs font-medium">
                   <div className="w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
                   Transcribing...
                 </span>
               )}
             </div>
           )}
-          
+
           {/* Audio Error */}
           {audioError && (
-            <div className="mt-2 px-1 p-2 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-xs text-red-700 font-medium mb-1">⚠️ Recording Error</p>
-              <p className="text-xs text-red-600">{audioError}</p>
-              <p className="text-xs text-red-500 mt-1">
-                💡 Tip: Make sure you've allowed microphone access in your browser settings.
+            <div className="mt-2 p-3 bg-danger-50 border border-danger-200 rounded-xl">
+              <p className="text-xs text-danger-700 font-medium mb-1">
+                Recording Error
+              </p>
+              <p className="text-xs text-danger-600">{audioError}</p>
+              <p className="text-xs text-danger-500 mt-1">
+                Make sure you've allowed microphone access in your browser.
               </p>
             </div>
           )}
-          
+
           {/* Hint Text */}
           <div className="flex items-center justify-between mt-2 px-1">
-            <p className="text-xs text-secondary-500">
+            <p className="text-xs text-neutral-400">
               Answer the AI's questions to build detailed requirements
             </p>
             {conversationId && (
-              <p className="text-xs text-secondary-400">
-                {messages.filter(m => m.role === 'user').length} responses given
+              <p className="text-xs text-neutral-400">
+                {messages.filter((m) => m.role === "user").length} responses
               </p>
             )}
           </div>
