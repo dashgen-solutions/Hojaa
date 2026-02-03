@@ -85,7 +85,7 @@ class AIService:
                 deps_type=MyContextModel
             )
             result = await agent.run(user_prompt, deps=context)
-            print(result.data)  # Validated MyOutputModel instance
+            print(result.output)  # Validated MyOutputModel instance
             ```
         """
         # Create agent with automatic retries on validation errors

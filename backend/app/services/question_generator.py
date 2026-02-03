@@ -97,7 +97,12 @@ class AIQuestionGenerator:
             logger.info(f"Token usage: {result.usage()}")
             
             # Get validated output
-            questions_output = result.data
+            questions_output = result.output
+            
+            # Log the generated questions for debugging
+            logger.info(f"AI generated {len(questions_output.questions)} questions:")
+            for i, q in enumerate(questions_output.questions):
+                logger.info(f"  Q{i+1}: {q.question[:80]}...")
             
             # Validate we got exactly 10 questions
             if len(questions_output.questions) != 10:
@@ -139,52 +144,58 @@ class AIQuestionGenerator:
     
     def _create_user_prompt(self, document_text: str, user_type: str) -> str:
         """Create the user prompt for question generation."""
-        return f"""You are analyzing a client's initial description to generate discovery questions.
+        user_type_description = (
+            "TECHNICAL (developer/architect)" 
+            if user_type == "technical" 
+            else "NON-TECHNICAL (business person)"
+        )
+        
+        return f"""You are a professional requirements gatherer conducting an initial discovery session.
+The client is {user_type_description}.
+Adjust your questions accordingly.
 
-CLIENT TYPE: {user_type}
+**If client is NON-TECHNICAL:**
+- Ask ONLY business-focused questions
+- NO technical questions (databases, APIs, architecture, etc.)
+- Focus on: problems, users, workflows, business value
 
-Your task is to generate exactly 10 VERY GRANULAR questions that dig deep into understanding their business idea.
+**If client is TECHNICAL:**
+- Ask BOTH business questions AND technical questions
+- Mix: business needs + tech stack + architecture + integrations
+- Can use technical terminology
 
-Think like you're meeting a client for the first time who has a vague idea. You need to understand:
-- What problem they're really trying to solve
-- Who will use this and why
-- What their business context is
-- What success looks like to them
-- What constraints or challenges they face
+CRITICAL INSTRUCTIONS:
+- You MUST read and understand the document below
+- Generate questions that are SPECIFIC to what's described in the document
+- Reference specific features, user types, or concepts mentioned in the document
+- Do NOT ask generic business questions - ask about THIS specific project
 
-Question categories (distribute across 10 questions):
+For example, if the document mentions "AI Butler" and "user profiles", ask about:
+- "What specific interactions should the AI Butler handle for each user profile?"
+- "How should the recommendation engine prioritize suggestions for different user types?"
 
-1. **Problem Discovery** (2-3 questions):
-   - What specific pain point exists today?
-   - Who is experiencing this problem?
-   - How are they currently dealing with it?
+NOT generic questions like:
+- "What problem are you trying to solve?" (too generic)
+- "Who are your users?" (too generic)
 
-2. **Business Context** (2-3 questions):
-   - What type of business/organization?
-   - What are the business goals?
-   - What happens if this problem isn't solved?
-
-3. **User Understanding** (2-3 questions):
-   - Who are the actual end users (specific roles)?
-   - What is their current workflow?
-   - What would make their lives easier?
-
-4. **Success & Value** (1-2 questions):
-   - How will you measure success?
-   - What outcome would make this worthwhile?
-
-5. **Scope & Context** (1-2 questions):
-   - What's the most critical thing this MUST do?
-   - Any existing systems to integrate with?
+Your task is to generate exactly 10 DOCUMENT-SPECIFIC questions that clarify:
+1. Specific features or components mentioned in the document (3-4 questions)
+2. User types, roles, or personas described (2-3 questions)  
+3. Interactions, workflows, or processes outlined (2-3 questions)
+4. Success criteria or expected outcomes for THIS project (1-2 questions)
 
 Requirements for questions:
+- MUST reference specific elements from the document
 - Ask ONE thing per question (focused)
 - Be conversational and natural
 - Avoid yes/no questions - ask "what", "how", "who", "why"
-- Build understanding progressively
+- Follow the technical/non-technical guidelines above
 
-Document to analyze:
+=== CLIENT'S DOCUMENT ===
 {document_text}
+=== END DOCUMENT ===
+
+Generate 10 questions that are SPECIFIC to the above document content and appropriate for a {user_type_description} client.
 """
     
     async def _create_fallback_questions(

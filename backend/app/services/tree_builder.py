@@ -124,7 +124,7 @@ class AITreeBuilder:
             logger.info(f"Token usage: {result.usage()}")
             
             # Get validated output
-            tree_output = result.data
+            tree_output = result.output
             
             # Create root node
             root_node = Node(
@@ -238,7 +238,7 @@ class AITreeBuilder:
             logger.info(f"Token usage: {result.usage()}")
             
             # Get validated output
-            sub_req_output = result.data
+            sub_req_output = result.output
             
             # Create child nodes from validated output
             child_nodes = []

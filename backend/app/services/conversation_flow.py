@@ -146,7 +146,7 @@ class AIConversationFlow:
             logger.info(f"Token usage: {result.usage()}")
             
             # Get validated output
-            output = result.data
+            output = result.output
             
             # Save system message
             system_msg = Message(
@@ -261,7 +261,7 @@ class AIConversationFlow:
             logger.info(f"Token usage: {result.usage()}")
             
             # Get validated output
-            output = result.data
+            output = result.output
             
             # Update conversation with extracted info
             extracted_info_dict = output.extracted_info.model_dump(exclude_none=True)
