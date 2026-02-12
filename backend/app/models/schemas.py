@@ -1,7 +1,7 @@
 """
 Pydantic models for request/response validation.
 """
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from pydantic import BaseModel, Field, ConfigDict
@@ -11,9 +11,6 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class UserRegister(BaseModel):
     """Schema for user registration."""
-    # Use plain str to avoid requiring the optional `email-validator` dependency
-    # at import time. If you want strict email validation, install:
-    #   pip install "pydantic[email]"
     email: str
     username: str = Field(..., min_length=3, max_length=100)
     password: str = Field(..., min_length=6, max_length=72)
@@ -51,7 +48,7 @@ class TokenData(BaseModel):
 
 class SessionCreate(BaseModel):
     """Schema for creating a new session."""
-    user_type: str = "non_technical"  # "technical" or "non_technical"
+    user_type: str = "non_technical"
     document_text: Optional[str] = None
     document_type: Optional[str] = None
     document_filename: Optional[str] = None
@@ -128,6 +125,10 @@ class NodeResponse(BaseModel):
     question: str
     answer: Optional[str] = None
     node_type: str
+    status: str = "active"
+    priority: Optional[str] = None
+    acceptance_criteria: Optional[List[str]] = []
+    source_id: Optional[str] = None
     depth: int
     order_index: int
     can_expand: bool
@@ -145,6 +146,7 @@ class NodeCreate(BaseModel):
     question: str = Field(..., min_length=1, max_length=500)
     answer: Optional[str] = ""
     node_type: Optional[str] = "feature"
+    priority: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = {}
 
 
@@ -153,7 +155,15 @@ class NodeUpdate(BaseModel):
     question: Optional[str] = Field(None, min_length=1, max_length=500)
     answer: Optional[str] = None
     node_type: Optional[str] = None
+    priority: Optional[str] = None
+    acceptance_criteria: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
+
+
+class NodeStatusUpdate(BaseModel):
+    """Schema for changing node status with a reason."""
+    status: str  # 'active', 'deferred', 'completed', 'removed'
+    reason: Optional[str] = None
 
 
 class TreeResponse(BaseModel):
@@ -223,6 +233,235 @@ class ConversationHistoryResponse(BaseModel):
     messages: List[MessageResponse]
     extracted_info: Dict[str, Any] = {}
     status: str
+
+
+# ===== Source Schemas (Phase 1) =====
+
+class SourceIngestRequest(BaseModel):
+    """Schema for ingesting meeting notes or documents."""
+    session_id: str
+    source_type: str = "meeting"  # 'meeting', 'document', 'manual'
+    source_name: str = Field(..., min_length=1, max_length=255)
+    raw_content: str = Field(..., min_length=1)
+    source_metadata: Optional[Dict[str, Any]] = {}  # date, attendees, etc.
+
+
+class SuggestionResponse(BaseModel):
+    """Schema for a single AI-generated suggestion."""
+    id: str
+    source_id: str
+    change_type: str  # 'add', 'modify', 'defer', 'remove'
+    target_node_id: Optional[str] = None
+    parent_node_id: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    acceptance_criteria: Optional[List[str]] = []
+    confidence: float
+    reasoning: Optional[str] = None
+    source_quote: Optional[str] = None
+    is_approved: Optional[bool] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SourceResponse(BaseModel):
+    """Schema for source response."""
+    id: str
+    session_id: str
+    source_type: str
+    source_name: str
+    is_processed: bool
+    processed_summary: Optional[str] = None
+    source_metadata: Optional[Dict[str, Any]] = {}
+    suggestions_count: int = 0
+    approved_count: int = 0
+    rejected_count: int = 0
+    pending_count: int = 0
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SourceDetailResponse(BaseModel):
+    """Schema for source with its suggestions."""
+    id: str
+    session_id: str
+    source_type: str
+    source_name: str
+    raw_content: Optional[str] = None
+    processed_summary: Optional[str] = None
+    is_processed: bool
+    source_metadata: Optional[Dict[str, Any]] = {}
+    suggestions: List[SuggestionResponse] = []
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SuggestionApplyRequest(BaseModel):
+    """Schema for approving/rejecting suggestions."""
+    suggestion_id: str
+    is_approved: bool
+    edited_title: Optional[str] = None
+    edited_description: Optional[str] = None
+
+
+class BulkSuggestionApplyRequest(BaseModel):
+    """Schema for bulk approving/rejecting suggestions."""
+    decisions: List[SuggestionApplyRequest]
+
+
+# ===== Node History / Audit Schemas (Phase 2 & 3) =====
+
+class NodeHistoryResponse(BaseModel):
+    """Schema for a single history entry."""
+    id: str
+    node_id: str
+    change_type: str
+    field_changed: Optional[str] = None
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    change_reason: Optional[str] = None
+    source_name: Optional[str] = None
+    changed_by_name: Optional[str] = None
+    changed_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AuditTimelineEntry(BaseModel):
+    """Schema for a timeline entry in the audit log."""
+    id: str
+    node_id: str
+    node_title: str
+    change_type: str
+    field_changed: Optional[str] = None
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    change_reason: Optional[str] = None
+    source_name: Optional[str] = None
+    changed_by_name: Optional[str] = None
+    changed_at: datetime
+
+
+class AuditTimelineResponse(BaseModel):
+    """Schema for the full audit timeline."""
+    session_id: str
+    total_changes: int
+    entries: List[AuditTimelineEntry]
+
+
+# ===== Planning Board Schemas (Phase 4) =====
+
+class TeamMemberCreate(BaseModel):
+    """Schema for creating a team member."""
+    name: str = Field(..., min_length=1, max_length=255)
+    email: Optional[str] = None
+    role: Optional[str] = None
+
+
+class TeamMemberResponse(BaseModel):
+    """Schema for team member response."""
+    id: str
+    session_id: str
+    name: str
+    email: Optional[str] = None
+    role: Optional[str] = None
+    avatar_color: Optional[str] = None
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CardCreate(BaseModel):
+    """Schema for creating a planning card from a node."""
+    node_id: str
+    session_id: str
+    priority: Optional[str] = "medium"
+    due_date: Optional[date] = None
+
+
+class CardUpdate(BaseModel):
+    """Schema for updating a planning card."""
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    due_date: Optional[date] = None
+    estimated_hours: Optional[float] = None
+
+
+class AssignmentCreate(BaseModel):
+    """Schema for assigning a team member to a card."""
+    team_member_id: str
+    role: Optional[str] = "assignee"
+
+
+class CardAssignmentResponse(BaseModel):
+    """Schema for assignment on a card."""
+    id: str
+    team_member_id: str
+    team_member_name: str
+    role: str
+    assigned_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CardResponse(BaseModel):
+    """Schema for planning card response."""
+    id: str
+    node_id: str
+    session_id: str
+    node_title: str
+    node_description: Optional[str] = None
+    node_type: str
+    status: str
+    priority: str
+    due_date: Optional[date] = None
+    estimated_hours: Optional[float] = None
+    assignments: List[CardAssignmentResponse] = []
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PlanningBoardResponse(BaseModel):
+    """Schema for the full planning board."""
+    session_id: str
+    columns: Dict[str, List[CardResponse]]
+    team_members: List[TeamMemberResponse]
+    total_cards: int
+    completed_cards: int
+
+
+class BulkCardCreate(BaseModel):
+    """Schema for bulk creating cards from graph nodes."""
+    session_id: str
+    node_types: Optional[List[str]] = ["feature"]  # which node types to create cards for
+    include_details: bool = False
+
+
+# ===== Export Schemas (Phase 5) =====
+
+class ExportRequest(BaseModel):
+    """Schema for export request."""
+    session_id: str
+    format: str = "pdf"  # 'pdf', 'json', 'markdown'
+    include_deferred: bool = False
+    include_change_log: bool = False
+    include_assignments: bool = False
+    date_from: Optional[datetime] = None
+
+
+class ExportResponse(BaseModel):
+    """Schema for export response."""
+    session_id: str
+    format: str
+    content: Optional[str] = None  # For markdown/JSON
+    download_url: Optional[str] = None  # For PDF
+    filename: str
+    generated_at: datetime
 
 
 # ===== Generic Response Schemas =====

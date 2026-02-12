@@ -6,6 +6,85 @@ from typing import List, Dict, Any, Optional, Literal
 from pydantic import BaseModel, Field
 
 
+# ===== Meeting Notes / Source Analysis Models =====
+
+class ScopeChange(BaseModel):
+    """A single scope change detected from meeting notes or documents."""
+    change_type: Literal["add", "modify", "defer", "remove"] = Field(
+        description="Type of scope change"
+    )
+    target_node_id: Optional[str] = Field(
+        default=None,
+        description="ID of existing node to modify/defer/remove (null for 'add')"
+    )
+    parent_node_id: Optional[str] = Field(
+        default=None,
+        description="ID of parent node for new additions"
+    )
+    title: str = Field(description="Clear title for the scope change")
+    description: Optional[str] = Field(
+        default=None,
+        description="Detailed description of the change"
+    )
+    acceptance_criteria: Optional[List[str]] = Field(
+        default=None,
+        description="Acceptance criteria if applicable"
+    )
+    confidence: float = Field(
+        description="Confidence score 0-1 that this is a real scope change",
+        ge=0.0,
+        le=1.0
+    )
+    reasoning: str = Field(
+        description="Why this is identified as a scope change"
+    )
+    source_quote: str = Field(
+        description="Exact quote from the source that supports this change"
+    )
+
+
+class MeetingNotesOutput(BaseModel):
+    """Output from meeting notes analysis agent."""
+    summary: str = Field(description="Brief summary of the meeting/document")
+    scope_changes: List[ScopeChange] = Field(
+        description="Detected scope changes (only clear, confident changes)",
+        default=[]
+    )
+    action_items: List[str] = Field(
+        description="Action items mentioned in the meeting",
+        default=[]
+    )
+    questions_raised: List[str] = Field(
+        description="Questions that need clarification",
+        default=[]
+    )
+
+
+# ===== Graph Comparison Models =====
+
+class NodeSummary(BaseModel):
+    """Summary of a node for comparison purposes."""
+    node_id: str = Field(description="Node ID")
+    title: str = Field(description="Node title")
+    description: Optional[str] = Field(default=None, description="Node description")
+
+
+class ModifiedNode(BaseModel):
+    """A node that was modified between two graph versions."""
+    node_id: str = Field(description="Node ID")
+    title: str = Field(description="Node title")
+    changes: List[str] = Field(description="List of changes made")
+
+
+class GraphDiffOutput(BaseModel):
+    """Output from graph comparison agent."""
+    added_nodes: List[NodeSummary] = Field(default=[], description="Nodes added")
+    modified_nodes: List[ModifiedNode] = Field(default=[], description="Nodes modified")
+    deferred_nodes: List[NodeSummary] = Field(default=[], description="Nodes deferred")
+    removed_nodes: List[NodeSummary] = Field(default=[], description="Nodes removed")
+    summary: str = Field(description="Human-readable summary of changes")
+
+
 # ===== Question Generation Models =====
 
 class GeneratedQuestion(BaseModel):
@@ -137,3 +216,10 @@ class SubRequirementContext(BaseModel):
     parent_hierarchy: str = Field(description="Hierarchical context")
     conversation_history: str = Field(description="Complete conversation")
     user_type: Literal["technical", "non_technical"] = Field(description="User's technical level")
+
+
+class MeetingNotesContext(BaseModel):
+    """Context for meeting notes analysis."""
+    raw_content: str = Field(description="Raw meeting notes or document text")
+    current_graph_summary: str = Field(description="Summary of current graph state (nodes and structure)")
+    session_id: str = Field(description="Session ID for reference")

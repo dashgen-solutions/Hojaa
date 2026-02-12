@@ -17,7 +17,11 @@ from app.api.routes import (
     health,
     question_management,
     node_management,
-    transcription
+    transcription,
+    sources,
+    audit,
+    planning,
+    export,
 )
 from app.models.schemas import HealthResponse
 from app.middleware.metrics import MetricsMiddleware
@@ -59,6 +63,10 @@ app.include_router(tree.router, prefix="/api")
 app.include_router(node_management.router, prefix="/api/manage")  # Node management
 app.include_router(sessions.router, prefix="/api")
 app.include_router(transcription.router, prefix="/api")  # Audio transcription
+app.include_router(sources.router, prefix="/api")  # Source ingestion (Phase 1)
+app.include_router(audit.router, prefix="/api")  # Audit trail & node status (Phase 2/3)
+app.include_router(planning.router, prefix="/api")  # Planning board (Phase 4)
+app.include_router(export.router, prefix="/api")  # Export (Phase 5)
 
 
 @app.on_event("startup")

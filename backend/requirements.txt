@@ -25,6 +25,8 @@ openai-whisper  # For local Whisper (optional, we use OpenAI API)
 # Document Processing
 pypdf2
 python-docx
+markdown2
+fpdf2
 
 # Utilities
 python-dotenv

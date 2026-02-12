@@ -9,13 +9,18 @@ import TreeVisualization from "@/components/tree/TreeVisualization";
 import ChatInterface from "@/components/chat/ChatInterface";
 import DocumentUpload from "@/components/upload/DocumentUpload";
 import InitialQuestions from "@/components/questions/InitialQuestions";
-import { createSession } from "@/lib/api";
+import AddSourceButton from "@/components/sources/AddSourceButton";
+import SuggestionReview from "@/components/sources/SuggestionReview";
+import ExportModal from "@/components/export/ExportModal";
+import { createSession, listSources, getSourceDetail } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStore } from "@/stores/useStore";
 import {
   BriefcaseIcon,
   CodeBracketIcon,
   SparklesIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 
 export default function Home() {
@@ -31,6 +36,9 @@ export default function Home() {
   const router = useRouter();
 
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showSourceSuggestions, setShowSourceSuggestions] = useState(false);
+  const { currentSourceDetail, sources, fetchSources } = useStore();
 
   useEffect(() => {
     const initSession = async () => {
@@ -163,7 +171,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-neutral-50">
-      <Header />
+      <Header sessionId={sessionId} onExport={() => setShowExportModal(true)} />
 
       {/* Guest User Banner */}
       {!isAuthenticated && currentStep === "upload" && (
@@ -206,10 +214,48 @@ export default function Home() {
 
           {currentStep === "tree" && (
             <>
+              {/* Source suggestions panel */}
+              {showSourceSuggestions && currentSourceDetail?.suggestions && (
+                <div className="w-96 border-r border-neutral-200 bg-white overflow-y-auto p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-neutral-900">Review Suggestions</h3>
+                    <button
+                      onClick={() => setShowSourceSuggestions(false)}
+                      className="text-xs text-neutral-500 hover:text-neutral-700"
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <SuggestionReview
+                    suggestions={currentSourceDetail.suggestions}
+                    sourceId={currentSourceDetail.id}
+                    onComplete={() => setShowSourceSuggestions(false)}
+                  />
+                </div>
+              )}
+
               {selectedNode ? (
                 <ResizableSplitPane
                   leftPanel={
                     <div className="h-full bg-white overflow-hidden rounded-xl shadow-soft-sm m-2 mr-1">
+                      {/* Add Source Button Bar */}
+                      <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-100">
+                        <div className="flex items-center gap-2">
+                          <AddSourceButton
+                            sessionId={sessionId!}
+                            onSourceAdded={() => {
+                              setShowSourceSuggestions(true);
+                              fetchSources(sessionId!);
+                            }}
+                          />
+                          {sources.length > 0 && (
+                            <span className="text-xs text-neutral-500">
+                              <DocumentTextIcon className="w-3.5 h-3.5 inline mr-1" />
+                              {sources.length} source{sources.length !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                       <TreeVisualization
                         sessionId={sessionId}
                         onNodeSelect={handleNodeSelect}
@@ -234,6 +280,24 @@ export default function Home() {
               ) : (
                 <div className="w-full h-full p-2">
                   <div className="h-full bg-white overflow-hidden rounded-xl shadow-soft-sm">
+                    {/* Add Source Button Bar */}
+                    <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-100">
+                      <div className="flex items-center gap-2">
+                        <AddSourceButton
+                          sessionId={sessionId!}
+                          onSourceAdded={() => {
+                            setShowSourceSuggestions(true);
+                            fetchSources(sessionId!);
+                          }}
+                        />
+                        {sources.length > 0 && (
+                          <span className="text-xs text-neutral-500">
+                            <DocumentTextIcon className="w-3.5 h-3.5 inline mr-1" />
+                            {sources.length} source{sources.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <TreeVisualization
                       sessionId={sessionId}
                       onNodeSelect={handleNodeSelect}
@@ -246,6 +310,14 @@ export default function Home() {
           )}
         </main>
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && sessionId && (
+        <ExportModal
+          sessionId={sessionId}
+          onClose={() => setShowExportModal(false)}
+        />
+      )}
 
       {/* User Type Selection Modal */}
       {showUserTypeModal && (

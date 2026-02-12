@@ -1,12 +1,12 @@
 """
 SQLAlchemy database models for the application.
 """
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional
 from uuid import uuid4
 from sqlalchemy import (
-    Column, String, Text, Integer, Boolean, DateTime,
-    ForeignKey, JSON, Enum as SQLEnum
+    Column, String, Text, Integer, Boolean, DateTime, Date, Float,
+    ForeignKey, JSON, Enum as SQLEnum, Index
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -17,6 +17,8 @@ import enum
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
+# ===== Enumerations =====
 
 class SessionStatus(str, enum.Enum):
     """Session status enumeration."""
@@ -34,6 +36,14 @@ class NodeType(str, enum.Enum):
     DETAIL = "detail"
 
 
+class NodeStatus(str, enum.Enum):
+    """Status of a node in the scope lifecycle."""
+    ACTIVE = "active"
+    DEFERRED = "deferred"
+    COMPLETED = "completed"
+    REMOVED = "removed"
+
+
 class ConversationStatus(str, enum.Enum):
     """Conversation status enumeration."""
     ACTIVE = "active"
@@ -46,6 +56,47 @@ class MessageRole(str, enum.Enum):
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
+
+
+class SourceType(str, enum.Enum):
+    """Type of ingested source material."""
+    DISCOVERY = "discovery"
+    MEETING = "meeting"
+    DOCUMENT = "document"
+    MANUAL = "manual"
+
+
+class ChangeType(str, enum.Enum):
+    """Type of change recorded in history."""
+    CREATED = "created"
+    MODIFIED = "modified"
+    STATUS_CHANGED = "status_changed"
+    MOVED = "moved"
+    DELETED = "deleted"
+
+
+class CardStatus(str, enum.Enum):
+    """Status of a planning card on the board."""
+    BACKLOG = "backlog"
+    TODO = "todo"
+    IN_PROGRESS = "in_progress"
+    REVIEW = "review"
+    DONE = "done"
+
+
+class CardPriority(str, enum.Enum):
+    """Priority level for planning cards and nodes."""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class AssignmentRole(str, enum.Enum):
+    """Role of a person assigned to a node/card."""
+    OWNER = "owner"
+    ASSIGNEE = "assignee"
+    REVIEWER = "reviewer"
 
 
 class User(Base):
@@ -105,6 +156,9 @@ class Session(Base):
     questions = relationship("Question", back_populates="session", cascade="all, delete-orphan")
     nodes = relationship("Node", back_populates="session", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="session", cascade="all, delete-orphan")
+    sources = relationship("Source", back_populates="session", cascade="all, delete-orphan")
+    cards = relationship("Card", back_populates="session", cascade="all, delete-orphan")
+    team_members = relationship("TeamMember", back_populates="session", cascade="all, delete-orphan")
 
 
 class Question(Base):
@@ -141,6 +195,12 @@ class Node(Base):
     answer = Column(Text, nullable=True)
     node_type = Column(SQLEnum(NodeType), nullable=False)
     
+    # Scope lifecycle fields (Phase 2)
+    status = Column(SQLEnum(NodeStatus), default=NodeStatus.ACTIVE, nullable=False)
+    priority = Column(SQLEnum(CardPriority), nullable=True)
+    acceptance_criteria = Column(JSON, default=list)
+    source_id = Column(UUID(as_uuid=True), ForeignKey("sources.id", ondelete="SET NULL"), nullable=True)
+    
     # Tree metadata
     depth = Column(Integer, default=0, nullable=False)
     order_index = Column(Integer, default=0, nullable=False)
@@ -157,6 +217,10 @@ class Node(Base):
     session = relationship("Session", back_populates="nodes")
     children = relationship("Node", backref="parent", remote_side=[id], cascade="all")
     conversations = relationship("Conversation", back_populates="node")
+    source = relationship("Source", back_populates="nodes")
+    history_entries = relationship("NodeHistory", back_populates="node", cascade="all, delete-orphan")
+    assignments = relationship("Assignment", back_populates="node", cascade="all, delete-orphan")
+    card = relationship("Card", back_populates="node", uselist=False, cascade="all, delete-orphan")
 
 
 class Conversation(Base):
@@ -199,3 +263,170 @@ class Message(Base):
     
     # Relationships
     conversation = relationship("Conversation", back_populates="messages")
+
+
+# ===== Phase 1: Source Tracking =====
+
+class Source(Base):
+    """Tracks where scope items originated from (meeting notes, documents, manual edits)."""
+    __tablename__ = "sources"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    
+    source_type = Column(SQLEnum(SourceType), nullable=False)
+    source_name = Column(String(255), nullable=False)
+    raw_content = Column(Text, nullable=True)
+    processed_summary = Column(Text, nullable=True)
+    source_metadata = Column(JSON, default=dict)  # date, attendees, etc.
+    
+    is_processed = Column(Boolean, default=False, nullable=False)
+    processed_at = Column(DateTime, nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    session = relationship("Session", back_populates="sources")
+    creator = relationship("User", foreign_keys=[created_by])
+    nodes = relationship("Node", back_populates="source")
+    suggestions = relationship("SourceSuggestion", back_populates="source", cascade="all, delete-orphan")
+    history_entries = relationship("NodeHistory", back_populates="source")
+
+
+class SourceSuggestion(Base):
+    """AI-generated suggestions from processing a source (meeting notes, documents)."""
+    __tablename__ = "source_suggestions"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    source_id = Column(UUID(as_uuid=True), ForeignKey("sources.id", ondelete="CASCADE"), nullable=False)
+    
+    change_type = Column(String(50), nullable=False)  # 'add', 'modify', 'defer', 'remove'
+    target_node_id = Column(UUID(as_uuid=True), ForeignKey("nodes.id", ondelete="SET NULL"), nullable=True)
+    parent_node_id = Column(UUID(as_uuid=True), ForeignKey("nodes.id", ondelete="SET NULL"), nullable=True)
+    
+    title = Column(String(500), nullable=False)
+    description = Column(Text, nullable=True)
+    acceptance_criteria = Column(JSON, default=list)
+    
+    confidence = Column(Float, default=0.0, nullable=False)
+    reasoning = Column(Text, nullable=True)
+    source_quote = Column(Text, nullable=True)
+    
+    # Approval status
+    is_approved = Column(Boolean, nullable=True)  # None = pending, True = approved, False = rejected
+    approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    source = relationship("Source", back_populates="suggestions")
+    target_node = relationship("Node", foreign_keys=[target_node_id])
+    parent_node = relationship("Node", foreign_keys=[parent_node_id])
+
+
+# ===== Phase 2 & 3: Audit Trail & History =====
+
+class NodeHistory(Base):
+    """Tracks every change made to a node for full audit trail."""
+    __tablename__ = "node_history"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    node_id = Column(UUID(as_uuid=True), ForeignKey("nodes.id", ondelete="CASCADE"), nullable=False)
+    
+    change_type = Column(SQLEnum(ChangeType), nullable=False)
+    field_changed = Column(String(100), nullable=True)
+    old_value = Column(Text, nullable=True)
+    new_value = Column(Text, nullable=True)
+    change_reason = Column(Text, nullable=True)
+    
+    source_id = Column(UUID(as_uuid=True), ForeignKey("sources.id", ondelete="SET NULL"), nullable=True)
+    changed_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
+    changed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    node = relationship("Node", back_populates="history_entries")
+    source = relationship("Source", back_populates="history_entries")
+    changer = relationship("User", foreign_keys=[changed_by])
+    
+    # Indexes for efficient querying
+    __table_args__ = (
+        Index("idx_node_history_node_id", "node_id"),
+        Index("idx_node_history_changed_at", "changed_at"),
+        Index("idx_node_history_change_type", "change_type"),
+    )
+
+
+# ===== Phase 4: Planning Board =====
+
+class TeamMember(Base):
+    """Team members available for assignment within a session."""
+    __tablename__ = "team_members"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=True)
+    role = Column(String(100), nullable=True)  # 'developer', 'designer', 'pm', etc.
+    avatar_color = Column(String(20), nullable=True)  # hex color for avatar
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    session = relationship("Session", back_populates="team_members")
+    assignments = relationship("Assignment", back_populates="team_member", cascade="all, delete-orphan")
+
+
+class Card(Base):
+    """Planning card derived from a node for lightweight task tracking."""
+    __tablename__ = "cards"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    node_id = Column(UUID(as_uuid=True), ForeignKey("nodes.id", ondelete="CASCADE"), nullable=False, unique=True)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    
+    status = Column(SQLEnum(CardStatus), default=CardStatus.BACKLOG, nullable=False)
+    priority = Column(SQLEnum(CardPriority), default=CardPriority.MEDIUM, nullable=False)
+    
+    due_date = Column(Date, nullable=True)
+    estimated_hours = Column(Float, nullable=True)
+    card_metadata = Column(JSON, default=dict)
+    
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    node = relationship("Node", back_populates="card")
+    session = relationship("Session", back_populates="cards")
+    assignments = relationship("Assignment", back_populates="card", cascade="all, delete-orphan")
+    
+    # Indexes
+    __table_args__ = (
+        Index("idx_cards_session_status", "session_id", "status"),
+    )
+
+
+class Assignment(Base):
+    """Links team members to nodes or cards."""
+    __tablename__ = "assignments"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    node_id = Column(UUID(as_uuid=True), ForeignKey("nodes.id", ondelete="CASCADE"), nullable=True)
+    card_id = Column(UUID(as_uuid=True), ForeignKey("cards.id", ondelete="CASCADE"), nullable=True)
+    team_member_id = Column(UUID(as_uuid=True), ForeignKey("team_members.id", ondelete="CASCADE"), nullable=False)
+    
+    role = Column(SQLEnum(AssignmentRole), default=AssignmentRole.ASSIGNEE, nullable=False)
+    assigned_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
+    assigned_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    node = relationship("Node", back_populates="assignments")
+    card = relationship("Card", back_populates="assignments")
+    team_member = relationship("TeamMember", back_populates="assignments")
+    assigner = relationship("User", foreign_keys=[assigned_by])
