@@ -69,7 +69,7 @@ export default function Header({ sessionId, onExport }: HeaderProps) {
                 }`}
               >
                 <ClockIcon className="w-4 h-4" />
-                History
+                Audit
               </Link>
               {onExport && (
                 <button

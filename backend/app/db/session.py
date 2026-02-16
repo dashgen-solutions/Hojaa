@@ -57,11 +57,12 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """Initialize database tables."""
+    """Initialize database tables and run pending Alembic migrations."""
     logger.info("Initializing database tables")
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
+        _run_alembic_migrations()
         return
     except OperationalError as e:
         # If we're using Postgres and the database doesn't exist yet, optionally
@@ -98,7 +99,38 @@ def init_db() -> None:
             # Retry table creation now that the DB exists.
             Base.metadata.create_all(bind=engine)
             logger.info("Database tables created successfully")
+            _run_alembic_migrations()
             return
 
         # Anything else: re-raise so caller can handle/log.
         raise
+
+
+def _run_alembic_migrations() -> None:
+    """Stamp or upgrade the Alembic migration head so future migrations apply cleanly."""
+    try:
+        from alembic.config import Config
+        from alembic import command
+        from alembic.runtime.migration import MigrationContext
+
+        alembic_cfg = Config("alembic.ini")
+
+        # Check current revision
+        with engine.connect() as conn:
+            ctx = MigrationContext.configure(conn)
+            current_rev = ctx.get_current_revision()
+
+        if current_rev is None:
+            # Fresh DB (created via create_all) — stamp to head so Alembic knows
+            # the schema is already up-to-date
+            logger.info("Stamping Alembic migration head (fresh database)")
+            command.stamp(alembic_cfg, "head")
+        else:
+            # DB already has revision — run any pending upgrades
+            logger.info(f"Current Alembic revision: {current_rev}. Running pending migrations...")
+            command.upgrade(alembic_cfg, "head")
+            logger.info("Alembic migrations applied successfully")
+
+    except Exception as e:
+        # Non-fatal — don't break startup if alembic.ini is missing (e.g. dev mode)
+        logger.warning(f"Alembic migration step skipped: {e}")

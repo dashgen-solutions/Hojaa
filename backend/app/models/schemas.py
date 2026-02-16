@@ -166,6 +166,13 @@ class NodeStatusUpdate(BaseModel):
     reason: Optional[str] = None
 
 
+class BulkNodeStatusUpdate(BaseModel):
+    """Schema for changing status of multiple nodes at once."""
+    node_ids: List[str]
+    status: str  # 'active', 'deferred', 'completed', 'removed'
+    reason: Optional[str] = None
+
+
 class TreeResponse(BaseModel):
     """Schema for complete tree response."""
     session_id: UUID
@@ -240,10 +247,12 @@ class ConversationHistoryResponse(BaseModel):
 class SourceIngestRequest(BaseModel):
     """Schema for ingesting meeting notes or documents."""
     session_id: str
-    source_type: str = "meeting"  # 'meeting', 'document', 'manual'
+    source_type: str = "meeting"  # 'meeting', 'document', 'manual', 'email', 'slack'
+    source_format: str = "raw"  # 'raw', 'otter', 'fireflies', 'email', 'slack'
     source_name: str = Field(..., min_length=1, max_length=255)
     raw_content: str = Field(..., min_length=1)
-    source_metadata: Optional[Dict[str, Any]] = {}  # date, attendees, etc.
+    meeting_type: Optional[str] = None  # 'sprint_planning', 'standup', 'retrospective', etc.
+    source_metadata: Optional[Dict[str, Any]] = {}  # date, attendees, duration, etc.
 
 
 class SuggestionResponse(BaseModel):
@@ -304,6 +313,7 @@ class SuggestionApplyRequest(BaseModel):
     is_approved: bool
     edited_title: Optional[str] = None
     edited_description: Optional[str] = None
+    reviewer_note: Optional[str] = None
 
 
 class BulkSuggestionApplyRequest(BaseModel):
@@ -375,10 +385,13 @@ class TeamMemberResponse(BaseModel):
 
 class CardCreate(BaseModel):
     """Schema for creating a planning card from a node."""
-    node_id: str
+    node_id: Optional[str] = None
     session_id: str
+    title: Optional[str] = None
+    description: Optional[str] = None
     priority: Optional[str] = "medium"
     due_date: Optional[date] = None
+    is_out_of_scope: bool = False
 
 
 class CardUpdate(BaseModel):
@@ -387,6 +400,9 @@ class CardUpdate(BaseModel):
     priority: Optional[str] = None
     due_date: Optional[date] = None
     estimated_hours: Optional[float] = None
+    actual_hours: Optional[float] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
 
 
 class AssignmentCreate(BaseModel):
@@ -409,21 +425,80 @@ class CardAssignmentResponse(BaseModel):
 class CardResponse(BaseModel):
     """Schema for planning card response."""
     id: str
-    node_id: str
+    node_id: Optional[str] = None
     session_id: str
     node_title: str
     node_description: Optional[str] = None
     node_type: str
+    node_status: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
     status: str
     priority: str
+    is_out_of_scope: bool = False
     due_date: Optional[date] = None
     estimated_hours: Optional[float] = None
+    actual_hours: Optional[float] = None
     assignments: List[CardAssignmentResponse] = []
+    acceptance_criteria: List['AcceptanceCriterionResponse'] = []
+    comments: List['CardCommentResponse'] = []
+    ac_total: int = 0
+    ac_completed: int = 0
     completed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
+
+
+class AcceptanceCriterionResponse(BaseModel):
+    """Schema for acceptance criterion response."""
+    id: str
+    card_id: str
+    node_id: Optional[str] = None
+    description: str
+    is_completed: bool
+    completed_at: Optional[datetime] = None
+    order_index: int = 0
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AcceptanceCriterionCreate(BaseModel):
+    """Schema for creating an acceptance criterion."""
+    description: str
+    node_id: Optional[str] = None
+
+
+class AcceptanceCriterionUpdate(BaseModel):
+    """Schema for updating an acceptance criterion."""
+    description: Optional[str] = None
+    is_completed: Optional[bool] = None
+
+
+class CardCommentResponse(BaseModel):
+    """Schema for card comment response."""
+    id: str
+    card_id: str
+    author_name: Optional[str] = None
+    content: str
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CardCommentCreate(BaseModel):
+    """Schema for adding a comment to a card."""
+    content: str
+
+
+class WorkloadEntry(BaseModel):
+    """Schema for a single team member workload entry."""
+    team_member_id: str
+    team_member_name: str
+    avatar_color: Optional[str] = None
+    total_cards: int = 0
+    cards_by_status: Dict[str, int] = {}
 
 
 class PlanningBoardResponse(BaseModel):
@@ -451,6 +526,10 @@ class ExportRequest(BaseModel):
     include_deferred: bool = False
     include_change_log: bool = False
     include_assignments: bool = False
+    include_sources: bool = False
+    include_completed: bool = False
+    include_conversations: bool = False
+    detail_level: str = "detailed"  # 'summary', 'detailed', 'full'
     date_from: Optional[datetime] = None
 
 

@@ -6,6 +6,7 @@ import {
   DocumentArrowDownIcon, CheckIcon,
 } from '@heroicons/react/24/outline';
 import { useStore } from '@/stores/useStore';
+import ExportHistory, { recordExport } from './ExportHistory';
 
 interface ExportModalProps {
   sessionId: string;
@@ -38,6 +39,11 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
   const [includeDeferred, setIncludeDeferred] = useState(false);
   const [includeChangeLog, setIncludeChangeLog] = useState(false);
   const [includeAssignments, setIncludeAssignments] = useState(false);
+  const [includeSources, setIncludeSources] = useState(false);
+  const [includeCompleted, setIncludeCompleted] = useState(false);
+  const [includeConversations, setIncludeConversations] = useState(false);
+  const [detailLevel, setDetailLevel] = useState<'summary' | 'detailed' | 'full'>('detailed');
+  const [pdfTemplate, setPdfTemplate] = useState<'standard' | 'executive' | 'technical'>('standard');
   const [isExporting, setIsExporting] = useState(false);
   const [exportedContent, setExportedContent] = useState<string | null>(null);
 
@@ -62,6 +68,11 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
         include_deferred: includeDeferred,
         include_change_log: includeChangeLog,
         include_assignments: includeAssignments,
+        include_sources: includeSources,
+        include_completed: includeCompleted,
+        include_conversations: includeConversations,
+        detail_level: detailLevel,
+        template: selectedFormat === 'pdf' ? pdfTemplate : undefined,
       };
 
       if (selectedFormat === 'pdf') {
@@ -71,18 +82,24 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
 
         // Then download the real PDF from backend
         const pdfBlob = await downloadPdf(exportOptions);
-        triggerFileDownload(pdfBlob, 'scope_document.pdf');
+        const filename = 'scope_document.pdf';
+        triggerFileDownload(pdfBlob, filename);
+        recordExport(sessionId, 'pdf', exportOptions, filename);
       } else if (selectedFormat === 'json') {
         const content = await downloadJson(exportOptions);
         setExportedContent(content);
+        const filename = 'scope_document.json';
         const blob = new Blob([content], { type: 'application/json' });
-        triggerFileDownload(blob, 'scope_document.json');
+        triggerFileDownload(blob, filename);
+        recordExport(sessionId, 'json', exportOptions, filename);
       } else {
         // Markdown (default)
         const content = await downloadMarkdown(exportOptions);
         setExportedContent(content);
+        const filename = 'scope_document.md';
         const blob = new Blob([content], { type: 'text/markdown' });
-        triggerFileDownload(blob, 'scope_document.md');
+        triggerFileDownload(blob, filename);
+        recordExport(sessionId, 'markdown', exportOptions, filename);
       }
     } catch (exportError) {
       console.error('Export failed:', exportError);
@@ -137,6 +154,9 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
                 { key: 'deferred', label: 'Deferred items', description: 'Items pushed to later phases', value: includeDeferred, setter: setIncludeDeferred },
                 { key: 'changelog', label: 'Change log', description: 'History of all scope changes', value: includeChangeLog, setter: setIncludeChangeLog },
                 { key: 'assignments', label: 'Team assignments', description: 'Who is working on what', value: includeAssignments, setter: setIncludeAssignments },
+                { key: 'sources', label: 'Sources', description: 'Meeting notes, documents & origins', value: includeSources, setter: setIncludeSources },
+                { key: 'completed', label: 'Completed items', description: 'Items marked as done', value: includeCompleted, setter: setIncludeCompleted },
+                { key: 'conversations', label: 'Conversations', description: 'Chat history for each node', value: includeConversations, setter: setIncludeConversations },
               ].map((option) => (
                 <label
                   key={option.key}
@@ -166,6 +186,51 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
             </div>
           </div>
 
+          {/* Detail Level */}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-2">Detail Level</label>
+            <select
+              value={detailLevel}
+              onChange={(e) => setDetailLevel(e.target.value as 'summary' | 'detailed' | 'full')}
+              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm 
+                         text-neutral-800 bg-white focus:outline-none focus:ring-2 
+                         focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="summary">Summary — titles only</option>
+              <option value="detailed">Detailed — titles & descriptions</option>
+              <option value="full">Full — everything incl. acceptance criteria</option>
+            </select>
+          </div>
+
+          {/* PDF Template (only for PDF) */}
+          {selectedFormat === 'pdf' && (
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">PDF Template</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { key: 'standard', label: 'Standard', desc: 'Full scope document' },
+                  { key: 'executive', label: 'Executive', desc: 'High-level summary' },
+                  { key: 'technical', label: 'Technical', desc: 'Detailed with AC & hours' },
+                ].map((tpl) => (
+                  <button
+                    key={tpl.key}
+                    onClick={() => setPdfTemplate(tpl.key as typeof pdfTemplate)}
+                    className={`p-2 rounded-lg border text-left transition-all ${
+                      pdfTemplate === tpl.key
+                        ? 'border-primary-500 bg-primary-50'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    <p className={`text-xs font-medium ${
+                      pdfTemplate === tpl.key ? 'text-primary-700' : 'text-neutral-700'
+                    }`}>{tpl.label}</p>
+                    <p className="text-[10px] text-neutral-500">{tpl.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Preview of exported content */}
           {exportedContent && (
             <div>
@@ -177,6 +242,8 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
               </pre>
             </div>
           )}
+          {/* Export History */}
+          <ExportHistory sessionId={sessionId} />
         </div>
 
         {/* Footer */}

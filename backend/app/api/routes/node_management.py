@@ -7,10 +7,14 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List, Optional
 from app.db.session import get_db
-from app.models.database import Node, NodeType, Session as DBSession, Conversation
+from app.models.database import Node, NodeType, NodeStatus, ChangeType, Session as DBSession, Conversation
 from app.models.schemas import NodeCreate, NodeUpdate, NodeResponse
 from app.core.logger import get_logger
 from app.core.exceptions import resource_not_found_error
+from app.core.auth import get_optional_user
+from app.models.database import User
+from app.services.audit_service import audit_service
+from app.services.notification_service import notification_service
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/nodes", tags=["node-management"])
@@ -19,7 +23,8 @@ router = APIRouter(prefix="/nodes", tags=["node-management"])
 @router.post("/add", response_model=NodeResponse, status_code=status.HTTP_201_CREATED)
 async def add_node(
     node_data: NodeCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """
     Add a new node to the requirements tree.
@@ -89,8 +94,33 @@ async def add_node(
         )
         
         db.add(new_node)
+        db.flush()
+        
+        # Record creation in audit trail
+        audit_service.record_change(
+            database=db,
+            node_id=new_node.id,
+            change_type=ChangeType.CREATED,
+            new_value=new_node.question,
+            changed_by=current_user.id if current_user else None,
+            session_id=UUID(node_data.session_id),
+        )
+        
         db.commit()
         db.refresh(new_node)
+        
+        # Fire email notification (non-blocking, errors are logged)
+        try:
+            notification_service.notify_node_change(
+                db=db,
+                session_id=UUID(node_data.session_id),
+                node_id=new_node.id,
+                change_type=ChangeType.CREATED.value,
+                new_value=new_node.question,
+                changed_by=current_user.id if current_user else None,
+            )
+        except Exception:
+            pass  # never fail the request for a notification error
         
         logger.info(f"Added node {new_node.id} to session {node_data.session_id}")
         
@@ -123,7 +153,8 @@ async def add_node(
 async def delete_node(
     node_id: str,
     cascade: bool = True,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """
     Delete a node from the requirements tree.
@@ -167,6 +198,29 @@ async def delete_node(
         session_id = node.session_id
         parent_id = node.parent_id
         deleted_order_index = node.order_index
+        
+        # Record deletion in audit trail before actually deleting
+        audit_service.record_change(
+            database=db,
+            node_id=node.id,
+            change_type=ChangeType.DELETED,
+            old_value=node.question,
+            changed_by=current_user.id if current_user else None,
+            session_id=session_id,
+        )
+        
+        # Fire email notification before deletion removes the node
+        try:
+            notification_service.notify_node_change(
+                db=db,
+                session_id=session_id,
+                node_id=node.id,
+                change_type=ChangeType.DELETED.value,
+                old_value=node.question,
+                changed_by=current_user.id if current_user else None,
+            )
+        except Exception:
+            pass
         
         if cascade:
             # Delete node and all descendants (cascade delete)
@@ -243,7 +297,8 @@ async def delete_node(
 async def update_node(
     node_id: str,
     node_update: NodeUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """
     Update node question, answer, or metadata.
@@ -264,12 +319,44 @@ async def update_node(
         if not node:
             raise resource_not_found_error("Node", node_id)
         
-        # Update fields if provided
+        # Update fields if provided, recording each change
+        content_changed = False
+
         if node_update.question is not None:
+            old_question = node.question
             node.question = node_update.question
+            if old_question != node_update.question:
+                content_changed = True
+                audit_service.record_change(
+                    database=db,
+                    node_id=node.id,
+                    change_type=ChangeType.MODIFIED,
+                    field_changed="question",
+                    old_value=old_question,
+                    new_value=node_update.question,
+                    changed_by=current_user.id if current_user else None,
+                    session_id=node.session_id,
+                )
         
         if node_update.answer is not None:
+            old_answer = node.answer
             node.answer = node_update.answer
+            if old_answer != node_update.answer:
+                content_changed = True
+                audit_service.record_change(
+                    database=db,
+                    node_id=node.id,
+                    change_type=ChangeType.MODIFIED,
+                    field_changed="answer",
+                    old_value=old_answer,
+                    new_value=node_update.answer,
+                    changed_by=current_user.id if current_user else None,
+                    session_id=node.session_id,
+                )
+        
+        # Mark node status as modified so it shows up in the "Modified" filter
+        if content_changed and node.status not in (NodeStatus.COMPLETED, NodeStatus.REMOVED):
+            node.status = NodeStatus.MODIFIED
         
         if node_update.node_type is not None:
             # Don't allow changing root node type
@@ -285,6 +372,18 @@ async def update_node(
         
         db.commit()
         db.refresh(node)
+        
+        # Fire email notification for modifications
+        try:
+            notification_service.notify_node_change(
+                db=db,
+                session_id=node.session_id,
+                node_id=node.id,
+                change_type=ChangeType.MODIFIED.value,
+                changed_by=current_user.id if current_user else None,
+            )
+        except Exception:
+            pass
         
         logger.info(f"Updated node {node_id}")
         
@@ -317,7 +416,8 @@ async def update_node(
 async def move_node(
     node_id: str,
     new_parent_id: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """
     Move a node to a different parent in the tree.
@@ -369,6 +469,18 @@ async def move_node(
         old_parent_id = node.parent_id
         old_order_index = node.order_index
         
+        # Record move in audit trail
+        audit_service.record_change(
+            database=db,
+            node_id=node.id,
+            change_type=ChangeType.MOVED,
+            field_changed="parent_id",
+            old_value=str(old_parent_id) if old_parent_id else None,
+            new_value=new_parent_id,
+            changed_by=current_user.id if current_user else None,
+            session_id=node.session_id,
+        )
+        
         node.parent_id = UUID(new_parent_id) if new_parent_id else None
         node.depth = new_depth
         
@@ -393,6 +505,21 @@ async def move_node(
         
         db.commit()
         db.refresh(node)
+        
+        # Fire email notification for move
+        try:
+            notification_service.notify_node_change(
+                db=db,
+                session_id=node.session_id,
+                node_id=node.id,
+                change_type=ChangeType.MOVED.value,
+                field_changed="parent_id",
+                old_value=str(old_parent_id) if old_parent_id else None,
+                new_value=new_parent_id,
+                changed_by=current_user.id if current_user else None,
+            )
+        except Exception:
+            pass
         
         logger.info(f"Moved node {node_id}")
         
@@ -479,3 +606,22 @@ def _update_descendant_depths_by_change(node_id: UUID, depth_change: int, db: Se
     for child in children:
         child.depth += depth_change
         _update_descendant_depths_by_change(child.id, depth_change, db)
+
+
+# ===== AI-3.1: Smart Status Suggestions =====
+
+@router.post("/{node_id}/suggest-status")
+async def suggest_status(
+    node_id: str,
+    db: Session = Depends(get_db),
+):
+    """AI-powered status suggestion based on node context, children, and history."""
+    try:
+        from app.services.ai_features_service import suggest_status as _suggest
+        suggestions = await _suggest(db, UUID(node_id))
+        return {"suggestions": suggestions}
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    except Exception as error:
+        logger.error(f"Error suggesting status: {error}")
+        raise HTTPException(status_code=500, detail=str(error))

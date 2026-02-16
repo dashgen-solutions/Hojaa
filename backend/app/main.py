@@ -22,6 +22,7 @@ from app.api.routes import (
     audit,
     planning,
     export,
+    notifications,
 )
 from app.models.schemas import HealthResponse
 from app.middleware.metrics import MetricsMiddleware
@@ -67,6 +68,7 @@ app.include_router(sources.router, prefix="/api")  # Source ingestion (Phase 1)
 app.include_router(audit.router, prefix="/api")  # Audit trail & node status (Phase 2/3)
 app.include_router(planning.router, prefix="/api")  # Planning board (Phase 4)
 app.include_router(export.router, prefix="/api")  # Export (Phase 5)
+app.include_router(notifications.router, prefix="/api")  # Email notifications (Mailchimp)
 
 
 @app.on_event("startup")

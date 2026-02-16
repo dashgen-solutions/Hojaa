@@ -41,6 +41,23 @@ class ScopeChange(BaseModel):
     source_quote: str = Field(
         description="Exact quote from the source that supports this change"
     )
+    decided_by: Optional[str] = Field(
+        default=None,
+        description="Name of the person who made or proposed this decision, if identifiable from context"
+    )
+
+
+class DecisionMaker(BaseModel):
+    """A person identified as making or influencing scope decisions."""
+    name: str = Field(description="Full name (or label) of the person")
+    role: Optional[str] = Field(
+        default=None,
+        description="Inferred role (e.g. 'Product Owner', 'CTO', 'Stakeholder')"
+    )
+    decisions: List[str] = Field(
+        default=[],
+        description="Brief list of decisions this person drove in the meeting"
+    )
 
 
 class MeetingNotesOutput(BaseModel):
@@ -57,6 +74,10 @@ class MeetingNotesOutput(BaseModel):
     questions_raised: List[str] = Field(
         description="Questions that need clarification",
         default=[]
+    )
+    decision_makers: List[DecisionMaker] = Field(
+        default=[],
+        description="People identified as decision makers or key influencers in the discussion"
     )
 
 
@@ -223,3 +244,56 @@ class MeetingNotesContext(BaseModel):
     raw_content: str = Field(description="Raw meeting notes or document text")
     current_graph_summary: str = Field(description="Summary of current graph state (nodes and structure)")
     session_id: str = Field(description="Session ID for reference")
+
+
+# ===== AI-3.1: Smart Status Suggestions =====
+
+class StatusSuggestion(BaseModel):
+    """AI-generated suggestion for a node's status."""
+    suggested_status: str = Field(description="Suggested status: active, deferred, completed, removed")
+    confidence: float = Field(description="Confidence 0-1", ge=0.0, le=1.0)
+    reasoning: str = Field(description="Why this status is appropriate")
+
+
+class StatusSuggestionsOutput(BaseModel):
+    """Output from smart status suggestion agent."""
+    suggestions: List[StatusSuggestion] = Field(
+        description="One or more status suggestions, ordered by confidence",
+        min_length=1,
+    )
+
+
+# ===== AI-3.3: AC Generation =====
+
+class GeneratedAC(BaseModel):
+    """A single AI-generated acceptance criterion."""
+    description: str = Field(description="Clear, testable acceptance criterion")
+    priority: Literal["must", "should", "could"] = Field(
+        default="must",
+        description="MoSCoW priority"
+    )
+
+
+class ACGenerationOutput(BaseModel):
+    """Output from AI acceptance-criteria generation agent."""
+    acceptance_criteria: List[GeneratedAC] = Field(
+        description="List of acceptance criteria derived from the node description and context",
+        min_length=1,
+    )
+
+
+# ===== AI-3.4 / AI-3.5: Export Structuring & Summary =====
+
+class ExportSummaryOutput(BaseModel):
+    """AI-generated executive summary for export documents."""
+    executive_summary: str = Field(
+        description="A concise, professional executive summary of the project scope (3-5 paragraphs)"
+    )
+    key_themes: List[str] = Field(
+        default=[],
+        description="Top 3-5 recurring themes across the scope"
+    )
+    risk_highlights: List[str] = Field(
+        default=[],
+        description="Key risks or open questions to flag"
+    )

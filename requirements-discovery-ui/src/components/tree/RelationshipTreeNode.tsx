@@ -14,8 +14,12 @@ import {
   PencilIcon,
   TrashIcon,
   XMarkIcon,
+  ClockIcon,
+  ArrowPathIcon,
+  StarIcon,
+  DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
-import { updateNode, deleteNode, addNode } from "@/lib/api";
+import { updateNode, deleteNode, addNode, updateNodeStatus } from "@/lib/api";
 
 interface TreeNodeData {
   id: string;
@@ -26,6 +30,11 @@ interface TreeNodeData {
   children?: TreeNodeData[];
   isExpanded?: boolean;
   canExpand?: boolean;
+  status?: string;
+  deferred_reason?: string;
+  completed_at?: string;
+  source_name?: string;
+  source_type?: string;
 }
 
 interface RelationshipTreeNodeProps {
@@ -60,6 +69,9 @@ export default function RelationshipTreeNode({
   const [isAddingChild, setIsAddingChild] = useState(false);
   const [newChildQuestion, setNewChildQuestion] = useState("");
   const [newChildAnswer, setNewChildAnswer] = useState("");
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [deferredReason, setDeferredReason] = useState("");
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
   const getNodeStyle = () => {
     switch (node.type) {
@@ -118,8 +130,54 @@ export default function RelationshipTreeNode({
     }
   };
 
+  const getStatusIndicator = () => {
+    switch (node.status) {
+      case "new":
+        return {
+          ringClass: "ring-2 ring-green-400 ring-offset-1",
+          opacityClass: "",
+          badgeLabel: "New",
+          badgeBg: "bg-green-100 text-green-700 border-green-200",
+          BadgeIcon: StarIcon,
+          dotColor: "bg-green-500",
+        };
+      case "modified":
+        return {
+          ringClass: "ring-2 ring-blue-400 ring-offset-1",
+          opacityClass: "",
+          badgeLabel: "Modified",
+          badgeBg: "bg-blue-100 text-blue-700 border-blue-200",
+          BadgeIcon: ArrowPathIcon,
+          dotColor: "bg-blue-500",
+        };
+      case "deferred":
+        return {
+          ringClass: "ring-1 ring-neutral-300",
+          opacityClass: "opacity-60",
+          badgeLabel: "Deferred",
+          badgeBg: "bg-neutral-200 text-neutral-600 border-neutral-300",
+          BadgeIcon: ClockIcon,
+          dotColor: "bg-neutral-400",
+        };
+      case "completed":
+        return {
+          ringClass: "ring-2 ring-emerald-400 ring-offset-1",
+          opacityClass: "",
+          badgeLabel: "Completed",
+          badgeBg: "bg-emerald-100 text-emerald-700 border-emerald-200",
+          BadgeIcon: CheckCircleIcon,
+          dotColor: "bg-emerald-500",
+        };
+      default:
+        return null;
+    }
+  };
+
   const style = getNodeStyle();
   const Icon = style.icon;
+  const statusIndicator = getStatusIndicator();
+
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const handleNodeClick = () => {
     if (onNodeClick && hasAnswer) {
@@ -181,6 +239,27 @@ export default function RelationshipTreeNode({
       alert("Failed to add child node");
     }
   };
+
+  const handleStatusChange = async (newStatus: string, reason?: string) => {
+    try {
+      await updateNodeStatus(node.id, newStatus, reason);
+      setShowStatusDropdown(false);
+      setPendingStatus(null);
+      setDeferredReason("");
+      if (onUpdate) onUpdate();
+    } catch (error) {
+      console.error("Error changing node status:", error);
+      alert("Failed to change status");
+    }
+  };
+
+  const STATUS_OPTIONS = [
+    { value: "active", label: "Active", bg: "bg-primary-50 text-primary-700 hover:bg-primary-100" },
+    { value: "new", label: "New", bg: "bg-green-50 text-green-700 hover:bg-green-100" },
+    { value: "modified", label: "Modified", bg: "bg-blue-50 text-blue-700 hover:bg-blue-100" },
+    { value: "deferred", label: "Deferred", bg: "bg-neutral-100 text-neutral-600 hover:bg-neutral-200" },
+    { value: "completed", label: "Completed", bg: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" },
+  ];
 
   // Render edit form
   if (isEditing) {
@@ -323,8 +402,12 @@ export default function RelationshipTreeNode({
             transform hover:-translate-y-0.5 transition-all duration-300 ease-smooth
             ${isRoot ? "min-w-[320px]" : "min-w-[280px]"} max-w-[380px]
             overflow-visible ${hasAnswer ? "cursor-pointer" : ""}
+            ${statusIndicator?.ringClass ?? ""}
+            ${statusIndicator?.opacityClass ?? ""}
           `}
           onClick={handleNodeClick}
+          onMouseEnter={() => statusIndicator && setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
         >
           {/* Top gradient bar */}
           <div
@@ -383,6 +466,150 @@ export default function RelationshipTreeNode({
                       Details
                     </span>
                   )}
+
+                  {/* Source badge — shows which source added this node */}
+                  {node.source_name && (
+                    <span
+                      className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200 flex items-center gap-1"
+                      title={`Added from: ${node.source_name} (${node.source_type || 'source'})`}
+                    >
+                      <DocumentDuplicateIcon className="w-3 h-3" />
+                      {node.source_name.length > 18 ? node.source_name.substring(0, 16) + '…' : node.source_name}
+                    </span>
+                  )}
+
+                  {/* Status badge — clickable to change status */}
+                  {statusIndicator && sessionId && !isRoot ? (
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowStatusDropdown(!showStatusDropdown);
+                        }}
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full border flex items-center gap-1 cursor-pointer transition-colors ${statusIndicator.badgeBg}`}
+                        title="Change status"
+                      >
+                        <statusIndicator.BadgeIcon className="w-3 h-3" />
+                        {statusIndicator.badgeLabel}
+                      </button>
+
+                      {showStatusDropdown && (
+                        <div
+                          className="absolute left-0 top-full mt-1 w-44 bg-white rounded-xl shadow-soft-lg border border-neutral-200 z-50 overflow-hidden animate-fade-in"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {pendingStatus === "deferred" ? (
+                            <div className="p-3 space-y-2">
+                              <p className="text-xs font-medium text-neutral-700">Reason for deferring:</p>
+                              <input
+                                type="text"
+                                placeholder="Optional reason…"
+                                value={deferredReason}
+                                onChange={(e) => setDeferredReason(e.target.value)}
+                                className="w-full text-xs px-2 py-1.5 border border-neutral-200 rounded-lg"
+                                autoFocus
+                              />
+                              <div className="flex gap-1.5">
+                                <button
+                                  onClick={() => handleStatusChange("deferred", deferredReason || undefined)}
+                                  className="flex-1 text-xs px-2 py-1 bg-neutral-600 text-white rounded-lg hover:bg-neutral-700"
+                                >
+                                  Defer
+                                </button>
+                                <button
+                                  onClick={() => { setPendingStatus(null); setDeferredReason(""); }}
+                                  className="text-xs px-2 py-1 text-neutral-500 hover:text-neutral-700"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            STATUS_OPTIONS
+                              .filter((opt) => opt.value !== node.status)
+                              .map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  onClick={() => {
+                                    if (opt.value === "deferred") {
+                                      setPendingStatus("deferred");
+                                    } else {
+                                      handleStatusChange(opt.value);
+                                    }
+                                  }}
+                                  className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${opt.bg}`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : statusIndicator ? (
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full border flex items-center gap-1 ${statusIndicator.badgeBg}`}
+                    >
+                      <statusIndicator.BadgeIcon className="w-3 h-3" />
+                      {statusIndicator.badgeLabel}
+                    </span>
+                  ) : null}
+
+                  {/* Standalone status dropdown for nodes with no visible badge (e.g. active) */}
+                  {!statusIndicator && showStatusDropdown && sessionId && !isRoot && (
+                    <div className="relative">
+                      <div
+                        className="absolute left-0 top-0 mt-1 w-44 bg-white rounded-xl shadow-soft-lg border border-neutral-200 z-50 overflow-hidden animate-fade-in"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {pendingStatus === "deferred" ? (
+                          <div className="p-3 space-y-2">
+                            <p className="text-xs font-medium text-neutral-700">Reason for deferring:</p>
+                            <input
+                              type="text"
+                              placeholder="Optional reason…"
+                              value={deferredReason}
+                              onChange={(e) => setDeferredReason(e.target.value)}
+                              className="w-full text-xs px-2 py-1.5 border border-neutral-200 rounded-lg"
+                              autoFocus
+                            />
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleStatusChange("deferred", deferredReason || undefined)}
+                                className="flex-1 text-xs px-2 py-1 bg-neutral-600 text-white rounded-lg hover:bg-neutral-700"
+                              >
+                                Defer
+                              </button>
+                              <button
+                                onClick={() => { setPendingStatus(null); setDeferredReason(""); }}
+                                className="text-xs px-2 py-1 text-neutral-500 hover:text-neutral-700"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          STATUS_OPTIONS
+                            .filter((opt) => opt.value !== (node.status || "active"))
+                            .map((opt) => (
+                              <button
+                                key={opt.value}
+                                onClick={() => {
+                                  if (opt.value === "deferred") {
+                                    setPendingStatus("deferred");
+                                  } else {
+                                    handleStatusChange(opt.value);
+                                  }
+                                }}
+                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${opt.bg}`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -425,6 +652,17 @@ export default function RelationshipTreeNode({
                         >
                           <PlusIcon className="w-4 h-4" />
                           Add Child
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowMenu(false);
+                            setShowStatusDropdown(true);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                        >
+                          <ArrowPathIcon className="w-4 h-4" />
+                          Change Status
                         </button>
                         <div className="border-t border-neutral-100 my-1" />
                         <button
@@ -501,6 +739,29 @@ export default function RelationshipTreeNode({
               </div>
             )}
           </div>
+
+          {/* Status hover tooltip */}
+          {showTooltip && statusIndicator && (
+            <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 translate-y-full z-50 animate-fade-in">
+              <div className="bg-neutral-900 text-white text-xs rounded-xl px-3 py-2 shadow-lg min-w-[160px] max-w-[240px]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className={`w-2 h-2 rounded-full ${statusIndicator.dotColor}`} />
+                  <span className="font-semibold">{statusIndicator.badgeLabel}</span>
+                </div>
+                {node.deferred_reason && (
+                  <p className="text-neutral-300 leading-snug">
+                    Reason: {node.deferred_reason}
+                  </p>
+                )}
+                {node.completed_at && (
+                  <p className="text-neutral-400 mt-0.5">
+                    Completed: {new Date(node.completed_at).toLocaleDateString()}
+                  </p>
+                )}
+                <div className="absolute left-1/2 -translate-x-1/2 -top-1 w-2 h-2 bg-neutral-900 rotate-45" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

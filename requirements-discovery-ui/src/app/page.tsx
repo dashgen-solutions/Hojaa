@@ -10,6 +10,7 @@ import ChatInterface from "@/components/chat/ChatInterface";
 import DocumentUpload from "@/components/upload/DocumentUpload";
 import InitialQuestions from "@/components/questions/InitialQuestions";
 import AddSourceButton from "@/components/sources/AddSourceButton";
+import SourcesList from "@/components/sources/SourcesList";
 import SuggestionReview from "@/components/sources/SuggestionReview";
 import ExportModal from "@/components/export/ExportModal";
 import { createSession, listSources, getSourceDetail } from "@/lib/api";
@@ -20,7 +21,6 @@ import {
   CodeBracketIcon,
   SparklesIcon,
   ArrowRightIcon,
-  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 
 export default function Home() {
@@ -38,6 +38,7 @@ export default function Home() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showSourceSuggestions, setShowSourceSuggestions] = useState(false);
+  const [treeRefreshKey, setTreeRefreshKey] = useState(0);
   const { currentSourceDetail, sources, fetchSources } = useStore();
 
   useEffect(() => {
@@ -134,6 +135,10 @@ export default function Home() {
 
   const handleQuestionsComplete = () => {
     setCurrentStep("tree");
+    // Pre-fetch sources so the list is ready when tree view loads
+    if (sessionId) {
+      fetchSources(sessionId);
+    }
   };
 
   const handleNodeSelect = (nodeId: string) => {
@@ -214,24 +219,108 @@ export default function Home() {
 
           {currentStep === "tree" && (
             <>
-              {/* Source suggestions panel */}
+              {/* Source suggestions panel — fixed right overlay */}
               {showSourceSuggestions && currentSourceDetail?.suggestions && (
-                <div className="w-96 border-r border-neutral-200 bg-white overflow-y-auto p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-neutral-900">Review Suggestions</h3>
-                    <button
-                      onClick={() => setShowSourceSuggestions(false)}
-                      className="text-xs text-neutral-500 hover:text-neutral-700"
-                    >
-                      Close
-                    </button>
-                  </div>
-                  <SuggestionReview
-                    suggestions={currentSourceDetail.suggestions}
-                    sourceId={currentSourceDetail.id}
-                    onComplete={() => setShowSourceSuggestions(false)}
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-[90] bg-black/20"
+                    onClick={() => setShowSourceSuggestions(false)}
                   />
-                </div>
+                  {/* Panel */}
+                  <div className="fixed inset-y-0 right-0 z-[95] w-[460px] bg-white shadow-2xl border-l border-neutral-200 flex flex-col">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 shrink-0">
+                      <div>
+                        <h3 className="text-sm font-semibold text-neutral-900">
+                          {currentSourceDetail.source_name || "Source Details"}
+                        </h3>
+                        <p className="text-xs text-neutral-500 mt-0.5">
+                          {currentSourceDetail.source_type || "source"} &middot;{" "}
+                          {currentSourceDetail.is_processed ? "Processed" : "Pending"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setShowSourceSuggestions(false)}
+                        className="p-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
+                      >
+                        <span className="sr-only">Close</span>
+                        <svg className="w-5 h-5 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto">
+                      {/* Source Summary */}
+                      {currentSourceDetail.processed_summary && (
+                        <div className="px-5 py-3 bg-primary-50 border-b border-primary-100">
+                          <p className="text-xs font-medium text-primary-700 mb-1">AI Summary</p>
+                          <p className="text-xs text-primary-900 leading-relaxed">
+                            {currentSourceDetail.processed_summary}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Action Items & Questions from metadata */}
+                      {currentSourceDetail.source_metadata?.action_items?.length > 0 && (
+                        <div className="px-5 py-3 border-b border-neutral-100">
+                          <p className="text-xs font-medium text-neutral-700 mb-1.5">Action Items</p>
+                          <ul className="space-y-1">
+                            {currentSourceDetail.source_metadata.action_items.map((item: string, index: number) => (
+                              <li key={index} className="text-xs text-neutral-600 flex items-start gap-1.5">
+                                <span className="text-amber-500 mt-0.5">●</span>
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {currentSourceDetail.source_metadata?.questions_raised?.length > 0 && (
+                        <div className="px-5 py-3 border-b border-neutral-100">
+                          <p className="text-xs font-medium text-neutral-700 mb-1.5">Unresolved Questions</p>
+                          <ul className="space-y-1">
+                            {currentSourceDetail.source_metadata.questions_raised.map((question: string, index: number) => (
+                              <li key={index} className="text-xs text-neutral-600 flex items-start gap-1.5">
+                                <span className="text-blue-500 mt-0.5">?</span>
+                                {question}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Raw Content (collapsible) */}
+                      {currentSourceDetail.raw_content && (
+                        <details className="px-5 py-3 border-b border-neutral-100">
+                          <summary className="text-xs font-medium text-neutral-700 cursor-pointer hover:text-neutral-900">
+                            Original Content
+                          </summary>
+                          <pre className="mt-2 text-xs text-neutral-600 whitespace-pre-wrap bg-neutral-50 rounded-lg p-3 max-h-40 overflow-y-auto">
+                            {currentSourceDetail.raw_content}
+                          </pre>
+                        </details>
+                      )}
+
+                      {/* Suggestions */}
+                      <div className="px-5 py-4">
+                        <p className="text-xs font-medium text-neutral-700 mb-3">
+                          Scope Change Suggestions ({currentSourceDetail.suggestions.length})
+                        </p>
+                        <SuggestionReview
+                          suggestions={currentSourceDetail.suggestions}
+                          sourceId={currentSourceDetail.id}
+                          sessionId={sessionId || undefined}
+                          onComplete={() => {
+                            setShowSourceSuggestions(false);
+                            setTreeRefreshKey((previous) => previous + 1);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
 
               {selectedNode ? (
@@ -248,18 +337,17 @@ export default function Home() {
                               fetchSources(sessionId!);
                             }}
                           />
-                          {sources.length > 0 && (
-                            <span className="text-xs text-neutral-500">
-                              <DocumentTextIcon className="w-3.5 h-3.5 inline mr-1" />
-                              {sources.length} source{sources.length !== 1 ? 's' : ''}
-                            </span>
-                          )}
+                          <SourcesList
+                            sessionId={sessionId!}
+                            onSelectSource={() => setShowSourceSuggestions(true)}
+                          />
                         </div>
                       </div>
                       <TreeVisualization
                         sessionId={sessionId}
                         onNodeSelect={handleNodeSelect}
                         selectedNodeId={selectedNode}
+                        refreshKey={treeRefreshKey}
                       />
                     </div>
                   }
@@ -290,18 +378,17 @@ export default function Home() {
                             fetchSources(sessionId!);
                           }}
                         />
-                        {sources.length > 0 && (
-                          <span className="text-xs text-neutral-500">
-                            <DocumentTextIcon className="w-3.5 h-3.5 inline mr-1" />
-                            {sources.length} source{sources.length !== 1 ? 's' : ''}
-                          </span>
-                        )}
+                        <SourcesList
+                          sessionId={sessionId!}
+                          onSelectSource={() => setShowSourceSuggestions(true)}
+                        />
                       </div>
                     </div>
                     <TreeVisualization
                       sessionId={sessionId}
                       onNodeSelect={handleNodeSelect}
                       selectedNodeId={null}
+                      refreshKey={treeRefreshKey}
                     />
                   </div>
                 </div>

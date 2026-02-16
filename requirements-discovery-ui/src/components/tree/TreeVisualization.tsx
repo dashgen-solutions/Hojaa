@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react";
 import RelationshipTreeNode from "./RelationshipTreeNode";
 import NodeDetailsModal from "./NodeDetailsModal";
+import DeferredItemsList from "./DeferredItemsList";
 import {
   DocumentTextIcon,
   MagnifyingGlassMinusIcon,
   MagnifyingGlassPlusIcon,
+  MagnifyingGlassIcon,
   ArrowPathIcon,
-  SparklesIcon,
+  FunnelIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
 import { getTree } from "@/lib/api";
 
@@ -18,6 +21,9 @@ interface TreeNodeData {
   answer?: string;
   node_type?: string;
   type?: "root" | "feature" | "detail";
+  status?: string;
+  deferred_reason?: string;
+  completed_at?: string;
   depth: number;
   children?: TreeNodeData[];
   isExpanded?: boolean;
@@ -25,18 +31,22 @@ interface TreeNodeData {
   canExpand?: boolean;
   can_expand?: boolean;
   order_index?: number;
+  source_name?: string;
+  source_type?: string;
 }
 
 interface TreeVisualizationProps {
   sessionId: string;
   onNodeSelect?: (nodeId: string) => void;
   selectedNodeId?: string | null;
+  refreshKey?: number;
 }
 
 export default function TreeVisualization({
   sessionId,
   onNodeSelect,
   selectedNodeId,
+  refreshKey,
 }: TreeVisualizationProps) {
   const [treeData, setTreeData] = useState<TreeNodeData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +55,10 @@ export default function TreeVisualization({
   const [selectedNodeForModal, setSelectedNodeForModal] =
     useState<TreeNodeData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showDeferred, setShowDeferred] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<string>("");
 
   const fetchTree = async () => {
     try {
@@ -52,10 +66,21 @@ export default function TreeVisualization({
       setError(null);
       const response = await getTree(sessionId);
 
+      // Tree is still being built — show nothing yet
+      if (response.pending) {
+        setTreeData(null);
+        return;
+      }
+
       const convertNode = (node: any, depth: number = 0): TreeNodeData => ({
         id: node.id,
         question: node.question,
         answer: node.answer,
+        status: node.status || "active",
+        deferred_reason: node.deferred_reason,
+        completed_at: node.completed_at,
+        source_name: node.source_name || undefined,
+        source_type: node.source_type || undefined,
         type:
           node.node_type === "ROOT"
             ? "root"
@@ -84,7 +109,7 @@ export default function TreeVisualization({
     if (sessionId) {
       fetchTree();
     }
-  }, [sessionId]);
+  }, [sessionId, refreshKey]);
 
   const toggleNode = (nodeId: string) => {
     const toggleInTree = (node: TreeNodeData): TreeNodeData => {
@@ -130,6 +155,44 @@ export default function TreeVisualization({
     setTimeout(() => setSelectedNodeForModal(null), 300);
   };
 
+  /** Collect unique source names from the tree for the filter dropdown. */
+  const collectSources = (node: TreeNodeData): string[] => {
+    const sources: string[] = [];
+    if (node.source_name) sources.push(node.source_name);
+    (node.children || []).forEach((c) => sources.push(...collectSources(c)));
+    return sources;
+  };
+  const uniqueSources = treeData
+    ? Array.from(new Set(collectSources(treeData))).sort()
+    : [];
+
+  /** Recursively filter tree, keeping a node if it or any descendant matches. */
+  const filterTree = (node: TreeNodeData): TreeNodeData | null => {
+    const statusMatch =
+      statusFilter === "all" || node.type === "root" || node.status === statusFilter;
+    const searchMatch =
+      !searchQuery ||
+      node.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (node.answer || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const sourceMatch =
+      !sourceFilter || node.type === "root" || node.source_name === sourceFilter;
+
+    const filteredChildren = (node.children || [])
+      .map(filterTree)
+      .filter(Boolean) as TreeNodeData[];
+
+    // Keep this node if it directly matches, or if any child survived the filter
+    if ((statusMatch && searchMatch && sourceMatch) || filteredChildren.length > 0) {
+      return { ...node, children: filteredChildren };
+    }
+    return null;
+  };
+
+  const filteredTree =
+    treeData && (statusFilter !== "all" || searchQuery || sourceFilter)
+      ? filterTree(treeData)
+      : treeData;
+
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center bg-neutral-50">
@@ -169,10 +232,26 @@ export default function TreeVisualization({
   if (!treeData) {
     return (
       <div className="h-full flex items-center justify-center bg-neutral-50">
-        <p className="text-neutral-500">No data available</p>
+        <div className="text-center">
+          <div className="relative w-12 h-12 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+          </div>
+          <p className="text-neutral-500">Building requirements map…</p>
+          <p className="text-neutral-400 text-sm mt-1">Complete the questions first to generate the tree</p>
+        </div>
       </div>
     );
   }
+
+  const STATUS_FILTER_OPTIONS = [
+    { value: "all", label: "All" },
+    { value: "active", label: "Active" },
+    { value: "new", label: "New" },
+    { value: "modified", label: "Modified" },
+    { value: "deferred", label: "Deferred" },
+    { value: "completed", label: "Completed" },
+  ];
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -224,34 +303,128 @@ export default function TreeVisualization({
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Tree Content */}
-      <div className="flex-1 overflow-auto p-8 bg-neutral-50/50">
-        <div
-          className="inline-block min-w-full"
-          style={{
-            transform: `scale(${zoom / 100})`,
-            transformOrigin: "top center",
-            transition: "transform 0.2s ease-smooth",
-          }}
-        >
-          <RelationshipTreeNode
-            node={treeData}
-            sessionId={sessionId}
-            onToggle={toggleNode}
-            onExpand={handleExpandNode}
-            onNodeClick={handleNodeClick}
-            onUpdate={fetchTree}
-            isRoot={true}
-            selectedNodeId={selectedNodeId}
-          />
+        {/* Filter & Search Toolbar */}
+        <div className="px-4 pb-3 flex items-center gap-3 flex-wrap">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search nodes..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-neutral-200 bg-neutral-50
+                         focus:border-primary-300 focus:ring-1 focus:ring-primary-200 focus:bg-white transition-colors"
+            />
+          </div>
+
+          {/* Status filter pills */}
+          <div className="flex items-center gap-1">
+            <FunnelIcon className="w-3.5 h-3.5 text-neutral-400 mr-1" />
+            {STATUS_FILTER_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setStatusFilter(opt.value)}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-200 ${
+                  statusFilter === opt.value
+                    ? "bg-primary-600 text-white shadow-sm"
+                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Source filter */}
+          {uniqueSources.length > 0 && (
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="text-[11px] border border-neutral-200 rounded-lg px-2 py-1 bg-white text-neutral-600"
+            >
+              <option value="">All Sources</option>
+              {uniqueSources.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          )}
+
+          {/* Active scope toggle */}
+          <button
+            onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
+            className={`ml-auto px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-200 border ${
+              statusFilter === "active"
+                ? "bg-primary-50 text-primary-700 border-primary-200"
+                : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
+            }`}
+          >
+            Active scope only
+          </button>
+          <button
+            onClick={() => setShowDeferred(!showDeferred)}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-200 border flex items-center gap-1 ${
+              showDeferred
+                ? "bg-neutral-700 text-white border-neutral-700"
+                : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
+            }`}
+          >
+            <ClockIcon className="w-3.5 h-3.5" />
+            Deferred
+          </button>
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Tree Content + optional Deferred panel */}
+      <div className="flex-1 overflow-hidden flex">
+        <div className="flex-1 overflow-auto p-8 bg-neutral-50/50">
+          {filteredTree ? (
+            <div
+              className="inline-block min-w-full"
+              style={{
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: "top center",
+                transition: "transform 0.2s ease-smooth",
+              }}
+            >
+              <RelationshipTreeNode
+                node={filteredTree}
+                sessionId={sessionId}
+                onToggle={toggleNode}
+                onExpand={handleExpandNode}
+                onNodeClick={handleNodeClick}
+                onUpdate={fetchTree}
+                isRoot={true}
+                selectedNodeId={selectedNodeId}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-neutral-400">
+              <FunnelIcon className="w-8 h-8 mb-2" />
+              <p className="text-sm font-medium">No nodes match the current filter</p>
+              <button
+                onClick={() => { setStatusFilter("all"); setSearchQuery(""); setSourceFilter(""); }}
+                className="mt-2 text-xs text-primary-600 hover:underline"
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Deferred items side panel */}
+        {showDeferred && (
+          <div className="w-80 flex-shrink-0 border-l border-neutral-200 bg-white overflow-y-auto p-4">
+            <DeferredItemsList sessionId={sessionId} onReactivated={fetchTree} />
+          </div>
+        )}
+      </div>
+
+      {/* Legend: types + status indicators */}
       <div className="border-t border-neutral-200/60 bg-white p-3 flex-shrink-0">
-        <div className="flex items-center justify-center gap-6 text-xs">
+        <div className="flex items-center justify-center gap-4 text-xs flex-wrap">
+          {/* Type legend */}
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-md bg-gradient-to-br from-primary-500 to-primary-600"></div>
             <span className="text-neutral-600 font-medium">Project</span>
@@ -263,6 +436,26 @@ export default function TreeVisualization({
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-md bg-gradient-to-br from-success-500 to-success-600"></div>
             <span className="text-neutral-600 font-medium">Requirement</span>
+          </div>
+
+          <div className="w-px h-4 bg-neutral-200 mx-1" />
+
+          {/* Status legend */}
+          <div className="flex items-center gap-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+            <span className="text-neutral-500">New</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
+            <span className="text-neutral-500">Modified</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-neutral-400" />
+            <span className="text-neutral-500">Deferred</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-neutral-500">Completed</span>
           </div>
         </div>
       </div>

@@ -12,6 +12,7 @@ from app.models.database import (
     Source, SourceSuggestion, NodeHistory
 )
 from app.services.audit_service import audit_service
+from app.services.planning_service import planning_service
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -56,6 +57,16 @@ class GraphService:
         node.status = NodeStatus(new_status)
         node.updated_at = datetime.utcnow()
         
+        # Populate lifecycle metadata
+        if new_status == "deferred":
+            node.deferred_reason = reason
+        elif new_status == "completed":
+            node.completed_at = datetime.utcnow()
+        elif new_status == "active":
+            # Clear deferred / completed metadata on reactivation
+            node.deferred_reason = None
+            node.completed_at = None
+        
         # Record in audit trail
         audit_service.record_change(
             database=database,
@@ -86,6 +97,14 @@ class GraphService:
         database.commit()
         database.refresh(node)
         
+        # Sync planning board cards with the new node status
+        planning_service.sync_node_to_cards(
+            database=database,
+            node_id=node_id,
+            node_status=new_status,
+            session_id=node.session_id,
+        )
+        
         return self._serialize_node(node)
     
     def get_filtered_nodes(
@@ -94,9 +113,13 @@ class GraphService:
         session_id: UUID,
         status_filter: Optional[str] = None,
         node_type_filter: Optional[str] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        source_id: Optional[str] = None,
+        search: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Get nodes filtered by status and/or type.
+        Get nodes filtered by status, type, date range, source, and/or keyword search.
         
         Returns:
             List of serialized nodes matching the filters
@@ -108,6 +131,21 @@ class GraphService:
         
         if node_type_filter:
             query = query.filter(Node.node_type == NodeType(node_type_filter))
+        
+        if date_from:
+            query = query.filter(Node.updated_at >= date_from)
+        
+        if date_to:
+            query = query.filter(Node.updated_at <= date_to)
+        
+        if source_id:
+            query = query.filter(Node.source_id == source_id)
+        
+        if search:
+            like_pattern = f"%{search}%"
+            query = query.filter(
+                Node.question.ilike(like_pattern) | Node.answer.ilike(like_pattern)
+            )
         
         nodes = query.order_by(Node.depth, Node.order_index).all()
         
@@ -121,6 +159,7 @@ class GraphService:
         approved_by: Optional[UUID] = None,
         edited_title: Optional[str] = None,
         edited_description: Optional[str] = None,
+        reviewer_note: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Apply or reject a source suggestion.
@@ -140,6 +179,7 @@ class GraphService:
         suggestion.is_approved = is_approved
         suggestion.approved_by = approved_by
         suggestion.approved_at = datetime.utcnow()
+        suggestion.reviewer_note = reviewer_note
         
         if not is_approved:
             database.commit()
@@ -154,6 +194,31 @@ class GraphService:
         description = edited_description or suggestion.description
         
         result_node = None
+        
+        def find_target_node():
+            """Find the target node by ID or fall back to title-based search."""
+            if suggestion.target_node_id:
+                found_node = database.query(Node).filter(
+                    Node.id == suggestion.target_node_id
+                ).first()
+                if found_node:
+                    return found_node
+            
+            # Fallback: search by title within the same session
+            if source and suggestion.title:
+                found_node = database.query(Node).filter(
+                    Node.session_id == source.session_id,
+                    Node.question.ilike(f"%{suggestion.title}%"),
+                    Node.node_type != NodeType.ROOT,
+                ).first()
+                if found_node:
+                    logger.info(
+                        f"Matched suggestion '{suggestion.title}' to node '{found_node.question}' "
+                        f"(ID: {found_node.id}) via title search"
+                    )
+                    return found_node
+            
+            return None
         
         if suggestion.change_type == "add":
             # Create a new node
@@ -190,7 +255,7 @@ class GraphService:
                 question=title,
                 answer=description,
                 node_type=NodeType.FEATURE,
-                status=NodeStatus.ACTIVE,
+                status=NodeStatus.NEW,
                 source_id=suggestion.source_id,
                 acceptance_criteria=suggestion.acceptance_criteria or [],
                 depth=parent_depth + 1,
@@ -215,87 +280,93 @@ class GraphService:
             result_node = new_node
         
         elif suggestion.change_type == "modify":
-            if suggestion.target_node_id:
-                target_node = database.query(Node).filter(
-                    Node.id == suggestion.target_node_id
-                ).first()
+            target_node = find_target_node()
+            if target_node:
+                old_question = target_node.question
+                old_answer = target_node.answer
                 
-                if target_node:
-                    old_question = target_node.question
-                    old_answer = target_node.answer
-                    
-                    target_node.question = title
-                    target_node.answer = description
-                    target_node.updated_at = datetime.utcnow()
-                    
-                    audit_service.record_change(
-                        database=database,
-                        node_id=target_node.id,
-                        change_type=ChangeType.MODIFIED,
-                        field_changed="question",
-                        old_value=old_question,
-                        new_value=title,
-                        change_reason=f"Modified from source: {source.source_name}" if source else "Modified from suggestion",
-                        source_id=suggestion.source_id,
-                        changed_by=approved_by,
-                    )
-                    
-                    result_node = target_node
+                target_node.question = title
+                target_node.answer = description
+                target_node.status = NodeStatus.MODIFIED
+                target_node.updated_at = datetime.utcnow()
+                
+                audit_service.record_change(
+                    database=database,
+                    node_id=target_node.id,
+                    change_type=ChangeType.MODIFIED,
+                    field_changed="question",
+                    old_value=old_question,
+                    new_value=title,
+                    change_reason=f"Modified from source: {source.source_name}" if source else "Modified from suggestion",
+                    source_id=suggestion.source_id,
+                    changed_by=approved_by,
+                )
+                result_node = target_node
+            else:
+                logger.warning(f"Could not find target node for modify suggestion '{suggestion.title}'")
         
         elif suggestion.change_type == "defer":
-            if suggestion.target_node_id:
-                target_node = database.query(Node).filter(
-                    Node.id == suggestion.target_node_id
-                ).first()
+            target_node = find_target_node()
+            if target_node:
+                old_status = target_node.status.value if target_node.status else "active"
+                target_node.status = NodeStatus.DEFERRED
+                target_node.deferred_reason = suggestion.reasoning or (
+                    f"Deferred from source: {source.source_name}" if source else "Deferred from suggestion"
+                )
+                target_node.updated_at = datetime.utcnow()
                 
-                if target_node:
-                    old_status = target_node.status.value
-                    target_node.status = NodeStatus.DEFERRED
-                    target_node.updated_at = datetime.utcnow()
-                    
-                    audit_service.record_change(
-                        database=database,
-                        node_id=target_node.id,
-                        change_type=ChangeType.STATUS_CHANGED,
-                        field_changed="status",
-                        old_value=old_status,
-                        new_value="deferred",
-                        change_reason=f"Deferred from source: {source.source_name}" if source else "Deferred from suggestion",
-                        source_id=suggestion.source_id,
-                        changed_by=approved_by,
-                    )
-                    
-                    result_node = target_node
+                audit_service.record_change(
+                    database=database,
+                    node_id=target_node.id,
+                    change_type=ChangeType.STATUS_CHANGED,
+                    field_changed="status",
+                    old_value=old_status,
+                    new_value="deferred",
+                    change_reason=f"Deferred from source: {source.source_name}" if source else "Deferred from suggestion",
+                    source_id=suggestion.source_id,
+                    changed_by=approved_by,
+                )
+                result_node = target_node
+            else:
+                logger.warning(f"Could not find target node for defer suggestion '{suggestion.title}'")
         
         elif suggestion.change_type == "remove":
-            if suggestion.target_node_id:
-                target_node = database.query(Node).filter(
-                    Node.id == suggestion.target_node_id
-                ).first()
+            target_node = find_target_node()
+            if target_node:
+                old_status = target_node.status.value if target_node.status else "active"
+                target_node.status = NodeStatus.REMOVED
+                target_node.updated_at = datetime.utcnow()
                 
-                if target_node:
-                    old_status = target_node.status.value
-                    target_node.status = NodeStatus.REMOVED
-                    target_node.updated_at = datetime.utcnow()
-                    
-                    audit_service.record_change(
-                        database=database,
-                        node_id=target_node.id,
-                        change_type=ChangeType.STATUS_CHANGED,
-                        field_changed="status",
-                        old_value=old_status,
-                        new_value="removed",
-                        change_reason=f"Removed from source: {source.source_name}" if source else "Removed from suggestion",
-                        source_id=suggestion.source_id,
-                        changed_by=approved_by,
-                    )
-                    
-                    result_node = target_node
+                audit_service.record_change(
+                    database=database,
+                    node_id=target_node.id,
+                    change_type=ChangeType.STATUS_CHANGED,
+                    field_changed="status",
+                    old_value=old_status,
+                    new_value="removed",
+                    change_reason=f"Removed from source: {source.source_name}" if source else "Removed from suggestion",
+                    source_id=suggestion.source_id,
+                    changed_by=approved_by,
+                )
+                result_node = target_node
+            else:
+                logger.warning(f"Could not find target node for remove suggestion '{suggestion.title}'")
         
         database.commit()
         
+        # Sync planning board cards with the node change
         if result_node:
             database.refresh(result_node)
+            
+            # Determine the effective status for card sync
+            effective_status = result_node.status.value if result_node.status else "active"
+            planning_service.sync_node_to_cards(
+                database=database,
+                node_id=result_node.id,
+                node_status=effective_status,
+                session_id=result_node.session_id,
+            )
+            
             return self._serialize_node(result_node)
         
         return None
@@ -313,6 +384,8 @@ class GraphService:
             "priority": node.priority.value if node.priority else None,
             "acceptance_criteria": node.acceptance_criteria or [],
             "source_id": str(node.source_id) if node.source_id else None,
+            "deferred_reason": node.deferred_reason,
+            "completed_at": node.completed_at.isoformat() if node.completed_at else None,
             "depth": node.depth,
             "order_index": node.order_index,
             "can_expand": node.can_expand,

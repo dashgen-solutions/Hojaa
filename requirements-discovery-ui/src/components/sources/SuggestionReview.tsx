@@ -1,17 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   CheckIcon, XMarkIcon, PencilIcon,
   PlusCircleIcon, ArrowPathIcon, PauseCircleIcon, TrashIcon,
-  ChevronDownIcon, ChevronUpIcon,
+  ChevronDownIcon, ChevronUpIcon, CheckCircleIcon, XCircleIcon, ClockIcon,
 } from '@heroicons/react/24/outline';
 import { useStore, Suggestion } from '@/stores/useStore';
+import { getTree } from '@/lib/api';
+
+// Flat node shape for comparison lookups
+interface TreeNode {
+  id: string;
+  question: string;
+  answer?: string;
+  node_type: string;
+  status?: string;
+  children?: TreeNode[];
+}
 
 interface SuggestionReviewProps {
   suggestions: Suggestion[];
   sourceId: string;
   onComplete?: () => void;
+  /** Session id used to fetch the graph tree for side-by-side comparison */
+  sessionId?: string;
 }
 
 const CHANGE_TYPE_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -21,17 +34,80 @@ const CHANGE_TYPE_CONFIG: Record<string, { label: string; color: string; icon: a
   remove: { label: 'Remove', color: 'bg-red-100 text-red-700', icon: TrashIcon },
 };
 
-export default function SuggestionReview({ suggestions, sourceId, onComplete }: SuggestionReviewProps) {
-  const [decisions, setDecisions] = useState<Record<string, { approved: boolean; editedTitle?: string; editedDescription?: string }>>({});
+function SuggestionReadOnlyCard({ suggestion, status }: { suggestion: Suggestion; status: 'approved' | 'rejected' }) {
+  const config = CHANGE_TYPE_CONFIG[suggestion.change_type] || CHANGE_TYPE_CONFIG.add;
+  const ChangeIcon = config.icon;
+  const borderBg = status === 'approved' ? 'border-green-200 bg-green-50/50' : 'border-red-200 bg-red-50/30';
+
+  return (
+    <div className={`rounded-lg border ${borderBg} p-3`}>
+      <div className="flex items-start gap-2">
+        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${config.color}`}>
+          <ChangeIcon className="w-3 h-3" />
+          {config.label}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-neutral-800">{suggestion.title}</p>
+          {suggestion.description && (
+            <p className="text-xs text-neutral-600 mt-0.5 line-clamp-2">{suggestion.description}</p>
+          )}
+          {suggestion.reviewer_note && (
+            <p className="text-xs text-neutral-500 mt-1 italic border-l-2 border-neutral-300 pl-2">
+              Note: {suggestion.reviewer_note}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Flatten a recursive tree into a Record<id, node> for O(1) lookups. */
+function flattenTree(nodes: TreeNode[]): Record<string, TreeNode> {
+  const map: Record<string, TreeNode> = {};
+  const walk = (list: TreeNode[]) => {
+    for (const node of list) {
+      map[node.id] = node;
+      if (node.children?.length) walk(node.children);
+    }
+  };
+  walk(nodes);
+  return map;
+}
+
+export default function SuggestionReview({ suggestions, sourceId, onComplete, sessionId }: SuggestionReviewProps) {
+  const [decisions, setDecisions] = useState<Record<string, { approved: boolean; editedTitle?: string; editedDescription?: string; reviewerNote?: string }>>({});
   const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(null);
   const [editingSuggestion, setEditingSuggestion] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [treeNodes, setTreeNodes] = useState<TreeNode[]>([]);
 
   const { applyDecisions } = useStore();
 
-  const pendingSuggestions = suggestions.filter((suggestion) => suggestion.is_approved === null);
+  // Fetch tree data for side-by-side comparison
+  useEffect(() => {
+    if (!sessionId) return;
+    const fetchNodes = async () => {
+      try {
+        const res = await getTree(sessionId);
+        if (res?.tree) {
+          // Normalize to an array so flattenTree can walk it
+          setTreeNodes([res.tree]);
+        }
+      } catch {
+        // Non-critical — comparison will simply be unavailable
+      }
+    };
+    fetchNodes();
+  }, [sessionId]);
+
+  // Build flat lookup of current graph nodes for side-by-side comparison
+  const nodeMap = treeNodes.length ? flattenTree(treeNodes) : {};
+
+  const approvedSuggestions = suggestions.filter((s) => s.is_approved === true);
+  const rejectedSuggestions = suggestions.filter((s) => s.is_approved === false);
+  const pendingSuggestions = suggestions.filter((s) => s.is_approved === null);
   const decidedCount = Object.keys(decisions).length;
-  const allDecided = decidedCount === pendingSuggestions.length && pendingSuggestions.length > 0;
 
   const handleApprove = (suggestionId: string) => {
     setDecisions((previous) => ({ ...previous, [suggestionId]: { ...previous[suggestionId], approved: true } }));
@@ -65,6 +141,7 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete }: 
         is_approved: decision.approved,
         edited_title: decision.editedTitle,
         edited_description: decision.editedDescription,
+        reviewer_note: decision.reviewerNote,
       }));
 
       await applyDecisions(decisionList);
@@ -76,48 +153,109 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete }: 
     }
   };
 
-  if (pendingSuggestions.length === 0) {
-    return (
-      <div className="text-center py-8 text-neutral-500">
-        <p className="text-sm">All suggestions have been reviewed.</p>
-      </div>
-    );
-  }
+  // Summary line: X approved, Y rejected, Z pending
+  const summaryParts = [];
+  if (approvedSuggestions.length > 0) summaryParts.push(`${approvedSuggestions.length} approved`);
+  if (rejectedSuggestions.length > 0) summaryParts.push(`${rejectedSuggestions.length} rejected`);
+  if (pendingSuggestions.length > 0) summaryParts.push(`${pendingSuggestions.length} pending`);
 
   return (
-    <div className="space-y-4">
-      {/* Header with bulk actions */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-600">
-          <span className="font-medium">{pendingSuggestions.length}</span> suggestions to review
-          {decidedCount > 0 && (
-            <span className="ml-2 text-primary-600">({decidedCount} decided)</span>
-          )}
-        </p>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleApproveAll}
-            className="text-xs px-3 py-1 rounded-md bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
-          >
-            Approve All
-          </button>
-          <button
-            onClick={handleRejectAll}
-            className="text-xs px-3 py-1 rounded-md bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
-          >
-            Reject All
-          </button>
-        </div>
+    <div className="space-y-5">
+      {/* Summary: approved / rejected / pending */}
+      <div className="flex items-center gap-3 text-xs text-neutral-600">
+        {summaryParts.length > 0 ? (
+          <>
+            {approvedSuggestions.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-green-600">
+                <CheckCircleIcon className="w-3.5 h-3.5" />
+                {approvedSuggestions.length} approved
+              </span>
+            )}
+            {rejectedSuggestions.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-red-600">
+                <XCircleIcon className="w-3.5 h-3.5" />
+                {rejectedSuggestions.length} rejected
+              </span>
+            )}
+            {pendingSuggestions.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-amber-600">
+                <ClockIcon className="w-3.5 h-3.5" />
+                {pendingSuggestions.length} pending
+              </span>
+            )}
+          </>
+        ) : (
+          <span className="text-neutral-400">No suggestions for this source.</span>
+        )}
       </div>
 
-      {/* Suggestion Cards */}
-      <div className="space-y-3">
-        {pendingSuggestions.map((suggestion) => {
+      {/* ========== APPROVED (read-only) ========== */}
+      {approvedSuggestions.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-green-700 mb-2 flex items-center gap-1.5">
+            <CheckCircleIcon className="w-4 h-4" />
+            Approved ({approvedSuggestions.length})
+          </h4>
+          <div className="space-y-2">
+            {approvedSuggestions.map((suggestion) => (
+              <SuggestionReadOnlyCard key={suggestion.id} suggestion={suggestion} status="approved" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ========== REJECTED (read-only) ========== */}
+      {rejectedSuggestions.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-red-600 mb-2 flex items-center gap-1.5">
+            <XCircleIcon className="w-4 h-4" />
+            Rejected ({rejectedSuggestions.length})
+          </h4>
+          <div className="space-y-2">
+            {rejectedSuggestions.map((suggestion) => (
+              <SuggestionReadOnlyCard key={suggestion.id} suggestion={suggestion} status="rejected" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ========== PENDING (interactive) ========== */}
+      {pendingSuggestions.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-neutral-600">
+              <span className="font-medium">{pendingSuggestions.length}</span> to review
+              {decidedCount > 0 && (
+                <span className="ml-2 text-primary-600">({decidedCount} decided)</span>
+              )}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleApproveAll}
+                className="text-xs px-3 py-1 rounded-md bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+              >
+                Approve All
+              </button>
+              <button
+                onClick={handleRejectAll}
+                className="text-xs px-3 py-1 rounded-md bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
+              >
+                Reject All
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {pendingSuggestions.map((suggestion) => {
           const config = CHANGE_TYPE_CONFIG[suggestion.change_type] || CHANGE_TYPE_CONFIG.add;
           const decision = decisions[suggestion.id];
           const isExpanded = expandedSuggestion === suggestion.id;
           const isEditing = editingSuggestion === suggestion.id;
           const ChangeIcon = config.icon;
+
+          // Resolve target node for side-by-side comparison (modify/defer/remove)
+          const targetNode = suggestion.target_node_id ? nodeMap[suggestion.target_node_id] : null;
+          const showComparison = targetNode && ['modify', 'defer', 'remove'].includes(suggestion.change_type);
 
           return (
             <div
@@ -172,7 +310,34 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete }: 
 
                 {/* Expanded details */}
                 {isExpanded && (
-                  <div className="mt-3 pt-3 border-t border-neutral-200 space-y-2">
+                  <div className="mt-3 pt-3 border-t border-neutral-200 space-y-3">
+                    {/* Side-by-side comparison for modify/defer/remove */}
+                    {showComparison && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
+                          <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">Current</p>
+                          <p className="text-xs font-medium text-neutral-800">{targetNode.question}</p>
+                          {targetNode.answer && (
+                            <p className="text-xs text-neutral-500 mt-1 line-clamp-3">{targetNode.answer}</p>
+                          )}
+                          {targetNode.status && (
+                            <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 rounded bg-neutral-200 text-neutral-600">
+                              {targetNode.status}
+                            </span>
+                          )}
+                        </div>
+                        <div className="rounded-lg border border-primary-200 bg-primary-50 p-2.5">
+                          <p className="text-[10px] font-semibold text-primary-600 uppercase tracking-wider mb-1">Proposed</p>
+                          <p className="text-xs font-medium text-primary-900">{suggestion.title}</p>
+                          {suggestion.description && (
+                            <p className="text-xs text-primary-700 mt-1 line-clamp-3">{suggestion.description}</p>
+                          )}
+                          <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 rounded bg-primary-200 text-primary-700">
+                            {suggestion.change_type}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     {suggestion.source_quote && (
                       <div>
                         <p className="text-xs font-medium text-neutral-500 mb-1">Source Quote</p>
@@ -265,32 +430,61 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete }: 
                     />
                   </div>
                 )}
+
+                {/* Reviewer note — visible once a decision is made */}
+                {decision && (
+                  <div className="mt-3 pt-3 border-t border-neutral-100">
+                    <label className="text-xs font-medium text-neutral-500 mb-1 block">
+                      Add a note <span className="font-normal text-neutral-400">(optional)</span>
+                    </label>
+                    <textarea
+                      value={decision.reviewerNote || ''}
+                      onChange={(e) =>
+                        setDecisions((previous) => ({
+                          ...previous,
+                          [suggestion.id]: { ...previous[suggestion.id], reviewerNote: e.target.value },
+                        }))
+                      }
+                      rows={2}
+                      className="w-full px-3 py-1.5 rounded-lg border border-neutral-200 text-xs bg-neutral-50
+                                 focus:border-primary-300 focus:ring-1 focus:ring-primary-200 focus:bg-white transition-colors"
+                      placeholder="Why you approved/rejected this, additional context..."
+                    />
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
-      </div>
+          </div>
 
-      {/* Apply button */}
-      {decidedCount > 0 && (
-        <div className="flex justify-end pt-2">
-          <button
-            onClick={handleApplyAll}
-            disabled={isApplying}
-            className="px-6 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium 
-                       hover:bg-primary-700 transition-colors shadow-sm disabled:opacity-50 
-                       flex items-center gap-2"
-          >
-            {isApplying ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Applying...
-              </>
-            ) : (
-              `Apply ${decidedCount} Decision${decidedCount !== 1 ? 's' : ''}`
-            )}
-          </button>
+          {/* Apply button — only when there are pending and some decided */}
+          {decidedCount > 0 && (
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handleApplyAll}
+                disabled={isApplying}
+                className="px-6 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium 
+                           hover:bg-primary-700 transition-colors shadow-sm disabled:opacity-50 
+                           flex items-center gap-2"
+              >
+                {isApplying ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Applying...
+                  </>
+                ) : (
+                  `Apply ${decidedCount} Decision${decidedCount !== 1 ? 's' : ''}`
+                )}
+              </button>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* When everything is reviewed and no suggestions at all */}
+      {suggestions.length === 0 && (
+        <p className="text-sm text-neutral-500 text-center py-4">No suggestions for this source.</p>
       )}
     </div>
   );

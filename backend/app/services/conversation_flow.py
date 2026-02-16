@@ -13,7 +13,7 @@ from app.models.agent_models import (
     FeatureContext,
     ConversationContext
 )
-from app.models.database import Conversation, Message, MessageRole, Node, Question
+from app.models.database import Conversation, Message, MessageRole, Node, Question, Source, NodeHistory, ChangeType
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -116,6 +116,12 @@ class AIConversationFlow:
             ).all()
             
             initial_context = self._build_initial_context(questions)
+
+            # Get source context (ingested documents)
+            source_context = self._build_source_context(session_id, db)
+
+            # Get recent changes context (audit trail)
+            changes_context = self._build_changes_context(session_id, db)
             
             # Create conversation
             conversation = Conversation(
@@ -137,7 +143,9 @@ class AIConversationFlow:
             )
             
             # Generate user prompt
-            user_prompt = self._create_start_prompt(context)
+            user_prompt = self._create_start_prompt(
+                context, source_context, changes_context
+            )
             
             # Run agent with structured output
             result = await self.start_agent.run(user_prompt, deps=context)
@@ -241,6 +249,14 @@ class AIConversationFlow:
             ).order_by(Message.created_at).all()
             
             conversation_history = self._format_conversation_history(messages)
+
+            # Get source & changes context for richer prompts
+            source_context = self._build_source_context(
+                conversation.session_id, db
+            )
+            changes_context = self._build_changes_context(
+                conversation.session_id, db
+            )
             
             # Create context for agent
             context = ConversationContext(
@@ -252,7 +268,9 @@ class AIConversationFlow:
             )
             
             # Generate user prompt
-            user_prompt = self._create_continue_prompt(context)
+            user_prompt = self._create_continue_prompt(
+                context, source_context, changes_context
+            )
             
             # Run agent with structured output
             result = await self.continue_agent.run(user_prompt, deps=context)
@@ -352,6 +370,57 @@ class AIConversationFlow:
         
         return "\n".join(context_parts) if context_parts else "No initial context available"
     
+    def _build_source_context(self, session_id: UUID, db: Session) -> str:
+        """Build context from ingested sources for this session."""
+        try:
+            sources = (
+                db.query(Source)
+                .filter(
+                    Source.session_id == session_id,
+                    Source.is_deleted == False,
+                )
+                .order_by(Source.created_at.desc())
+                .limit(5)
+                .all()
+            )
+            if not sources:
+                return ""
+
+            parts = ["INGESTED SOURCES (documents / meeting notes uploaded by client):"]
+            for src in sources:
+                label = src.original_filename or src.source_type or "unknown"
+                summary = (src.raw_content or "")[:400]
+                parts.append(f"- [{label}]: {summary}")
+            return "\n".join(parts)
+        except Exception:
+            return ""
+
+    def _build_changes_context(self, session_id: UUID, db: Session) -> str:
+        """Build context from recent audit-trail changes for this session."""
+        try:
+            recent = (
+                db.query(NodeHistory)
+                .join(Node, NodeHistory.node_id == Node.id)
+                .filter(Node.session_id == session_id)
+                .order_by(NodeHistory.changed_at.desc())
+                .limit(10)
+                .all()
+            )
+            if not recent:
+                return ""
+
+            parts = ["RECENT SCOPE CHANGES (last 10):"]
+            for h in recent:
+                node = db.query(Node).filter(Node.id == h.node_id).first()
+                name = node.question if node else str(h.node_id)
+                desc = f"{h.change_type.value}"
+                if h.field_changed:
+                    desc += f" ({h.field_changed}: {h.old_value} → {h.new_value})"
+                parts.append(f"- {name}: {desc}")
+            return "\n".join(parts)
+        except Exception:
+            return ""
+
     def _format_conversation_history(self, messages: List[Message]) -> str:
         """Format conversation messages."""
         history = []
@@ -363,8 +432,19 @@ class AIConversationFlow:
         
         return "\n".join(history)
     
-    def _create_start_prompt(self, context: FeatureContext) -> str:
+    def _create_start_prompt(
+        self,
+        context: FeatureContext,
+        source_context: str = "",
+        changes_context: str = "",
+    ) -> str:
         """Create prompt for starting conversation."""
+        extra_sections = ""
+        if source_context:
+            extra_sections += f"\n\n{source_context}"
+        if changes_context:
+            extra_sections += f"\n\n{changes_context}"
+
         return f"""You are exploring this component with your client:
 
 Component: {context.feature_name}
@@ -373,7 +453,7 @@ Description: {context.feature_description}
 {context.parent_hierarchy}
 
 Business context you already know:
-{context.initial_context}
+{context.initial_context}{extra_sections}
 
 Ask the FIRST question to deeply understand this component's requirements.
 
@@ -385,8 +465,19 @@ Good questions:
 Also provide 3-5 realistic answer suggestions based on their business context.
 """
     
-    def _create_continue_prompt(self, context: ConversationContext) -> str:
+    def _create_continue_prompt(
+        self,
+        context: ConversationContext,
+        source_context: str = "",
+        changes_context: str = "",
+    ) -> str:
         """Create prompt for continuing conversation."""
+        extra_sections = ""
+        if source_context:
+            extra_sections += f"\n\n{source_context}"
+        if changes_context:
+            extra_sections += f"\n\n{changes_context}"
+
         return f"""Continue your conversation about this component:
 
 Component: {context.feature_name}
@@ -397,7 +488,7 @@ Conversation so far:
 {context.conversation_history}
 
 What you've learned:
-{context.extracted_info}
+{context.extracted_info}{extra_sections}
 
 Evaluate the conversation:
 1. Do you understand the business need and user workflow?

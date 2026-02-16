@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   PlusCircleIcon, PencilSquareIcon, ArrowsRightLeftIcon,
   TrashIcon, AdjustmentsHorizontalIcon, FunnelIcon,
+  ChevronDownIcon, ChevronRightIcon, ArrowDownTrayIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import { useStore, AuditEntry } from '@/stores/useStore';
 
@@ -28,13 +30,45 @@ const TIME_RANGE_OPTIONS = [
 ];
 
 export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
-  const { auditEntries, auditTotalChanges, isLoadingAudit, fetchTimeline } = useStore();
+  const {
+    auditEntries, auditTotalChanges, isLoadingAudit,
+    fetchTimeline, sessionUsers, fetchSessionUsers, exportAuditReport,
+  } = useStore();
   const [timeRange, setTimeRange] = useState(30);
   const [changeTypeFilter, setChangeTypeFilter] = useState<string | null>(null);
+  const [userFilter, setUserFilter] = useState<string | null>(null);
+  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetchTimeline(sessionId, timeRange);
-  }, [sessionId, timeRange, fetchTimeline]);
+    fetchSessionUsers(sessionId);
+  }, [sessionId, fetchSessionUsers]);
+
+  useEffect(() => {
+    fetchTimeline(sessionId, timeRange, userFilter || undefined);
+  }, [sessionId, timeRange, userFilter, fetchTimeline]);
+
+  const toggleEntry = useCallback((entryId: string) => {
+    setExpandedEntries((prev) => {
+      const next = new Set(prev);
+      if (next.has(entryId)) next.delete(entryId);
+      else next.add(entryId);
+      return next;
+    });
+  }, []);
+
+  const handleExport = async () => {
+    try {
+      const blob = await exportAuditReport(sessionId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-report-${sessionId.slice(0, 8)}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silent
+    }
+  };
 
   const filteredEntries = changeTypeFilter
     ? auditEntries.filter((entry) => entry.change_type === changeTypeFilter)
@@ -70,6 +104,33 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Export button */}
+          <button
+            onClick={handleExport}
+            className="p-2 rounded-lg border border-neutral-300 hover:bg-neutral-50 transition-colors"
+            title="Export audit report"
+          >
+            <ArrowDownTrayIcon className="w-4 h-4 text-neutral-600" />
+          </button>
+
+          {/* User filter */}
+          {sessionUsers.length > 0 && (
+            <div className="relative">
+              <select
+                value={userFilter || ''}
+                onChange={(e) => setUserFilter(e.target.value || null)}
+                className="pl-8 pr-3 py-1.5 rounded-lg border border-neutral-300 text-sm
+                           focus:border-primary-500 outline-none appearance-none"
+              >
+                <option value="">All users</option>
+                {sessionUsers.map((u) => (
+                  <option key={u.id} value={u.id}>{u.username}</option>
+                ))}
+              </select>
+              <UserIcon className="w-4 h-4 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          )}
+
           {/* Time range selector */}
           <select
             value={timeRange}
@@ -123,51 +184,81 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
                 {entries.map((entry) => {
                   const config = CHANGE_TYPE_CONFIG[entry.change_type] || CHANGE_TYPE_CONFIG.modified;
                   const EntryIcon = config.icon;
+                  const isExpanded = expandedEntries.has(entry.id);
+                  const hasDetails = entry.field_changed || entry.change_reason || entry.old_value || entry.new_value;
 
                   return (
                     <div
                       key={entry.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-neutral-50 transition-colors"
+                      className="rounded-lg hover:bg-neutral-50 transition-colors"
                     >
-                      {/* Icon */}
-                      <div className={`w-8 h-8 rounded-full ${config.bgColor} flex items-center justify-center shrink-0`}>
-                        <EntryIcon className={`w-4 h-4 ${config.color}`} />
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className="text-sm font-medium text-neutral-900">{entry.node_title}</span>
-                            <span className={`ml-2 text-xs font-medium ${config.color}`}>{config.label}</span>
-                          </div>
-                          <span className="text-[10px] text-neutral-400 whitespace-nowrap">
-                            {new Date(entry.changed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                      {/* Collapsed row */}
+                      <div
+                        className="flex items-center gap-3 p-3 cursor-pointer"
+                        onClick={() => hasDetails && toggleEntry(entry.id)}
+                      >
+                        {/* Icon */}
+                        <div className={`w-8 h-8 rounded-full ${config.bgColor} flex items-center justify-center shrink-0`}>
+                          <EntryIcon className={`w-4 h-4 ${config.color}`} />
                         </div>
 
-                        {/* Change details */}
-                        {entry.field_changed && (
-                          <p className="text-xs text-neutral-600 mt-0.5">
-                            <span className="font-medium">{entry.field_changed}</span>
-                            {entry.old_value && entry.new_value && (
-                              <span>: {entry.old_value} → {entry.new_value}</span>
+                        {/* Compact content */}
+                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                          <span className="text-sm font-medium text-neutral-900 truncate">{entry.node_title}</span>
+                          <span className={`text-xs font-medium ${config.color}`}>{config.label}</span>
+                        </div>
+
+                        {/* Time */}
+                        <span className="text-[10px] text-neutral-400 whitespace-nowrap">
+                          {new Date(entry.changed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+
+                        {/* Expand chevron */}
+                        {hasDetails && (
+                          isExpanded
+                            ? <ChevronDownIcon className="w-3.5 h-3.5 text-neutral-400" />
+                            : <ChevronRightIcon className="w-3.5 h-3.5 text-neutral-400" />
+                        )}
+                      </div>
+
+                      {/* Expanded details */}
+                      {isExpanded && (
+                        <div className="px-3 pb-3 ml-11 text-xs space-y-1.5 animate-fade-in">
+                          {entry.field_changed && (
+                            <p className="text-neutral-600">
+                              <span className="font-medium">{entry.field_changed}</span>
+                              {entry.old_value && entry.new_value && (
+                                <span>: <span className="text-red-500 line-through">{entry.old_value}</span> → <span className="text-green-600">{entry.new_value}</span></span>
+                              )}
+                            </p>
+                          )}
+
+                          {entry.change_reason && (
+                            <p className="text-neutral-500 italic">
+                              &ldquo;{entry.change_reason}&rdquo;
+                            </p>
+                          )}
+
+                          {/* Attribution with clickable source */}
+                          <div className="flex items-center gap-3 text-[10px] text-neutral-400">
+                            {entry.changed_by_name && <span>by {entry.changed_by_name}</span>}
+                            {entry.source_name && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Navigate to source detail — use source_id if available
+                                  if ((entry as any).source_id) {
+                                    window.location.hash = `source-${(entry as any).source_id}`;
+                                  }
+                                }}
+                                className="text-primary-600 hover:underline font-medium"
+                              >
+                                from {entry.source_name}
+                              </button>
                             )}
-                          </p>
-                        )}
-
-                        {entry.change_reason && (
-                          <p className="text-xs text-neutral-500 mt-0.5 italic">
-                            &ldquo;{entry.change_reason}&rdquo;
-                          </p>
-                        )}
-
-                        {/* Attribution */}
-                        <div className="flex items-center gap-3 mt-1 text-[10px] text-neutral-400">
-                          {entry.changed_by_name && <span>by {entry.changed_by_name}</span>}
-                          {entry.source_name && <span>from {entry.source_name}</span>}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   );
                 })}

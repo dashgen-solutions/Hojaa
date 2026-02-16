@@ -28,6 +28,9 @@ python-docx
 markdown2
 fpdf2
 
+# Mailchimp
+mailchimp-marketing
+
 # Utilities
 python-dotenv
 python-jose[cryptography]

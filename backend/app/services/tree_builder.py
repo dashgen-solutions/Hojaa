@@ -13,7 +13,7 @@ from app.models.agent_models import (
     UserContext,
     SubRequirementContext
 )
-from app.models.database import Node, NodeType, Question, Message
+from app.models.database import Node, NodeType, NodeStatus, Question, Message, ChangeType
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -126,12 +126,16 @@ class AITreeBuilder:
             # Get validated output
             tree_output = result.output
             
+            # Import audit_service lazily to avoid circular imports
+            from app.services.audit_service import audit_service
+
             # Create root node
             root_node = Node(
                 session_id=session_id,
                 question="Main Project",
                 answer=tree_output.project_description,
                 node_type=NodeType.ROOT,
+                status=NodeStatus.ACTIVE,
                 depth=0,
                 order_index=0,
                 can_expand=True,
@@ -139,6 +143,16 @@ class AITreeBuilder:
             )
             db.add(root_node)
             db.flush()  # Get root_node.id
+
+            # Audit trail for root node creation
+            audit_service.record_change(
+                database=db,
+                node_id=root_node.id,
+                change_type=ChangeType.CREATED,
+                new_value=tree_output.project_description,
+                change_reason="Initial tree build",
+                session_id=session_id,
+            )
             
             # Create feature nodes from validated output
             for idx, feature in enumerate(tree_output.features):
@@ -148,6 +162,7 @@ class AITreeBuilder:
                     question=feature.name,
                     answer=feature.description,
                     node_type=NodeType.FEATURE,
+                    status=NodeStatus.NEW,
                     depth=1,
                     order_index=idx,
                     can_expand=True,
@@ -158,6 +173,17 @@ class AITreeBuilder:
                     }
                 )
                 db.add(feature_node)
+                db.flush()
+
+                # Audit trail for each feature node
+                audit_service.record_change(
+                    database=db,
+                    node_id=feature_node.id,
+                    change_type=ChangeType.CREATED,
+                    new_value=feature.description,
+                    change_reason=f"Feature '{feature.name}' created during initial tree build",
+                    session_id=session_id,
+                )
             
             db.commit()
             db.refresh(root_node)
@@ -240,6 +266,8 @@ class AITreeBuilder:
             # Get validated output
             sub_req_output = result.output
             
+            from app.services.audit_service import audit_service
+
             # Create child nodes from validated output
             child_nodes = []
             for idx, sub_req in enumerate(sub_req_output.sub_requirements):
@@ -251,6 +279,7 @@ class AITreeBuilder:
                     question=sub_req.question,
                     answer=sub_req.answer,
                     node_type=node_type,
+                    status=NodeStatus.NEW,
                     depth=parent_node.depth + 1,
                     order_index=idx,
                     can_expand=True,
@@ -258,7 +287,18 @@ class AITreeBuilder:
                     node_metadata={"priority": sub_req.priority}
                 )
                 db.add(child_node)
+                db.flush()
                 child_nodes.append(child_node)
+
+                # Audit trail for each child node
+                audit_service.record_change(
+                    database=db,
+                    node_id=child_node.id,
+                    change_type=ChangeType.CREATED,
+                    new_value=sub_req.answer,
+                    change_reason=f"Sub-requirement '{sub_req.question}' extracted from conversation",
+                    session_id=parent_node.session_id,
+                )
             
             # Update parent node
             parent_node.is_expanded = True

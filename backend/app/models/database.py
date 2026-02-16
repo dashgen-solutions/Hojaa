@@ -42,6 +42,8 @@ class NodeStatus(str, enum.Enum):
     DEFERRED = "deferred"
     COMPLETED = "completed"
     REMOVED = "removed"
+    NEW = "new"
+    MODIFIED = "modified"
 
 
 class ConversationStatus(str, enum.Enum):
@@ -64,6 +66,31 @@ class SourceType(str, enum.Enum):
     MEETING = "meeting"
     DOCUMENT = "document"
     MANUAL = "manual"
+    EMAIL = "email"
+    SLACK = "slack"
+
+
+class SourceFormat(str, enum.Enum):
+    """Format of the source content (affects pre-processing)."""
+    RAW = "raw"
+    OTTER = "otter"
+    FIREFLIES = "fireflies"
+    EMAIL = "email"
+    SLACK = "slack"
+
+
+class MeetingType(str, enum.Enum):
+    """Type of meeting for better AI context."""
+    SPRINT_PLANNING = "sprint_planning"
+    STANDUP = "standup"
+    RETROSPECTIVE = "retrospective"
+    CLIENT_REVIEW = "client_review"
+    KICKOFF = "kickoff"
+    BRAINSTORM = "brainstorm"
+    DESIGN_REVIEW = "design_review"
+    TECHNICAL_DISCUSSION = "technical_discussion"
+    STAKEHOLDER_UPDATE = "stakeholder_update"
+    OTHER = "other"
 
 
 class ChangeType(str, enum.Enum):
@@ -200,12 +227,18 @@ class Node(Base):
     priority = Column(SQLEnum(CardPriority), nullable=True)
     acceptance_criteria = Column(JSON, default=list)
     source_id = Column(UUID(as_uuid=True), ForeignKey("sources.id", ondelete="SET NULL"), nullable=True)
+    added_from_source_at = Column(DateTime, nullable=True)  # REQ-7.2.1: when node was added from a source
+    assigned_to = Column(UUID(as_uuid=True), ForeignKey("team_members.id", ondelete="SET NULL"), nullable=True)  # REQ-7.2.1: direct assignment shortcut
     
     # Tree metadata
     depth = Column(Integer, default=0, nullable=False)
     order_index = Column(Integer, default=0, nullable=False)
     can_expand = Column(Boolean, default=False, nullable=False)
     is_expanded = Column(Boolean, default=False, nullable=False)
+    
+    # Deferred / completed metadata
+    deferred_reason = Column(Text, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
     
     # Additional data
     node_metadata = Column(JSON, default=dict)
@@ -221,6 +254,15 @@ class Node(Base):
     history_entries = relationship("NodeHistory", back_populates="node", cascade="all, delete-orphan")
     assignments = relationship("Assignment", back_populates="node", cascade="all, delete-orphan")
     card = relationship("Card", back_populates="node", uselist=False, cascade="all, delete-orphan")
+    direct_assignee = relationship("TeamMember", foreign_keys=[assigned_to])
+    
+    # Indexes for efficient filtering (REQ-3.5.2)
+    __table_args__ = (
+        Index("idx_nodes_status", "status"),
+        Index("idx_nodes_session_status", "session_id", "status"),
+        Index("idx_nodes_updated_at", "updated_at"),
+        Index("idx_nodes_created_at", "created_at"),
+    )
 
 
 class Conversation(Base):
@@ -293,6 +335,12 @@ class Source(Base):
     nodes = relationship("Node", back_populates="source")
     suggestions = relationship("SourceSuggestion", back_populates="source", cascade="all, delete-orphan")
     history_entries = relationship("NodeHistory", back_populates="source")
+    
+    # Indexes (REQ-7.4.1)
+    __table_args__ = (
+        Index("idx_sources_session_id", "session_id"),
+        Index("idx_sources_source_type", "source_type"),
+    )
 
 
 class SourceSuggestion(Base):
@@ -318,6 +366,7 @@ class SourceSuggestion(Base):
     is_approved = Column(Boolean, nullable=True)  # None = pending, True = approved, False = rejected
     approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     approved_at = Column(DateTime, nullable=True)
+    reviewer_note = Column(Text, nullable=True)  # Manual note from reviewer on approve/reject
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
@@ -334,6 +383,7 @@ class NodeHistory(Base):
     __tablename__ = "node_history"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=True)
     node_id = Column(UUID(as_uuid=True), ForeignKey("nodes.id", ondelete="CASCADE"), nullable=False)
     
     change_type = Column(SQLEnum(ChangeType), nullable=False)
@@ -349,14 +399,17 @@ class NodeHistory(Base):
     
     # Relationships
     node = relationship("Node", back_populates="history_entries")
+    session = relationship("Session")
     source = relationship("Source", back_populates="history_entries")
     changer = relationship("User", foreign_keys=[changed_by])
     
     # Indexes for efficient querying
     __table_args__ = (
         Index("idx_node_history_node_id", "node_id"),
+        Index("idx_node_history_session_id", "session_id"),
         Index("idx_node_history_changed_at", "changed_at"),
         Index("idx_node_history_change_type", "change_type"),
+        Index("idx_node_history_changed_by", "changed_by"),
     )
 
 
@@ -386,14 +439,20 @@ class Card(Base):
     __tablename__ = "cards"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    node_id = Column(UUID(as_uuid=True), ForeignKey("nodes.id", ondelete="CASCADE"), nullable=False, unique=True)
+    node_id = Column(UUID(as_uuid=True), ForeignKey("nodes.id", ondelete="SET NULL"), nullable=True, unique=True)
     session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    
+    # Card-level title/description (used for out-of-scope cards or overrides)
+    title = Column(String(500), nullable=True)
+    description = Column(Text, nullable=True)
     
     status = Column(SQLEnum(CardStatus), default=CardStatus.BACKLOG, nullable=False)
     priority = Column(SQLEnum(CardPriority), default=CardPriority.MEDIUM, nullable=False)
+    is_out_of_scope = Column(Boolean, default=False, nullable=False)
     
     due_date = Column(Date, nullable=True)
     estimated_hours = Column(Float, nullable=True)
+    actual_hours = Column(Float, nullable=True)
     card_metadata = Column(JSON, default=dict)
     
     completed_at = Column(DateTime, nullable=True)
@@ -404,10 +463,92 @@ class Card(Base):
     node = relationship("Node", back_populates="card")
     session = relationship("Session", back_populates="cards")
     assignments = relationship("Assignment", back_populates="card", cascade="all, delete-orphan")
+    acceptance_criteria = relationship("AcceptanceCriterion", back_populates="card", cascade="all, delete-orphan")
+    comments = relationship("CardComment", back_populates="card", cascade="all, delete-orphan")
     
     # Indexes
     __table_args__ = (
+        Index("idx_cards_session_id", "session_id"),
         Index("idx_cards_session_status", "session_id", "status"),
+        Index("idx_cards_priority", "priority"),
+    )
+
+
+class NotificationPreference(Base):
+    """User notification preferences per session — controls which email alerts they receive."""
+    __tablename__ = "notification_preferences"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    
+    # Which events to notify about
+    notify_node_created = Column(Boolean, default=True, nullable=False)
+    notify_node_modified = Column(Boolean, default=True, nullable=False)
+    notify_node_deleted = Column(Boolean, default=True, nullable=False)
+    notify_node_moved = Column(Boolean, default=False, nullable=False)
+    notify_status_changed = Column(Boolean, default=True, nullable=False)
+    notify_source_ingested = Column(Boolean, default=True, nullable=False)
+    
+    # Mailchimp subscriber hash (md5 of lowercase email) — cached for fast lookups
+    mailchimp_subscriber_hash = Column(String(32), nullable=True)
+    is_subscribed = Column(Boolean, default=True, nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id])
+    session = relationship("Session", foreign_keys=[session_id])
+    
+    __table_args__ = (
+        Index("idx_notification_pref_user_session", "user_id", "session_id", unique=True),
+    )
+
+
+class AcceptanceCriterion(Base):
+    """Individual acceptance criterion on a planning card."""
+    __tablename__ = "acceptance_criteria"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    card_id = Column(UUID(as_uuid=True), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False)
+    node_id = Column(UUID(as_uuid=True), ForeignKey("nodes.id", ondelete="SET NULL"), nullable=True)
+    
+    description = Column(Text, nullable=False)
+    is_completed = Column(Boolean, default=False, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+    order_index = Column(Integer, default=0, nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    card = relationship("Card", back_populates="acceptance_criteria")
+    node = relationship("Node")
+    
+    __table_args__ = (
+        Index("idx_ac_card_id", "card_id"),
+    )
+
+
+class CardComment(Base):
+    """Comment / note on a planning card."""
+    __tablename__ = "card_comments"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    card_id = Column(UUID(as_uuid=True), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False)
+    author_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
+    content = Column(Text, nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    card = relationship("Card", back_populates="comments")
+    author = relationship("User", foreign_keys=[author_id])
+    
+    __table_args__ = (
+        Index("idx_card_comments_card_id", "card_id"),
     )
 
 

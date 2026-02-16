@@ -189,11 +189,20 @@ export const moveNode = async (nodeId: string, newParentId?: string) => {
 export const ingestSource = async (data: {
   session_id: string;
   source_type: string;
+  source_format?: string;
   source_name: string;
   raw_content: string;
+  meeting_type?: string;
   source_metadata?: Record<string, any>;
 }) => {
   const response = await api.post('/api/sources/ingest', data);
+  return response.data;
+};
+
+export const uploadSourceFile = async (formData: FormData) => {
+  const response = await api.post('/api/sources/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
   return response.data;
 };
 
@@ -212,8 +221,24 @@ export const applySuggestions = async (decisions: Array<{
   is_approved: boolean;
   edited_title?: string;
   edited_description?: string;
+  reviewer_note?: string;
 }>) => {
   const response = await api.post('/api/sources/apply', { decisions });
+  return response.data;
+};
+
+export const getSourceSuggestions = async (sourceId: string) => {
+  const response = await api.get(`/api/sources/${sourceId}/suggestions`);
+  return response.data;
+};
+
+export const deleteSource = async (sourceId: string) => {
+  const response = await api.delete(`/api/sources/${sourceId}`);
+  return response.data;
+};
+
+export const reanalyzeSource = async (sourceId: string) => {
+  const response = await api.post(`/api/sources/${sourceId}/reanalyze`);
   return response.data;
 };
 
@@ -235,15 +260,38 @@ export const updateNodeStatus = async (
 
 export const getFilteredNodes = async (
   sessionId: string,
-  statusFilter?: string,
-  nodeTypeFilter?: string
+  filters?: {
+    status?: string;
+    nodeType?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    sourceId?: string;
+    search?: string;
+  }
 ) => {
   const params = new URLSearchParams();
-  if (statusFilter) params.append('status', statusFilter);
-  if (nodeTypeFilter) params.append('node_type', nodeTypeFilter);
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.nodeType) params.append('node_type', filters.nodeType);
+  if (filters?.dateFrom) params.append('date_from', filters.dateFrom);
+  if (filters?.dateTo) params.append('date_to', filters.dateTo);
+  if (filters?.sourceId) params.append('source_id', filters.sourceId);
+  if (filters?.search) params.append('search', filters.search);
   const queryString = params.toString();
   const url = `/api/nodes/${sessionId}/filter${queryString ? '?' + queryString : ''}`;
   const response = await api.get(url);
+  return response.data;
+};
+
+export const bulkUpdateNodeStatus = async (
+  nodeIds: string[],
+  status: string,
+  reason?: string
+) => {
+  const response = await api.patch('/api/nodes/bulk-status', {
+    node_ids: nodeIds,
+    status,
+    reason,
+  });
   return response.data;
 };
 
@@ -267,24 +315,100 @@ export const getAuditLog = async (
   return response.data;
 };
 
-export const getAuditTimeline = async (sessionId: string, days: number = 7) => {
-  const response = await api.get(`/api/audit/${sessionId}/timeline?days=${days}`);
+export const getAuditTimeline = async (sessionId: string, days: number = 7, changedBy?: string) => {
+  const params = new URLSearchParams({ days: days.toString() });
+  if (changedBy) params.append('changed_by', changedBy);
+  const response = await api.get(`/api/audit/${sessionId}/timeline?${params.toString()}`);
+  return response.data;
+};
+
+
+// ===== Time-Travel API (Phase 3) =====
+
+export const getGraphStateAt = async (sessionId: string, asOfDate: string) => {
+  const params = new URLSearchParams({
+    session_id: sessionId,
+    as_of_date: asOfDate,
+  });
+  const response = await api.get(`/api/audit/graph-state?${params.toString()}`);
+  return response.data;
+};
+
+export const compareGraphStates = async (
+  sessionId: string,
+  dateFrom: string,
+  dateTo: string
+) => {
+  const params = new URLSearchParams({
+    session_id: sessionId,
+    date_from: dateFrom,
+    date_to: dateTo,
+  });
+  const response = await api.get(`/api/audit/compare?${params.toString()}`);
+  return response.data;
+};
+
+// ===== Audit Extras (Phase 3 additions) =====
+
+export const getSessionUsers = async (sessionId: string) => {
+  const response = await api.get(`/api/audit/${sessionId}/users`);
+  return response.data;
+};
+
+export const revertNode = async (nodeId: string, historyEntryId: string) => {
+  const response = await api.post(`/api/nodes/${nodeId}/revert`, {
+    history_entry_id: historyEntryId,
+  });
+  return response.data;
+};
+
+export const compareNodeVersions = async (
+  nodeId: string,
+  entryIdA: string,
+  entryIdB: string
+) => {
+  const response = await api.post(`/api/nodes/${nodeId}/compare-versions`, {
+    entry_id_a: entryIdA,
+    entry_id_b: entryIdB,
+  });
+  return response.data;
+};
+
+export const exportAuditReport = async (
+  sessionId: string,
+  dateFrom?: string,
+  dateTo?: string
+) => {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append('date_from', dateFrom);
+  if (dateTo) params.append('date_to', dateTo);
+  const queryString = params.toString();
+  const response = await api.post(
+    `/api/audit/${sessionId}/export${queryString ? '?' + queryString : ''}`,
+    {},
+    { responseType: 'blob' }
+  );
   return response.data;
 };
 
 
 // ===== Planning Board API (Phase 4) =====
 
-export const getPlanningBoard = async (sessionId: string) => {
-  const response = await api.get(`/api/planning/${sessionId}`);
+export const getPlanningBoard = async (sessionId: string, assigneeFilter?: string) => {
+  const params = assigneeFilter ? `?assignee=${assigneeFilter}` : '';
+  const response = await api.get(`/api/planning/${sessionId}${params}`);
   return response.data;
 };
 
 export const createCard = async (data: {
-  node_id: string;
+  node_id?: string;
   session_id: string;
   priority?: string;
   due_date?: string;
+  title?: string;
+  description?: string;
+  is_out_of_scope?: boolean;
+  estimated_hours?: number;
 }) => {
   const response = await api.post('/api/planning/cards', data);
   return response.data;
@@ -304,6 +428,9 @@ export const updateCard = async (cardId: string, updates: {
   priority?: string;
   due_date?: string;
   estimated_hours?: number;
+  actual_hours?: number;
+  title?: string;
+  description?: string;
 }) => {
   const response = await api.patch(`/api/planning/cards/${cardId}`, updates);
   return response.data;
@@ -321,6 +448,56 @@ export const removeCardAssignment = async (cardId: string, teamMemberId: string)
   const response = await api.delete(`/api/planning/cards/${cardId}/assign/${teamMemberId}`);
   return response.data;
 };
+
+export const deleteCard = async (cardId: string) => {
+  const response = await api.delete(`/api/planning/cards/${cardId}`);
+  return response.data;
+};
+
+// ---- Acceptance Criteria ----
+
+export const addAcceptanceCriterion = async (cardId: string, data: { description: string; node_id?: string }) => {
+  const response = await api.post(`/api/planning/cards/${cardId}/ac`, data);
+  return response.data;
+};
+
+export const updateAcceptanceCriterion = async (criterionId: string, data: { description?: string; is_completed?: boolean }) => {
+  const response = await api.patch(`/api/planning/ac/${criterionId}`, data);
+  return response.data;
+};
+
+export const deleteAcceptanceCriterion = async (criterionId: string) => {
+  const response = await api.delete(`/api/planning/ac/${criterionId}`);
+  return response.data;
+};
+
+// ---- Comments ----
+
+export const addCardComment = async (cardId: string, content: string) => {
+  const response = await api.post(`/api/planning/cards/${cardId}/comments`, { content });
+  return response.data;
+};
+
+export const getCardComments = async (cardId: string) => {
+  const response = await api.get(`/api/planning/cards/${cardId}/comments`);
+  return response.data;
+};
+
+// ---- Workload ----
+
+export const getWorkload = async (sessionId: string) => {
+  const response = await api.get(`/api/planning/workload/${sessionId}`);
+  return response.data;
+};
+
+// ---- Out of Scope ----
+
+export const addOutOfScopeToGraph = async (cardId: string, parentNodeId: string) => {
+  const response = await api.post(`/api/planning/cards/${cardId}/add-to-graph?parent_node_id=${parentNodeId}`);
+  return response.data;
+};
+
+// ---- Team ----
 
 export const getTeamMembers = async (sessionId: string) => {
   const response = await api.get(`/api/planning/team/${sessionId}`);
@@ -342,37 +519,77 @@ export const deleteTeamMember = async (teamMemberId: string) => {
 };
 
 
-// ===== Export API (Phase 5) =====
+// ===== Export API (Phase 6) =====
 
-export const exportMarkdown = async (data: {
+export interface ExportOptions {
   session_id: string;
   include_deferred?: boolean;
   include_change_log?: boolean;
   include_assignments?: boolean;
-}) => {
+  include_sources?: boolean;
+  include_completed?: boolean;
+  include_conversations?: boolean;
+  detail_level?: 'summary' | 'detailed' | 'full';
+  date_from?: string;
+}
+
+export const exportMarkdown = async (data: ExportOptions) => {
   const response = await api.post('/api/export/markdown', { ...data, format: 'markdown' });
   return response.data;
 };
 
-export const exportJson = async (data: {
-  session_id: string;
-  include_deferred?: boolean;
-  include_change_log?: boolean;
-  include_assignments?: boolean;
-}) => {
+export const exportJson = async (data: ExportOptions) => {
   const response = await api.post('/api/export/json', { ...data, format: 'json' });
   return response.data;
 };
 
-export const exportPdf = async (data: {
-  session_id: string;
-  include_deferred?: boolean;
-  include_change_log?: boolean;
-  include_assignments?: boolean;
-}) => {
+export const exportPdf = async (data: ExportOptions) => {
   const response = await api.post('/api/export/pdf', { ...data, format: 'pdf' }, {
     responseType: 'blob',
   });
+  return response.data;
+};
+
+export const exportDeferred = async (sessionId: string) => {
+  const response = await api.post('/api/export/deferred', { session_id: sessionId });
+  return response.data;
+};
+
+export const exportChangelog = async (data: ExportOptions) => {
+  const response = await api.post('/api/export/changelog', { ...data, format: 'markdown' });
+  return response.data;
+};
+
+// ── Notifications (Mailchimp) ────────────────────────────────────────────
+
+export const getNotificationHealth = async () => {
+  const response = await api.get('/api/notifications/health');
+  return response.data;
+};
+
+export const getNotificationPreferences = async (sessionId: string) => {
+  const response = await api.get(`/api/notifications/${sessionId}/preferences`);
+  return response.data;
+};
+
+export const updateNotificationPreferences = async (
+  sessionId: string,
+  updates: {
+    notify_node_created?: boolean;
+    notify_node_modified?: boolean;
+    notify_node_deleted?: boolean;
+    notify_node_moved?: boolean;
+    notify_status_changed?: boolean;
+    notify_source_ingested?: boolean;
+    is_subscribed?: boolean;
+  },
+) => {
+  const response = await api.patch(`/api/notifications/${sessionId}/preferences`, updates);
+  return response.data;
+};
+
+export const sendTestNotification = async () => {
+  const response = await api.post('/api/notifications/test');
   return response.data;
 };
 

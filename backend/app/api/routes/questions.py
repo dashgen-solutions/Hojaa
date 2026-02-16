@@ -108,10 +108,7 @@ async def get_questions(
             Question.session_id == session_id
         ).order_by(Question.order_index).all()
         
-        if not questions:
-            raise HTTPException(status_code=404, detail="No questions found")
-        
-        return {"questions": questions}
+        return {"questions": questions or []}
         
     except Exception as e:
         logger.error(f"Error getting questions: {str(e)}")
