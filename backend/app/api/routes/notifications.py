@@ -28,6 +28,7 @@ class NotificationPreferenceResponse(BaseModel):
     notify_node_moved: bool
     notify_status_changed: bool
     notify_source_ingested: bool
+    notify_team_member_added: bool
     is_subscribed: bool
 
 
@@ -38,6 +39,7 @@ class NotificationPreferenceUpdate(BaseModel):
     notify_node_moved: Optional[bool] = None
     notify_status_changed: Optional[bool] = None
     notify_source_ingested: Optional[bool] = None
+    notify_team_member_added: Optional[bool] = None
     is_subscribed: Optional[bool] = None
 
 
@@ -71,6 +73,7 @@ async def get_preferences(
             notify_node_moved=pref.notify_node_moved,
             notify_status_changed=pref.notify_status_changed,
             notify_source_ingested=pref.notify_source_ingested,
+            notify_team_member_added=pref.notify_team_member_added,
             is_subscribed=pref.is_subscribed,
         )
     except Exception as exc:
@@ -90,7 +93,7 @@ async def update_preferences(
 ):
     """Update notification preferences for the current user in a session."""
     try:
-        updates = {k: v for k, v in body.dict().items() if v is not None}
+        updates = {k: v for k, v in body.model_dump().items() if v is not None}
         if not updates:
             raise HTTPException(status_code=400, detail="No fields to update")
 
@@ -105,6 +108,7 @@ async def update_preferences(
             notify_node_moved=pref.notify_node_moved,
             notify_status_changed=pref.notify_status_changed,
             notify_source_ingested=pref.notify_source_ingested,
+            notify_team_member_added=pref.notify_team_member_added,
             is_subscribed=pref.is_subscribed,
         )
     except HTTPException:
@@ -119,28 +123,34 @@ async def send_test_notification(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Send a test notification email to the current user."""
+    """Send a test notification email to the current user via SMTP."""
     try:
-        sub_hash = notification_service.add_subscriber(
-            current_user.email, first_name=current_user.username,
-        )
-        if not sub_hash:
-            return {
-                "success": False,
-                "detail": "Mailchimp is not configured or subscriber could not be added",
-            }
-
-        success = notification_service._send_campaign(
+        success = notification_service.send_email(
             subject="[MoMetric] Test Notification",
             html_content="""
-            <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;">
-                <h2 style="color:#4F46E5;">Test Notification</h2>
-                <p>If you're reading this, your MoMetric email notifications are working correctly!</p>
+            <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
+                        background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+                <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:24px 28px;">
+                    <h2 style="color:#ffffff;margin:0;font-size:20px;">Test Notification</h2>
+                </div>
+                <div style="padding:24px 28px;">
+                    <p style="margin:0 0 8px;color:#374151;font-size:14px;">
+                        If you're reading this, your MoMetric email notifications are working correctly!
+                    </p>
+                </div>
+                <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
+                    <p style="margin:0;font-size:12px;color:#9CA3AF;">Sent from MoMetric via SMTP.</p>
+                </div>
             </div>
             """,
             recipient_emails=[current_user.email],
         )
-        return {"success": success}
+        if not success:
+            return {
+                "success": False,
+                "detail": "SMTP is not configured or email sending failed. Check SMTP_ENABLED, SMTP_USERNAME, and SMTP_PASSWORD in environment.",
+            }
+        return {"success": True}
     except Exception as exc:
         logger.error(f"Test notification failed: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))

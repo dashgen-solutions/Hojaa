@@ -158,7 +158,7 @@ async def assign_card(
     database: Session = Depends(get_db),
     current_user: User = Depends(get_optional_user),
 ):
-    """Assign a team member to a card. Sends Mailchimp notification to assignee if configured."""
+    """Assign a team member to a card. Sends email notification to assignee if configured."""
     try:
         card = planning_service.assign_card(
             database=database,
@@ -232,6 +232,7 @@ async def add_team_member(
     request: TeamMemberCreate,
     session_id: str = Query(..., description="Session to add the team member to"),
     database: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """Add a team member to a session."""
     try:
@@ -242,6 +243,18 @@ async def add_team_member(
             email=request.email,
             role=request.role,
         )
+        # Notify subscribed users + welcome email to new member
+        try:
+            notification_service.notify_team_member_added(
+                db=database,
+                session_id=UUID(session_id),
+                member_name=request.name,
+                member_email=request.email,
+                member_role=request.role or "member",
+                added_by=current_user.id if current_user else None,
+            )
+        except Exception as notif_err:
+            logger.warning(f"Team member notification failed (member added OK): {notif_err}")
         return member
         
     except Exception as error:

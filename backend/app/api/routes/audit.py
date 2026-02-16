@@ -2,18 +2,22 @@
 API routes for audit trail and change history.
 Phase 2 & 3: Graph State Management and Audit Trail.
 """
+import asyncio
 from uuid import UUID
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.auth import get_optional_user
+from app.core.config import settings
 from app.models.database import Node, NodeStatus, User, ChangeType
 from app.models.schemas import NodeStatusUpdate, BulkNodeStatusUpdate, SuccessResponse
 from app.services.audit_service import audit_service
 from app.services.graph_service import graph_service
+from app.services.pdf_generator import PDFGenerator
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -394,6 +398,7 @@ async def export_audit_report(
     session_id: str,
     date_from: Optional[str] = Query(None, description="Start date (ISO format)"),
     date_to: Optional[str] = Query(None, description="End date (ISO format)"),
+    changed_by: Optional[str] = Query(None, description="Filter by user ID"),
     database: Session = Depends(get_db),
 ):
     """Export a standalone audit report as Markdown."""
@@ -406,6 +411,7 @@ async def export_audit_report(
             session_id=UUID(session_id),
             date_from=parsed_from,
             date_to=parsed_to,
+            changed_by_filter=changed_by,
         )
         
         from fastapi.responses import PlainTextResponse
@@ -420,4 +426,97 @@ async def export_audit_report(
         raise HTTPException(status_code=404, detail=str(error))
     except Exception as error:
         logger.error(f"Error exporting audit report: {str(error)}")
+        raise HTTPException(status_code=500, detail=str(error))
+
+
+@router.post("/audit/{session_id}/export/pdf")
+async def export_audit_report_pdf(
+    session_id: str,
+    date_from: Optional[str] = Query(None, description="Start date (ISO format)"),
+    date_to: Optional[str] = Query(None, description="End date (ISO format)"),
+    changed_by: Optional[str] = Query(None, description="Filter by user ID"),
+    database: Session = Depends(get_db),
+):
+    """Export a standalone audit report as a styled PDF."""
+    try:
+        parsed_from = datetime.fromisoformat(date_from) if date_from else None
+        parsed_to = datetime.fromisoformat(date_to) if date_to else None
+
+        markdown = audit_service.export_audit_report(
+            database=database,
+            session_id=UUID(session_id),
+            date_from=parsed_from,
+            date_to=parsed_to,
+            for_pdf=True,
+            changed_by_filter=changed_by,
+        )
+
+        # Load branding from session's organization
+        org_id = None
+        try:
+            from app.models.database import Session as SessionModel
+            sess = database.query(SessionModel).filter(
+                SessionModel.id == session_id
+            ).first()
+            if sess:
+                org_id = sess.organization_id
+        except Exception:
+            pass
+
+        brand = None
+        if org_id:
+            try:
+                from app.models.database import BrandSettings
+                bs = database.query(BrandSettings).filter(
+                    BrandSettings.organization_id == org_id
+                ).first()
+                if bs:
+                    brand = {
+                        "app_name": bs.app_name,
+                        "tagline": bs.tagline,
+                        "primary_color": bs.primary_color,
+                        "secondary_color": bs.secondary_color,
+                        "accent_color": bs.accent_color,
+                        "text_color": bs.text_color,
+                        "pdf_header_text": bs.pdf_header_text,
+                        "pdf_footer_text": bs.pdf_footer_text,
+                    }
+            except Exception:
+                pass
+
+        # Generate PDF from the markdown audit report
+        scope_pdf = PDFGenerator(brand=brand)
+
+        # Extract title for cover
+        project_name = "Audit Report"
+        for line in markdown.split("\n"):
+            if line.startswith("# "):
+                project_name = line[2:].strip()
+                break
+
+        scope_pdf.add_cover(project_name, session_id[:8], document_type="Change History")
+        scope_pdf.add_toc()
+        scope_pdf.pdf.add_page()
+
+        # Strip the H1 line from markdown — the cover page already has the title
+        md_lines = markdown.split("\n")
+        md_body = "\n".join(l for l in md_lines if not l.startswith("# "))
+        scope_pdf.render_markdown(md_body)
+        scope_pdf._fill_toc()
+        scope_pdf.add_headers_footers(project_name)
+
+        pdf_bytes = scope_pdf.output()
+
+        filename = f"audit-report-{session_id[:8]}.pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except HTTPException:
+        raise
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    except Exception as error:
+        logger.error(f"Error exporting audit PDF: {str(error)}")
         raise HTTPException(status_code=500, detail=str(error))

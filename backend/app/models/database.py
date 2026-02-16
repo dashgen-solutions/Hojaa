@@ -443,7 +443,8 @@ class NodeHistory(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=True)
-    node_id = Column(UUID(as_uuid=True), ForeignKey("nodes.id", ondelete="CASCADE"), nullable=False)
+    node_id = Column(UUID(as_uuid=True), ForeignKey("nodes.id", ondelete="SET NULL"), nullable=True)
+    node_title = Column(Text, nullable=True)  # snapshot of node.question at time of change
     
     change_type = Column(SQLEnum(ChangeType), nullable=False)
     field_changed = Column(String(100), nullable=True)
@@ -548,6 +549,7 @@ class NotificationPreference(Base):
     notify_node_moved = Column(Boolean, default=False, nullable=False)
     notify_status_changed = Column(Boolean, default=True, nullable=False)
     notify_source_ingested = Column(Boolean, default=True, nullable=False)
+    notify_team_member_added = Column(Boolean, default=True, nullable=False)
     
     # Mailchimp subscriber hash (md5 of lowercase email) — cached for fast lookups
     mailchimp_subscriber_hash = Column(String(32), nullable=True)
@@ -696,4 +698,232 @@ class AIUsageLog(Base):
         Index("idx_ai_usage_created_at", "created_at"),
         Index("idx_ai_usage_session_id", "session_id"),
         Index("idx_ai_usage_org_id", "org_id"),
+    )
+
+
+# ===== 18.2-A: Real-time Collaboration — Presence Tracking =====
+
+class WebSocketPresence(Base):
+    """Tracks which users are currently connected to which sessions via WebSocket.
+
+    This is an ephemeral table — rows are cleaned up on disconnect.
+    Used for showing 'who's online' avatars on a session.
+    """
+    __tablename__ = "ws_presence"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    connected_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_heartbeat = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    session = relationship("Session")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_ws_presence_session", "session_id"),
+        Index("idx_ws_presence_user", "user_id"),
+        Index("idx_ws_presence_unique", "session_id", "user_id", unique=True),
+    )
+
+
+# ===== 18.2-B: External Integrations (Jira, Slack) =====
+
+class IntegrationType(str, enum.Enum):
+    """Supported external integration types."""
+    JIRA = "jira"
+    SLACK = "slack"
+
+
+class Integration(Base):
+    """Stores integration credentials and settings per organization.
+
+    Credentials are persisted encrypted (in production use a vault;
+    here we store them in a JSON blob for simplicity).
+    """
+    __tablename__ = "integrations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    integration_type = Column(SQLEnum(IntegrationType), nullable=False)
+
+    # Jira: base_url, email, api_token, project_key
+    # Slack: webhook_url, bot_token, channel_id
+    config = Column(JSON, default=dict, nullable=False)
+
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    organization = relationship("Organization")
+    creator = relationship("User", foreign_keys=[created_by])
+
+    __table_args__ = (
+        Index("idx_integration_org", "organization_id"),
+        Index("idx_integration_org_type", "organization_id", "integration_type", unique=True),
+    )
+
+
+class IntegrationSync(Base):
+    """Audit log for integration sync events (Jira issue created, Slack message sent, etc.)."""
+    __tablename__ = "integration_syncs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    integration_id = Column(UUID(as_uuid=True), ForeignKey("integrations.id", ondelete="CASCADE"), nullable=False)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True)
+
+    action = Column(String(100), nullable=False)       # e.g. "create_issue", "send_message"
+    entity_type = Column(String(50), nullable=True)     # "node", "card", "session"
+    entity_id = Column(String(100), nullable=True)      # UUID of node/card/session
+    external_id = Column(String(255), nullable=True)    # Jira issue key or Slack message ts
+    external_url = Column(String(500), nullable=True)   # Link to external resource
+    status = Column(String(20), default="success", nullable=False)  # success | failed
+    error_message = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    integration = relationship("Integration")
+
+    __table_args__ = (
+        Index("idx_sync_integration", "integration_id"),
+        Index("idx_sync_created_at", "created_at"),
+    )
+
+
+# ===== 18.2-C: White-labeling / Branding =====
+
+class BrandSettings(Base):
+    """Custom branding per organization for white-labeling.
+
+    Controls logo, colour palette, typography and naming used in:
+    - the web UI (CSS variables injected client-side)
+    - exported PDFs (header / footer theming)
+    - email notifications (from-name, accent colour)
+    """
+    __tablename__ = "brand_settings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, unique=True)
+
+    # Naming
+    app_name = Column(String(100), default="MoMetric", nullable=False)
+    tagline = Column(String(255), nullable=True)
+
+    # Visual
+    logo_url = Column(String(500), nullable=True)
+    favicon_url = Column(String(500), nullable=True)
+    primary_color = Column(String(7), default="#6366f1", nullable=False)     # hex
+    secondary_color = Column(String(7), default="#8b5cf6", nullable=False)
+    accent_color = Column(String(7), default="#f59e0b", nullable=False)
+    background_color = Column(String(7), default="#ffffff", nullable=False)
+    text_color = Column(String(7), default="#111827", nullable=False)
+
+    # Typography
+    font_family = Column(String(100), default="Inter, system-ui, sans-serif", nullable=False)
+
+    # PDF export branding
+    pdf_header_text = Column(String(255), nullable=True)
+    pdf_footer_text = Column(String(255), nullable=True)
+
+    # Email branding
+    email_from_name = Column(String(100), nullable=True)
+
+    # Custom domain (future)
+    custom_domain = Column(String(255), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    organization = relationship("Organization")
+
+    __table_args__ = (
+        Index("idx_brand_org", "organization_id", unique=True),
+    )
+
+
+# ===== 18.2-D: Public API — API Key Management =====
+
+class APIKeyScope(str, enum.Enum):
+    """Granular scopes an API key can be granted."""
+    READ_SESSIONS = "read:sessions"
+    WRITE_SESSIONS = "write:sessions"
+    READ_TREE = "read:tree"
+    WRITE_TREE = "write:tree"
+    READ_PLANNING = "read:planning"
+    WRITE_PLANNING = "write:planning"
+    READ_SOURCES = "read:sources"
+    WRITE_SOURCES = "write:sources"
+    EXPORT = "export"
+    FULL_ACCESS = "full_access"
+
+
+class APIKey(Base):
+    """API keys for third-party tool access.
+
+    The raw key is only shown once on creation; we store a SHA-256 hash.
+    Keys are scoped to an organization and optionally to a user.
+    """
+    __tablename__ = "api_keys"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    name = Column(String(100), nullable=False)              # human-readable label
+    key_prefix = Column(String(8), nullable=False)          # first 8 chars for identification (e.g. "mk_abcd")
+    key_hash = Column(String(64), nullable=False, unique=True)  # SHA-256 hex digest
+    scopes = Column(JSON, default=list, nullable=False)     # list of APIKeyScope values
+
+    is_active = Column(Boolean, default=True, nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+    last_used_at = Column(DateTime, nullable=True)
+    request_count = Column(Integer, default=0, nullable=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    organization = relationship("Organization")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_api_key_hash", "key_hash", unique=True),
+        Index("idx_api_key_org", "organization_id"),
+        Index("idx_api_key_user", "user_id"),
+        Index("idx_api_key_prefix", "key_prefix"),
+    )
+
+
+# ── Session Chatbot Messages (AI Command Center) ────────────────
+
+class SessionChatMessage(Base):
+    """
+    Stores messages for the session-level AI chatbot.
+    Each message belongs to a session + user conversation.
+    """
+    __tablename__ = "session_chat_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    role = Column(String(20), nullable=False)       # "user", "assistant", "system", "tool"
+    content = Column(Text, nullable=False)
+    tool_calls = Column(JSON, nullable=True)         # [{name, args, result}] when assistant invokes tools
+    message_metadata = Column(JSON, nullable=True)   # reasoning, context summary, etc.
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    session = relationship("Session")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_session_chat_session", "session_id"),
+        Index("idx_session_chat_user", "user_id"),
+        Index("idx_session_chat_created", "created_at"),
     )

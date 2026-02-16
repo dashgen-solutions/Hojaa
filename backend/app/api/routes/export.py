@@ -28,18 +28,52 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/export", tags=["export"])
 
 
+def _load_brand_dict(database: Session, organization_id) -> dict | None:
+    """Load BrandSettings for an org and return as a plain dict, or None."""
+    if not organization_id:
+        return None
+    try:
+        from app.models.database import BrandSettings
+        bs = database.query(BrandSettings).filter(
+            BrandSettings.organization_id == organization_id
+        ).first()
+        if not bs:
+            return None
+        return {
+            "app_name": bs.app_name,
+            "tagline": bs.tagline,
+            "primary_color": bs.primary_color,
+            "secondary_color": bs.secondary_color,
+            "accent_color": bs.accent_color,
+            "background_color": bs.background_color,
+            "text_color": bs.text_color,
+            "pdf_header_text": bs.pdf_header_text,
+            "pdf_footer_text": bs.pdf_footer_text,
+        }
+    except Exception as exc:
+        logger.warning(f"Could not load brand settings: {exc}")
+        return None
+
+
 # ──────────────────────────────────────────────────────────────
 #  Helper: Markdown → styled HTML (kept for potential future use)
 # ──────────────────────────────────────────────────────────────
 
-def _markdown_to_styled_html(markdown_content: str) -> str:
-    """Convert markdown to a fully-styled HTML document."""
+def _markdown_to_styled_html(markdown_content: str, brand: dict | None = None) -> str:
+    """Convert markdown to a fully-styled HTML document, optionally branded."""
     import markdown2
 
     html_body = markdown2.markdown(
         markdown_content,
         extras=["tables", "fenced-code-blocks", "header-ids"],
     )
+
+    # Resolve colors (fall back to defaults when no brand)
+    primary = (brand or {}).get("primary_color", "#4f46e5")
+    secondary = (brand or {}).get("secondary_color", "#4338ca")
+    accent = (brand or {}).get("accent_color", "#6366f1")
+    text_c = (brand or {}).get("text_color", "#333333")
+    bg_c = (brand or {}).get("background_color", "#ffffff")
 
     styled_html = f"""<!DOCTYPE html>
 <html>
@@ -51,11 +85,12 @@ def _markdown_to_styled_html(markdown_content: str) -> str:
         body {{
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             max-width: 800px; margin: 0 auto; padding: 20px;
-            color: #333; line-height: 1.6; font-size: 11pt;
+            color: {text_c}; line-height: 1.6; font-size: 11pt;
+            background-color: {bg_c};
         }}
-        h1 {{ color: #4f46e5; border-bottom: 2px solid #4f46e5; padding-bottom: 8px; font-size: 20pt; }}
-        h2 {{ color: #4338ca; margin-top: 28px; font-size: 16pt; }}
-        h3 {{ color: #6366f1; font-size: 13pt; }}
+        h1 {{ color: {primary}; border-bottom: 2px solid {primary}; padding-bottom: 8px; font-size: 20pt; }}
+        h2 {{ color: {secondary}; margin-top: 28px; font-size: 16pt; }}
+        h3 {{ color: {accent}; font-size: 13pt; }}
         table {{ border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 10pt; }}
         th, td {{ border: 1px solid #d1d5db; padding: 6px 10px; text-align: left; }}
         th {{ background-color: #f3f4f6; font-weight: 600; }}
@@ -67,8 +102,8 @@ def _markdown_to_styled_html(markdown_content: str) -> str:
         strong {{ color: #1f2937; }}
         em {{ color: #6b7280; }}
         blockquote {{
-            border-left: 3px solid #6366f1; margin: 10px 0;
-            padding: 8px 16px; background: #f5f3ff; color: #4338ca;
+            border-left: 3px solid {accent}; margin: 10px 0;
+            padding: 8px 16px; background: #f5f3ff; color: {secondary};
         }}
     </style>
 </head>
@@ -102,6 +137,7 @@ async def export_markdown(
             include_conversations=request.include_conversations,
             detail_level=request.detail_level,
             date_from=request.date_from,
+            template=request.template,
         )
 
         filename = f"scope_document_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.md"
@@ -279,6 +315,7 @@ async def export_pdf(
             include_conversations=request.include_conversations,
             detail_level=request.detail_level,
             date_from=request.date_from,
+            template=request.template,
         )
 
         filename = f"scope_document_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.pdf"
@@ -292,17 +329,23 @@ async def export_pdf(
 
         # Determine session name
         session_name = request.session_id
+        org_id = None
         try:
             from app.models.database import Session as SessionModel
             sess = database.query(SessionModel).filter(
                 SessionModel.id == request.session_id
             ).first()
-            if sess and sess.document_filename:
-                session_name = sess.document_filename
+            if sess:
+                if sess.document_filename:
+                    session_name = sess.document_filename
+                org_id = sess.organization_id
         except Exception:
             pass
 
-        scope_pdf = PDFGenerator()
+        # Load custom branding for the session's organization
+        brand = _load_brand_dict(database, org_id)
+
+        scope_pdf = PDFGenerator(brand=brand)
         scope_pdf.add_cover(project_name, str(session_name))
         scope_pdf.add_toc()
 

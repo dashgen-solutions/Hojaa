@@ -178,6 +178,10 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/api/docs") or request.url.path.startswith("/api/openapi"):
             return await call_next(request)
 
+        # Allow WebSocket upgrades (auth handled in WS endpoint)
+        if request.url.path.startswith("/api/ws"):
+            return await call_next(request)
+
         origin = request.headers.get("origin") or ""
         referer = request.headers.get("referer") or ""
 

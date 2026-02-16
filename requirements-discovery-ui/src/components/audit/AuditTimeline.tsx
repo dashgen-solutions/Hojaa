@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   PlusCircleIcon, PencilSquareIcon, ArrowsRightLeftIcon,
   TrashIcon, AdjustmentsHorizontalIcon, FunnelIcon,
   ChevronDownIcon, ChevronRightIcon, ArrowDownTrayIcon,
-  UserIcon,
+  UserIcon, DocumentTextIcon, DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
 import { useStore, AuditEntry } from '@/stores/useStore';
 
@@ -32,12 +32,26 @@ const TIME_RANGE_OPTIONS = [
 export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
   const {
     auditEntries, auditTotalChanges, isLoadingAudit,
-    fetchTimeline, sessionUsers, fetchSessionUsers, exportAuditReport,
+    fetchTimeline, sessionUsers, fetchSessionUsers, exportAuditReport, exportAuditReportPdf,
   } = useStore();
   const [timeRange, setTimeRange] = useState(30);
   const [changeTypeFilter, setChangeTypeFilter] = useState<string | null>(null);
   const [userFilter, setUserFilter] = useState<string | null>(null);
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    if (showExportMenu) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showExportMenu]);
 
   useEffect(() => {
     fetchSessionUsers(sessionId);
@@ -56,17 +70,31 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
     });
   }, []);
 
-  const handleExport = async () => {
+  const handleExport = async (format: 'markdown' | 'pdf') => {
+    setShowExportMenu(false);
+    setIsExporting(true);
     try {
-      const blob = await exportAuditReport(sessionId);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `audit-report-${sessionId.slice(0, 8)}.md`;
-      a.click();
-      URL.revokeObjectURL(url);
+      if (format === 'pdf') {
+        const blob = await exportAuditReportPdf(sessionId, undefined, undefined, userFilter || undefined);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit-report-${sessionId.slice(0, 8)}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const blob = await exportAuditReport(sessionId, undefined, undefined, userFilter || undefined);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit-report-${sessionId.slice(0, 8)}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } catch {
       // silent
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -104,14 +132,45 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Export button */}
-          <button
-            onClick={handleExport}
-            className="p-2 rounded-lg border border-neutral-300 hover:bg-neutral-50 transition-colors"
-            title="Export audit report"
-          >
-            <ArrowDownTrayIcon className="w-4 h-4 text-neutral-600" />
-          </button>
+          {/* Export dropdown */}
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={isExporting}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300
+                         hover:bg-neutral-50 transition-colors text-sm text-neutral-700 disabled:opacity-50"
+              title="Export audit report"
+            >
+              {isExporting ? (
+                <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
+              ) : (
+                <ArrowDownTrayIcon className="w-4 h-4" />
+              )}
+              Export
+              <ChevronDownIcon className="w-3 h-3" />
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border
+                              border-neutral-200 py-1 z-20">
+                <button
+                  onClick={() => handleExport('pdf')}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-neutral-700
+                             hover:bg-neutral-50 transition-colors"
+                >
+                  <DocumentArrowDownIcon className="w-4 h-4 text-red-500" />
+                  Download PDF
+                </button>
+                <button
+                  onClick={() => handleExport('markdown')}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-neutral-700
+                             hover:bg-neutral-50 transition-colors"
+                >
+                  <DocumentTextIcon className="w-4 h-4 text-blue-500" />
+                  Download Markdown
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* User filter */}
           {sessionUsers.length > 0 && (

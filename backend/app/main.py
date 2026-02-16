@@ -24,6 +24,11 @@ from app.api.routes import (
     export,
     notifications,
     metrics,
+    websocket,
+    integrations,
+    branding,
+    api_keys,
+    session_chat,
 )
 from app.models.schemas import HealthResponse
 from app.middleware.metrics import MetricsMiddleware
@@ -32,6 +37,7 @@ from app.middleware.security import (
     SecurityHeadersMiddleware,
     CSRFMiddleware,
 )
+from app.services.websocket_manager import ws_manager
 
 # Configure logging
 configure_logging()
@@ -80,6 +86,11 @@ app.include_router(planning.router, prefix="/api")  # Planning board (Phase 4)
 app.include_router(export.router, prefix="/api")  # Export (Phase 5)
 app.include_router(notifications.router, prefix="/api")  # Email notifications (Mailchimp)
 app.include_router(metrics.router, prefix="/api")  # Success metrics dashboard (Section 19)
+app.include_router(websocket.router, prefix="/api")  # 18.2-A: Real-time collaboration (WebSocket)
+app.include_router(integrations.router, prefix="/api")  # 18.2-B: External integrations (Jira, Slack)
+app.include_router(branding.router, prefix="/api")  # 18.2-C: White-labeling / branding
+app.include_router(api_keys.router, prefix="/api")  # 18.2-D: Public API — API key management
+app.include_router(session_chat.router, prefix="/api")  # Session AI Chatbot (Command Center)
 
 
 @app.on_event("startup")
@@ -94,6 +105,10 @@ async def startup_event():
         init_db()
         app.state.db_ready = True
         logger.info("Database initialized successfully")
+        
+        # Start WebSocket presence cleanup loop
+        await ws_manager.start_cleanup_loop()
+        logger.info("WebSocket presence cleanup loop started")
     except Exception as e:
         app.state.db_ready = False
         logger.error(f"Database initialization failed: {str(e)}")
@@ -109,6 +124,7 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown."""
+    ws_manager.stop_cleanup_loop()
     logger.info("Shutting down application")
 
 

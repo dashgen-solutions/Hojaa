@@ -77,14 +77,22 @@ class AuditService:
             The created NodeHistory record
         """
         # Auto-resolve session_id from the node if not provided
+        # Also snapshot node_title for audit entries that survive node deletion
+        node_title = None
         if session_id is None:
             node = database.query(Node).filter(Node.id == node_id).first()
             if node:
                 session_id = node.session_id
+                node_title = node.question
+        else:
+            node = database.query(Node).filter(Node.id == node_id).first()
+            if node:
+                node_title = node.question
         
         history_entry = NodeHistory(
             session_id=session_id,
             node_id=node_id,
+            node_title=node_title,
             change_type=change_type,
             field_changed=field_changed,
             old_value=old_value,
@@ -176,11 +184,11 @@ class AuditService:
         Returns:
             Timeline with enriched entries and total count
         """
-        # Build base query — join nodes to filter by session
+        # Build base query — filter by session_id directly on NodeHistory
+        # (avoids inner-joining Node, which would hide deleted-node entries)
         base_query = (
             database.query(NodeHistory)
-            .join(Node, NodeHistory.node_id == Node.id)
-            .filter(Node.session_id == session_id)
+            .filter(NodeHistory.session_id == session_id)
         )
         
         # Apply filters
@@ -205,13 +213,16 @@ class AuditService:
         
         timeline_entries = []
         for record in history_records:
-            # Get node title
-            node = database.query(Node).filter(Node.id == record.node_id).first()
-            node_title = node.question if node else "Deleted Node"
+            # Get node title — prefer live node, fall back to snapshot, then old_value
+            if record.node_id:
+                node = database.query(Node).filter(Node.id == record.node_id).first()
+                node_title = node.question if node else (record.node_title or record.old_value or "Deleted Node")
+            else:
+                node_title = record.node_title or record.old_value or "Deleted Node"
             
             entry = {
                 "id": str(record.id),
-                "node_id": str(record.node_id),
+                "node_id": str(record.node_id) if record.node_id else None,
                 "node_title": node_title,
                 "change_type": record.change_type.value,
                 "field_changed": record.field_changed,
@@ -387,9 +398,8 @@ class AuditService:
         # Get all audit entries between the two dates for this session
         changes_between = (
             database.query(NodeHistory)
-            .join(Node, NodeHistory.node_id == Node.id)
             .filter(
-                Node.session_id == session_id,
+                NodeHistory.session_id == session_id,
                 NodeHistory.changed_at > date_from,
                 NodeHistory.changed_at <= date_to,
             )
@@ -432,9 +442,12 @@ class AuditService:
         
         # Process audit history changes
         for record in changes_between:
-            node_id_str = str(record.node_id)
-            node = database.query(Node).filter(Node.id == record.node_id).first()
-            node_title = node.question if node else "Deleted Node"
+            node_id_str = str(record.node_id) if record.node_id else None
+            if record.node_id:
+                node = database.query(Node).filter(Node.id == record.node_id).first()
+                node_title = node.question if node else (record.node_title or record.old_value or "Deleted Node")
+            else:
+                node_title = record.node_title or record.old_value or "Deleted Node"
             
             change_entry = {
                 "node_id": node_id_str,
@@ -623,6 +636,8 @@ class AuditService:
         session_id: UUID,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
+        for_pdf: bool = False,
+        changed_by_filter: Optional[str] = None,
     ) -> str:
         """
         Generate a standalone audit report as Markdown.
@@ -632,6 +647,8 @@ class AuditService:
             session_id: Session to generate report for
             date_from: Optional start date filter
             date_to: Optional end date filter
+            for_pdf: If True, use a compact card layout instead of wide tables
+            changed_by_filter: Optional user ID to filter changes by
         
         Returns:
             Markdown string with the full audit report
@@ -650,13 +667,23 @@ class AuditService:
             session_id=session_id,
             date_from=date_from,
             date_to=date_to,
+            changed_by_filter=changed_by_filter,
             limit=500,
         )
+
+        # Resolve filtered user name
+        filtered_user_name = None
+        if changed_by_filter:
+            user_obj = database.query(User).filter(User.id == changed_by_filter).first()
+            if user_obj:
+                filtered_user_name = user_obj.username
         
         lines: list[str] = []
         lines.append(f"# Audit Report: {project_name}")
         lines.append("")
         lines.append(f"**Generated:** {datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')}")
+        if filtered_user_name:
+            lines.append(f"**Filtered by:** {filtered_user_name}")
         if date_from:
             lines.append(f"**Period:** {date_from.strftime('%B %d, %Y')} – {(date_to or datetime.utcnow()).strftime('%B %d, %Y')}")
         lines.append(f"**Total changes:** {timeline['total_changes']}")
@@ -692,25 +719,57 @@ class AuditService:
         # Detailed change log
         lines.append("## Detailed Change Log")
         lines.append("")
-        lines.append("| Date | Time | Node | Change | Field | Old Value | New Value | By | Source | Reason |")
-        lines.append("|------|------|------|--------|-------|-----------|-----------|----|--------|--------|")
+
+        if for_pdf:
+            # Card-based layout — fits in A4 portrait without column truncation
+            for i, entry in enumerate(timeline["entries"], 1):
+                dt = datetime.fromisoformat(entry["changed_at"])
+                date_str = dt.strftime("%b %d, %Y at %H:%M")
+                node_title = entry["node_title"]
+                change = entry["change_type"].replace("_", " ").title()
+                field = entry["field_changed"] or ""
+                old_val = entry["old_value"] or ""
+                new_val = entry["new_value"] or ""
+                user = entry.get("changed_by_name") or "System"
+                source = entry.get("source_name") or ""
+                reason = entry.get("change_reason") or ""
+
+                lines.append(f"### {i}. {change} — {date_str}")
+                lines.append(f"- **Node:** {node_title}")
+                lines.append(f"- **Changed by:** {user}")
+                if field:
+                    lines.append(f"- **Field:** {field}")
+                if old_val:
+                    lines.append(f"- **Old value:** {old_val}")
+                if new_val:
+                    lines.append(f"- **New value:** {new_val}")
+                if source:
+                    lines.append(f"- **Source:** {source}")
+                if reason:
+                    lines.append(f"- **Reason:** {reason}")
+                lines.append("")
+        else:
+            # Wide table — great for markdown viewers
+            lines.append("| Date | Time | Node | Change | Field | Old Value | New Value | By | Source | Reason |")
+            lines.append("|------|------|------|--------|-------|-----------|-----------|----|--------|--------|")
+
+            for entry in timeline["entries"]:
+                date_str = datetime.fromisoformat(entry["changed_at"]).strftime("%b %d")
+                time_str = datetime.fromisoformat(entry["changed_at"]).strftime("%H:%M")
+                node_title = entry["node_title"][:30]
+                change = entry["change_type"].replace("_", " ").title()
+                field = entry["field_changed"] or "-"
+                old_val = (entry["old_value"] or "-")[:25]
+                new_val = (entry["new_value"] or "-")[:25]
+                user = entry.get("changed_by_name") or "-"
+                source = entry.get("source_name") or "-"
+                reason = (entry.get("change_reason") or "-")[:30]
+                lines.append(f"| {date_str} | {time_str} | {node_title} | {change} | {field} | {old_val} | {new_val} | {user} | {source} | {reason} |")
+
+            lines.append("")
         
-        for entry in timeline["entries"]:
-            date_str = datetime.fromisoformat(entry["changed_at"]).strftime("%b %d")
-            time_str = datetime.fromisoformat(entry["changed_at"]).strftime("%H:%M")
-            node_title = entry["node_title"][:30]
-            change = entry["change_type"].replace("_", " ").title()
-            field = entry["field_changed"] or "-"
-            old_val = (entry["old_value"] or "-")[:25]
-            new_val = (entry["new_value"] or "-")[:25]
-            user = entry.get("changed_by_name") or "-"
-            source = entry.get("source_name") or "-"
-            reason = (entry.get("change_reason") or "-")[:30]
-            lines.append(f"| {date_str} | {time_str} | {node_title} | {change} | {field} | {old_val} | {new_val} | {user} | {source} | {reason} |")
-        
-        lines.append("")
         lines.append("---")
-        lines.append(f"*Generated by MoMetric on {datetime.utcnow().strftime('%B %d, %Y')}*")
+        lines.append(f"*Generated on {datetime.utcnow().strftime('%B %d, %Y')}*")
         
         return "\n".join(lines)
     
@@ -727,9 +786,8 @@ class AuditService:
         """
         user_ids = (
             database.query(NodeHistory.changed_by)
-            .join(Node, NodeHistory.node_id == Node.id)
             .filter(
-                Node.session_id == session_id,
+                NodeHistory.session_id == session_id,
                 NodeHistory.changed_by.isnot(None),
             )
             .distinct()

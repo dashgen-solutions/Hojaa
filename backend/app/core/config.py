@@ -123,11 +123,21 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     log_format: str = Field(default="json", alias="LOG_FORMAT")
     
-    # Mailchimp (notifications: node changes, source ingested, card assignment)
+    # SMTP Email (notification emails: node changes, source ingested, card assignment)
+    smtp_enabled: bool = Field(default=False, alias="SMTP_ENABLED")
+    smtp_host: str = Field(default="smtp.gmail.com", alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, alias="SMTP_PORT")
+    smtp_username: str = Field(default="", alias="SMTP_USERNAME")
+    smtp_password: str = Field(default="", alias="SMTP_PASSWORD")  # Gmail App Password
+    smtp_from_email: str = Field(default="", alias="SMTP_FROM_EMAIL")
+    smtp_from_name: str = Field(default="MoMetric", alias="SMTP_FROM_NAME")
+    smtp_use_tls: bool = Field(default=True, alias="SMTP_USE_TLS")
+
+    # Mailchimp (legacy — kept for reference, SMTP is now preferred)
     mailchimp_api_key: str = Field(default="", alias="MAILCHIMP_API_KEY")
     mailchimp_server_prefix: str = Field(default="", alias="MAILCHIMP_SERVER_PREFIX")
-    mailchimp_audience_id: str = Field(default="", alias="MAILCHIMP_AUDIENCE_ID")  # Audience/List ID from Mailchimp → Audience → Settings
-    mailchimp_from_email: str = Field(default="notifications@mometric.app", alias="MAILCHIMP_FROM_EMAIL")
+    mailchimp_audience_id: str = Field(default="", alias="MAILCHIMP_AUDIENCE_ID")
+    mailchimp_from_email: str = Field(default="", alias="MAILCHIMP_FROM_EMAIL")
     mailchimp_from_name: str = Field(default="MoMetric", alias="MAILCHIMP_FROM_NAME")
     mailchimp_enabled: bool = Field(default=False, alias="MAILCHIMP_ENABLED")
     

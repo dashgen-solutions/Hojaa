@@ -1,10 +1,10 @@
 """
-JWT Authentication utilities.
+JWT Authentication utilities + API Key authentication (18.2-D).
 """
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -171,3 +171,73 @@ def get_optional_user(
         pass
     
     return None
+
+
+# ─────────────────────────────────────────────────────────────
+#  18.2-D — API Key authentication (X-API-Key header)
+# ─────────────────────────────────────────────────────────────
+
+def get_user_from_api_key(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """
+    Authenticate via X-API-Key header.
+
+    Returns the User linked to the API key (if any), or None.
+    The API key row is attached to ``request.state.api_key`` for
+    downstream scope checks.
+    """
+    api_key_header = request.headers.get("X-API-Key")
+    if not api_key_header:
+        return None
+
+    from app.services.api_key_service import verify_api_key
+
+    api_key_row = verify_api_key(db, api_key_header)
+    if not api_key_row:
+        return None
+
+    # Stash the key row so routes can check scopes
+    request.state.api_key = api_key_row
+
+    # If the key is linked to a user, return that user
+    if api_key_row.user_id:
+        user = db.query(User).filter(User.id == api_key_row.user_id, User.is_active == True).first()
+        return user
+
+    return None
+
+
+def get_current_user_or_api_key(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    db: Session = Depends(get_db),
+) -> User:
+    """
+    Authenticate via JWT Bearer token OR X-API-Key header.
+
+    Tries JWT first, then falls back to API key.
+    Raises 401 if neither succeeds.
+    """
+    # Try JWT
+    if credentials:
+        try:
+            token = credentials.credentials
+            token_data = verify_token(token)
+            user = db.query(User).filter(User.id == token_data.user_id).first()
+            if user and user.is_active:
+                return user
+        except HTTPException:
+            pass
+
+    # Try API key
+    user = get_user_from_api_key(request, db)
+    if user:
+        return user
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication required (Bearer token or X-API-Key)",
+        headers={"WWW-Authenticate": "Bearer"},
+    )

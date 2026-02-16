@@ -48,6 +48,7 @@ class ExportService:
         include_conversations: bool = False,
         detail_level: str = "detailed",
         date_from: Optional[datetime] = None,
+        template: str = "standard",
     ) -> str:
         """
         Export the scope document as Markdown.
@@ -55,9 +56,25 @@ class ExportService:
         Args:
             detail_level: 'summary' (titles only), 'detailed' (titles + descriptions),
                           'full' (everything including acceptance criteria)
+            template: 'standard' (user options), 'executive' (high-level summary),
+                      'technical' (detailed with AC, hours, assignments)
         Returns:
             Markdown string of the scope document
         """
+        # ── Template overrides ──
+        if template == "executive":
+            detail_level = "summary"
+            include_assignments = True
+            include_conversations = False
+            include_completed = False
+        elif template == "technical":
+            detail_level = "full"
+            include_deferred = True
+            include_change_log = True
+            include_assignments = True
+            include_sources = True
+            include_completed = True
+
         session = database.query(SessionModel).filter(SessionModel.id == session_id).first()
         if not session:
             raise ValueError(f"Session {session_id} not found")
@@ -74,19 +91,22 @@ class ExportService:
         lines: list[str] = []
 
         # ── YAML-style frontmatter ──
+        template_label = {"standard": "Standard", "executive": "Executive Summary", "technical": "Technical Specification"}.get(template, "Standard")
         lines.append("---")
         lines.append(f"title: \"{project_name}\"")
         lines.append(f"generated: \"{datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')}\"")
         lines.append(f"session: \"{session.document_filename or 'Untitled'}\"")
         lines.append(f"format: markdown")
+        lines.append(f"template: {template}")
         lines.append(f"detail_level: {detail_level}")
         lines.append("---")
         lines.append("")
 
-        lines.append(f"# Project Scope Document: {project_name}")
+        lines.append(f"# {template_label}: {project_name}")
         lines.append("")
         lines.append(f"**Generated:** {datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')}")
         lines.append(f"**Session:** {session.document_filename or 'Untitled'}")
+        lines.append(f"**Template:** {template_label}")
         lines.append(f"**Detail Level:** {detail_level.title()}")
         lines.append("")
         lines.append("---")
@@ -248,6 +268,79 @@ class ExportService:
             lines.append("")
 
             self._render_conversations_markdown(lines, database, session_id)
+
+        # ── Planning Cards (technical template only) ──
+        if template == "technical":
+            lines.append("")
+            lines.append(f"## {next_section}. Planning Cards & Estimates")
+            next_section += 1
+            lines.append("")
+
+            cards = (
+                database.query(Card)
+                .filter(Card.session_id == session_id)
+                .order_by(Card.priority, Card.created_at)
+                .all()
+            )
+
+            if cards:
+                lines.append("| # | Card | Priority | Status | Estimate (hrs) |")
+                lines.append("|---|------|----------|--------|----------------|")
+                for idx, card in enumerate(cards, 1):
+                    title = (card.title or "Untitled").replace("|", "/")
+                    priority = card.priority.value.replace("_", " ").title() if card.priority else "—"
+                    status = card.status.value.replace("_", " ").title() if card.status else "—"
+                    hours = str(card.estimated_hours) if card.estimated_hours else "—"
+                    lines.append(f"| {idx} | **{title}** | {priority} | {status} | {hours} |")
+                lines.append("")
+
+                # Totals
+                total_hours = sum(c.estimated_hours or 0 for c in cards)
+                if total_hours > 0:
+                    lines.append(f"**Total Estimated Hours:** {total_hours}")
+                    lines.append("")
+            else:
+                lines.append("*No planning cards have been created yet.*")
+                lines.append("")
+
+        # ── Executive: Key Metrics summary ──
+        if template == "executive":
+            lines.append("")
+            lines.append(f"## {next_section}. Project Metrics")
+            next_section += 1
+            lines.append("")
+
+            total_nodes = database.query(Node).filter(
+                Node.session_id == session_id,
+                Node.node_type != NodeType.ROOT,
+            ).count()
+            active_count = database.query(Node).filter(
+                Node.session_id == session_id,
+                Node.status == NodeStatus.ACTIVE,
+            ).count()
+            completed_count = database.query(Node).filter(
+                Node.session_id == session_id,
+                Node.status == NodeStatus.COMPLETED,
+            ).count()
+            deferred_count = database.query(Node).filter(
+                Node.session_id == session_id,
+                Node.status == NodeStatus.DEFERRED,
+            ).count()
+
+            lines.append(f"- **Total Scope Items:** {total_nodes}")
+            lines.append(f"- **Active:** {active_count}")
+            lines.append(f"- **Completed:** {completed_count}")
+            lines.append(f"- **Deferred:** {deferred_count}")
+
+            card_count = database.query(Card).filter(Card.session_id == session_id).count()
+            total_hours = database.query(Card).filter(Card.session_id == session_id).with_entities(
+                Card.estimated_hours
+            ).all()
+            hours_sum = sum(h[0] or 0 for h in total_hours)
+            lines.append(f"- **Planning Cards:** {card_count}")
+            if hours_sum > 0:
+                lines.append(f"- **Total Estimated Hours:** {hours_sum}")
+            lines.append("")
 
         lines.append("---")
         lines.append("")

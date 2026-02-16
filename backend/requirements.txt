@@ -43,6 +43,9 @@ structlog
 # Redis (optional for caching)
 redis
 
+# Async HTTP client (Jira, Slack integrations)
+httpx
+
 # Testing
 pytest
 pytest-asyncio

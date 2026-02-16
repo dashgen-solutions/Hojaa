@@ -10,6 +10,7 @@ import {
   getGraphStateAt, compareGraphStates, getSessionUsers,
   revertNode as apiRevertNode, compareNodeVersions as apiCompareNodeVersions,
   exportAuditReport as apiExportAuditReport,
+  exportAuditReportPdf as apiExportAuditReportPdf,
   updateNodeStatus, getFilteredNodes, bulkUpdateNodeStatus,
   exportMarkdown, exportJson, exportPdf,
   getNotificationPreferences, updateNotificationPreferences as apiUpdateNotificationPreferences,
@@ -159,6 +160,7 @@ export interface NotificationPreferences {
   notify_node_moved: boolean;
   notify_status_changed: boolean;
   notify_source_ingested: boolean;
+  notify_team_member_added: boolean;
   is_subscribed: boolean;
 }
 
@@ -325,7 +327,8 @@ interface MoMetricStore {
   fetchSessionUsers: (sessionId: string) => Promise<void>;
   revertNodeVersion: (nodeId: string, historyEntryId: string) => Promise<any>;
   compareVersions: (nodeId: string, entryIdA: string, entryIdB: string) => Promise<any>;
-  exportAuditReport: (sessionId: string, dateFrom?: string, dateTo?: string) => Promise<Blob>;
+  exportAuditReport: (sessionId: string, dateFrom?: string, dateTo?: string, changedBy?: string) => Promise<Blob>;
+  exportAuditReportPdf: (sessionId: string, dateFrom?: string, dateTo?: string, changedBy?: string) => Promise<Blob>;
 
   // Notification actions
   fetchNotificationPreferences: (sessionId: string) => Promise<void>;
@@ -688,8 +691,13 @@ export const useStore = create<MoMetricStore>((set, get) => ({
     return result;
   },
 
-  exportAuditReport: async (sessionId, dateFrom, dateTo) => {
-    const blob = await apiExportAuditReport(sessionId, dateFrom, dateTo);
+  exportAuditReport: async (sessionId, dateFrom, dateTo, changedBy) => {
+    const blob = await apiExportAuditReport(sessionId, dateFrom, dateTo, changedBy);
+    return blob;
+  },
+
+  exportAuditReportPdf: async (sessionId, dateFrom, dateTo, changedBy) => {
+    const blob = await apiExportAuditReportPdf(sessionId, dateFrom, dateTo, changedBy);
     return blob;
   },
 

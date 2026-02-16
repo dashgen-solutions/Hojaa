@@ -27,6 +27,7 @@ from app.models.schemas import (
 )
 from app.services.meeting_notes_parser import meeting_notes_parser
 from app.services.graph_service import graph_service
+from app.services.notification_service import notification_service
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -348,6 +349,18 @@ async def ingest_source(
         # Run AI analysis
         suggestions = await meeting_notes_parser.analyze_source(source.id, database)
 
+        # Fire source ingested notification
+        try:
+            notification_service.notify_source_ingested(
+                db=database,
+                session_id=UUID(request.session_id) if isinstance(request.session_id, str) else request.session_id,
+                source_name=source.source_name,
+                suggestions_count=len(suggestions) if suggestions else 0,
+                ingested_by=current_user.id if current_user else None,
+            )
+        except Exception:
+            pass  # never fail the request for a notification error
+
         return _build_source_detail_response(source, suggestions)
 
     except Exception as error:
@@ -440,6 +453,18 @@ async def upload_source_file(
 
         # Run AI analysis
         suggestions = await meeting_notes_parser.analyze_source(source.id, database)
+
+        # Fire source ingested notification
+        try:
+            notification_service.notify_source_ingested(
+                db=database,
+                session_id=UUID(session_id) if isinstance(session_id, str) else session_id,
+                source_name=source.source_name,
+                suggestions_count=len(suggestions) if suggestions else 0,
+                ingested_by=current_user.id if current_user else None,
+            )
+        except Exception:
+            pass  # never fail the request for a notification error
 
         return _build_source_detail_response(source, suggestions)
 

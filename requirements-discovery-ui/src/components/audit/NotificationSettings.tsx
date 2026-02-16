@@ -18,6 +18,7 @@ const PREF_OPTIONS: { key: keyof NotificationPreferences; label: string; descrip
   { key: 'notify_node_moved', label: 'Requirement moves', description: 'When a requirement is moved to a different parent' },
   { key: 'notify_status_changed', label: 'Status changes', description: 'When a requirement is deferred, completed, or reactivated' },
   { key: 'notify_source_ingested', label: 'New sources', description: 'When meeting notes or documents are ingested' },
+  { key: 'notify_team_member_added', label: 'Team member added', description: 'When a new team member joins the session' },
 ];
 
 export default function NotificationSettings({ sessionId }: NotificationSettingsProps) {
@@ -83,7 +84,7 @@ export default function NotificationSettings({ sessionId }: NotificationSettings
           <BellIcon className="h-5 w-5 text-primary-600" />
           <div>
             <h3 className="text-sm font-semibold text-gray-900">Email Notifications</h3>
-            <p className="text-xs text-gray-500">Powered by Mailchimp</p>
+            <p className="text-xs text-gray-500">Email notifications via SMTP</p>
           </div>
         </div>
 

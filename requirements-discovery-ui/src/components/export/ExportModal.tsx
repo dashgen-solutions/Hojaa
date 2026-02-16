@@ -46,8 +46,27 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
   const [pdfTemplate, setPdfTemplate] = useState<'standard' | 'executive' | 'technical'>('standard');
   const [isExporting, setIsExporting] = useState(false);
   const [exportedContent, setExportedContent] = useState<string | null>(null);
+  const [exportSuccess, setExportSuccess] = useState(false);
 
   const { downloadMarkdown, downloadJson, downloadPdf } = useStore();
+
+  // Clear old preview & success state whenever the user changes any option
+  const clearPreviousExport = () => {
+    if (exportedContent || exportSuccess) {
+      setExportedContent(null);
+      setExportSuccess(false);
+    }
+  };
+
+  const changeFormat = (fmt: string) => { setSelectedFormat(fmt); clearPreviousExport(); };
+  const toggleDeferred = () => { setIncludeDeferred(v => !v); clearPreviousExport(); };
+  const toggleChangeLog = () => { setIncludeChangeLog(v => !v); clearPreviousExport(); };
+  const toggleAssignments = () => { setIncludeAssignments(v => !v); clearPreviousExport(); };
+  const toggleSources = () => { setIncludeSources(v => !v); clearPreviousExport(); };
+  const toggleCompleted = () => { setIncludeCompleted(v => !v); clearPreviousExport(); };
+  const toggleConversations = () => { setIncludeConversations(v => !v); clearPreviousExport(); };
+  const changeDetailLevel = (dl: 'summary' | 'detailed' | 'full') => { setDetailLevel(dl); clearPreviousExport(); };
+  const changeTemplate = (tpl: 'standard' | 'executive' | 'technical') => { setPdfTemplate(tpl); clearPreviousExport(); };
 
   const triggerFileDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -61,6 +80,9 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
   };
 
   const handleExport = async () => {
+    // Clear previous export state FIRST so the user sees a fresh loading state
+    setExportedContent(null);
+    setExportSuccess(false);
     setIsExporting(true);
     try {
       const exportOptions = {
@@ -72,8 +94,11 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
         include_completed: includeCompleted,
         include_conversations: includeConversations,
         detail_level: detailLevel,
-        template: selectedFormat === 'pdf' ? pdfTemplate : undefined,
+        template: pdfTemplate,
       };
+
+      // Unique timestamp so each download has a distinct filename
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
       if (selectedFormat === 'pdf') {
         // First, get markdown for preview
@@ -82,13 +107,13 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
 
         // Then download the real PDF from backend
         const pdfBlob = await downloadPdf(exportOptions);
-        const filename = 'scope_document.pdf';
+        const filename = `scope_document_${ts}.pdf`;
         triggerFileDownload(pdfBlob, filename);
         recordExport(sessionId, 'pdf', exportOptions, filename);
       } else if (selectedFormat === 'json') {
         const content = await downloadJson(exportOptions);
         setExportedContent(content);
-        const filename = 'scope_document.json';
+        const filename = `scope_document_${ts}.json`;
         const blob = new Blob([content], { type: 'application/json' });
         triggerFileDownload(blob, filename);
         recordExport(sessionId, 'json', exportOptions, filename);
@@ -96,11 +121,12 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
         // Markdown (default)
         const content = await downloadMarkdown(exportOptions);
         setExportedContent(content);
-        const filename = 'scope_document.md';
+        const filename = `scope_document_${ts}.md`;
         const blob = new Blob([content], { type: 'text/markdown' });
         triggerFileDownload(blob, filename);
         recordExport(sessionId, 'markdown', exportOptions, filename);
       }
+      setExportSuccess(true);
     } catch (exportError) {
       console.error('Export failed:', exportError);
     } finally {
@@ -127,7 +153,7 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
               {EXPORT_FORMATS.map((format) => (
                 <button
                   key={format.key}
-                  onClick={() => setSelectedFormat(format.key)}
+                  onClick={() => changeFormat(format.key)}
                   className={`p-3 rounded-xl border-2 text-left transition-all ${
                     selectedFormat === format.key
                       ? 'border-primary-500 bg-primary-50'
@@ -151,12 +177,12 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
             <label className="block text-sm font-medium text-neutral-700 mb-2">Include</label>
             <div className="space-y-2">
               {[
-                { key: 'deferred', label: 'Deferred items', description: 'Items pushed to later phases', value: includeDeferred, setter: setIncludeDeferred },
-                { key: 'changelog', label: 'Change log', description: 'History of all scope changes', value: includeChangeLog, setter: setIncludeChangeLog },
-                { key: 'assignments', label: 'Team assignments', description: 'Who is working on what', value: includeAssignments, setter: setIncludeAssignments },
-                { key: 'sources', label: 'Sources', description: 'Meeting notes, documents & origins', value: includeSources, setter: setIncludeSources },
-                { key: 'completed', label: 'Completed items', description: 'Items marked as done', value: includeCompleted, setter: setIncludeCompleted },
-                { key: 'conversations', label: 'Conversations', description: 'Chat history for each node', value: includeConversations, setter: setIncludeConversations },
+                { key: 'deferred', label: 'Deferred items', description: 'Items pushed to later phases', value: includeDeferred, toggle: toggleDeferred },
+                { key: 'changelog', label: 'Change log', description: 'History of all scope changes', value: includeChangeLog, toggle: toggleChangeLog },
+                { key: 'assignments', label: 'Team assignments', description: 'Who is working on what', value: includeAssignments, toggle: toggleAssignments },
+                { key: 'sources', label: 'Sources', description: 'Meeting notes, documents & origins', value: includeSources, toggle: toggleSources },
+                { key: 'completed', label: 'Completed items', description: 'Items marked as done', value: includeCompleted, toggle: toggleCompleted },
+                { key: 'conversations', label: 'Conversations', description: 'Chat history for each node', value: includeConversations, toggle: toggleConversations },
               ].map((option) => (
                 <label
                   key={option.key}
@@ -166,7 +192,7 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
                     <input
                       type="checkbox"
                       checked={option.value}
-                      onChange={() => option.setter(!option.value)}
+                      onChange={option.toggle}
                       className="sr-only"
                     />
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
@@ -191,7 +217,7 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
             <label className="block text-sm font-medium text-neutral-700 mb-2">Detail Level</label>
             <select
               value={detailLevel}
-              onChange={(e) => setDetailLevel(e.target.value as 'summary' | 'detailed' | 'full')}
+              onChange={(e) => changeDetailLevel(e.target.value as 'summary' | 'detailed' | 'full')}
               className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm 
                          text-neutral-800 bg-white focus:outline-none focus:ring-2 
                          focus:ring-primary-500 focus:border-primary-500"
@@ -202,11 +228,10 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
             </select>
           </div>
 
-          {/* PDF Template (only for PDF) */}
-          {selectedFormat === 'pdf' && (
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">PDF Template</label>
-              <div className="grid grid-cols-3 gap-2">
+          {/* Document Template */}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-2">Document Template</label>
+            <div className="grid grid-cols-3 gap-2">
                 {[
                   { key: 'standard', label: 'Standard', desc: 'Full scope document' },
                   { key: 'executive', label: 'Executive', desc: 'High-level summary' },
@@ -214,7 +239,7 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
                 ].map((tpl) => (
                   <button
                     key={tpl.key}
-                    onClick={() => setPdfTemplate(tpl.key as typeof pdfTemplate)}
+                    onClick={() => changeTemplate(tpl.key as typeof pdfTemplate)}
                     className={`p-2 rounded-lg border text-left transition-all ${
                       pdfTemplate === tpl.key
                         ? 'border-primary-500 bg-primary-50'
@@ -227,6 +252,18 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
                     <p className="text-[10px] text-neutral-500">{tpl.desc}</p>
                   </button>
                 ))}
+              </div>
+            </div>
+
+          {/* Success banner */}
+          {exportSuccess && (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+              <CheckIcon className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-green-800">Export downloaded successfully!</p>
+                <p className="text-xs text-green-600 mt-0.5">
+                  Change any option above and click &quot;Generate New Export&quot; to export again with different settings.
+                </p>
               </div>
             </div>
           )}
@@ -258,18 +295,26 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="px-6 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 
-                       rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+            className={`px-6 py-2 text-sm font-medium text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 ${
+              exportSuccess
+                ? 'bg-green-600 hover:bg-green-700'
+                : 'bg-primary-600 hover:bg-primary-700'
+            }`}
           >
             {isExporting ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 Generating...
               </>
+            ) : exportSuccess ? (
+              <>
+                <DocumentArrowDownIcon className="w-4 h-4" />
+                Generate New Export
+              </>
             ) : (
               <>
                 <DocumentArrowDownIcon className="w-4 h-4" />
-                Export & Download
+                Export &amp; Download
               </>
             )}
           </button>

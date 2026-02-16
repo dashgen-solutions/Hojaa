@@ -580,6 +580,7 @@ class ExportRequest(BaseModel):
     """Schema for export request."""
     session_id: str
     format: str = "pdf"  # 'pdf', 'json', 'markdown'
+    template: str = "standard"  # 'standard', 'executive', 'technical'
     include_deferred: bool = False
     include_change_log: bool = False
     include_assignments: bool = False

@@ -391,14 +391,35 @@ export const compareNodeVersions = async (
 export const exportAuditReport = async (
   sessionId: string,
   dateFrom?: string,
-  dateTo?: string
+  dateTo?: string,
+  changedBy?: string,
 ) => {
   const params = new URLSearchParams();
   if (dateFrom) params.append('date_from', dateFrom);
   if (dateTo) params.append('date_to', dateTo);
+  if (changedBy) params.append('changed_by', changedBy);
   const queryString = params.toString();
   const response = await api.post(
     `/api/audit/${sessionId}/export${queryString ? '?' + queryString : ''}`,
+    {},
+    { responseType: 'blob' }
+  );
+  return response.data;
+};
+
+export const exportAuditReportPdf = async (
+  sessionId: string,
+  dateFrom?: string,
+  dateTo?: string,
+  changedBy?: string,
+) => {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append('date_from', dateFrom);
+  if (dateTo) params.append('date_to', dateTo);
+  if (changedBy) params.append('changed_by', changedBy);
+  const queryString = params.toString();
+  const response = await api.post(
+    `/api/audit/${sessionId}/export/pdf${queryString ? '?' + queryString : ''}`,
     {},
     { responseType: 'blob' }
   );
@@ -537,6 +558,7 @@ export const deleteTeamMember = async (teamMemberId: string) => {
 
 export interface ExportOptions {
   session_id: string;
+  template?: 'standard' | 'executive' | 'technical';
   include_deferred?: boolean;
   include_change_log?: boolean;
   include_assignments?: boolean;
@@ -558,7 +580,7 @@ export const exportJson = async (data: ExportOptions) => {
 };
 
 export const exportPdf = async (data: ExportOptions) => {
-  const response = await api.post('/api/export/pdf', { ...data, format: 'pdf' }, {
+  const response = await api.post('/api/export/pdf', { ...data, format: 'pdf', _t: Date.now() }, {
     responseType: 'blob',
   });
   return response.data;
@@ -595,6 +617,7 @@ export const updateNotificationPreferences = async (
     notify_node_moved?: boolean;
     notify_status_changed?: boolean;
     notify_source_ingested?: boolean;
+    notify_team_member_added?: boolean;
     is_subscribed?: boolean;
   },
 ) => {
@@ -761,6 +784,170 @@ export const getMetricsTrends = async (days: number = 30) => {
 // RISK-2.3C: AI usage / budget monitoring
 export const getAIUsageMetrics = async (days: number = 30) => {
   const response = await platformApi.get(`/api/metrics/ai-usage?days=${days}`);
+  return response.data;
+};
+
+
+// ═══════════════════════════════════════════════════════════
+//  18.2-B: External Integrations (Jira, Slack)
+// ═══════════════════════════════════════════════════════════
+
+export const listIntegrations = async () => {
+  const response = await api.get('/api/integrations');
+  return response.data;
+};
+
+export const upsertIntegration = async (data: {
+  integration_type: string;
+  config: Record<string, string>;
+  is_active?: boolean;
+}) => {
+  const response = await api.post('/api/integrations', data);
+  return response.data;
+};
+
+export const deleteIntegration = async (integrationId: string) => {
+  await api.delete(`/api/integrations/${integrationId}`);
+};
+
+export const testIntegration = async (type: string) => {
+  const response = await api.post(`/api/integrations/test/${type}`);
+  return response.data;
+};
+
+export const getIntegrationSyncs = async (limit: number = 50) => {
+  const response = await api.get(`/api/integrations/syncs?limit=${limit}`);
+  return response.data;
+};
+
+export const exportCardsToJira = async (sessionId: string, cardIds?: string[]) => {
+  const response = await api.post('/api/integrations/jira/export-cards', {
+    session_id: sessionId,
+    card_ids: cardIds,
+  });
+  return response.data;
+};
+
+export const sendSlackNotification = async (text: string, sessionId?: string, channel?: string) => {
+  const response = await api.post('/api/integrations/slack/notify', {
+    text,
+    session_id: sessionId,
+    channel,
+  });
+  return response.data;
+};
+
+
+// ═══════════════════════════════════════════════════════════
+//  18.2-C: White-labeling / Branding
+// ═══════════════════════════════════════════════════════════
+
+export interface BrandSettings {
+  app_name: string;
+  tagline?: string;
+  logo_url?: string;
+  favicon_url?: string;
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  background_color: string;
+  text_color: string;
+  font_family: string;
+  pdf_header_text?: string;
+  pdf_footer_text?: string;
+  email_from_name?: string;
+  custom_domain?: string;
+}
+
+export const getBrandSettings = async (): Promise<BrandSettings> => {
+  const response = await api.get('/api/branding');
+  return response.data;
+};
+
+export const updateBrandSettings = async (data: Partial<BrandSettings>): Promise<BrandSettings> => {
+  const response = await api.put('/api/branding', data);
+  return response.data;
+};
+
+export const getPublicBrandSettings = async (orgSlug: string): Promise<BrandSettings> => {
+  const response = await api.get(`/api/branding/public/${orgSlug}`);
+  return response.data;
+};
+
+
+// ═══════════════════════════════════════════════════════════
+//  18.2-D: Public API — API Key Management
+// ═══════════════════════════════════════════════════════════
+
+export interface APIKeyInfo {
+  id: string;
+  name: string;
+  key_prefix: string;
+  scopes: string[];
+  is_active: boolean;
+  last_used_at?: string;
+  request_count: number;
+  expires_at?: string;
+  created_at: string;
+}
+
+export const listAPIKeys = async (): Promise<APIKeyInfo[]> => {
+  const response = await api.get('/api/api-keys');
+  return response.data;
+};
+
+export const createAPIKey = async (data: {
+  name: string;
+  scopes?: string[];
+  expires_at?: string;
+}): Promise<{ raw_key: string; key: APIKeyInfo }> => {
+  const response = await api.post('/api/api-keys', data);
+  return response.data;
+};
+
+export const revokeAPIKey = async (keyId: string) => {
+  await api.delete(`/api/api-keys/${keyId}`);
+};
+
+
+// ===== Session AI Chatbot API =====
+
+export interface SessionChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  tool_calls?: Array<{ name: string; args: Record<string, any>; result_preview?: string }>;
+  created_at: string;
+}
+
+export interface SessionChatResponse {
+  response: string;
+  tool_calls: Array<{ name: string; args: Record<string, any>; result_preview?: string }>;
+  actions_taken: Array<{ action: string; args: Record<string, any> }>;
+  message_id: string;
+}
+
+export const sendSessionChatMessage = async (
+  sessionId: string,
+  message: string,
+): Promise<SessionChatResponse> => {
+  const response = await api.post('/api/session-chat/send', {
+    session_id: sessionId,
+    message,
+  });
+  return response.data;
+};
+
+export const getSessionChatHistory = async (
+  sessionId: string,
+  limit: number = 50,
+): Promise<{ messages: SessionChatMessage[] }> => {
+  const response = await api.get(`/api/session-chat/history/${sessionId}?limit=${limit}`);
+  return response.data;
+};
+
+export const clearSessionChatHistory = async (sessionId: string) => {
+  const response = await api.delete(`/api/session-chat/history/${sessionId}`);
   return response.data;
 };
 

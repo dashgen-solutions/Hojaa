@@ -1,13 +1,16 @@
 """
-Notification service using Mailchimp Marketing API.
+Notification service using SMTP (Gmail or any SMTP provider).
 
-Manages subscriber lists and sends email notifications for audit events
-(node changes, source ingestion, status updates).
+Sends transactional email notifications for audit events
+(node changes, source ingestion, card assignment, status updates).
 """
-import hashlib
+import smtplib
+import asyncio
+import re as _re
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import List, Optional, Dict, Any
 from uuid import UUID
-from datetime import datetime
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import and_
 
@@ -15,58 +18,74 @@ from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.database import (
     User, Session, Node, NotificationPreference, ChangeType,
-    Card, TeamMember,
+    Card, TeamMember, SessionMember,
 )
 
 logger = get_logger(__name__)
 
-# Lazy-initialised Mailchimp client – avoids import errors when
-# mailchimp-marketing is not installed (dev environments).
-_mc_client = None
 
+def _send_email_sync(
+    to_emails: List[str],
+    subject: str,
+    html_content: str,
+) -> bool:
+    """
+    Send an email via SMTP (synchronous — call via asyncio.to_thread for async).
+    Works with Gmail (App Password), Outlook, or any SMTP provider.
+    """
+    if not settings.smtp_username or not settings.smtp_password:
+        logger.warning("SMTP credentials not configured — cannot send email")
+        return False
 
-def _get_mailchimp_client():
-    """Return a configured Mailchimp Marketing client (singleton)."""
-    global _mc_client
-    if _mc_client is not None:
-        return _mc_client
-
-    if not settings.mailchimp_api_key or not settings.mailchimp_server_prefix:
-        logger.warning("Mailchimp API key or server prefix not configured")
-        return None
+    from_email = settings.smtp_from_email or settings.smtp_username
+    from_name = settings.smtp_from_name or "MoMetric"
 
     try:
-        import mailchimp_marketing as MailchimpMarketing
-        from mailchimp_marketing.api_client import ApiClientError  # noqa: F401
+        for email in to_emails:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = f"{from_name} <{from_email}>"
+            msg["To"] = email
 
-        client = MailchimpMarketing.Client()
-        client.set_config({
-            "api_key": settings.mailchimp_api_key,
-            "server": settings.mailchimp_server_prefix,
-        })
-        # Quick ping to validate credentials
-        client.ping.get()
-        _mc_client = client
-        logger.info("Mailchimp client initialised successfully")
-        return _mc_client
+            # Plain-text fallback (strip HTML tags)
+            plain = html_content.replace("<br>", "\n").replace("<br/>", "\n")
+            plain = _re.sub(r"<[^>]+>", "", plain)
+            msg.attach(MIMEText(plain, "plain"))
+            msg.attach(MIMEText(html_content, "html"))
+
+            if settings.smtp_use_tls:
+                server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15)
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+            else:
+                server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=15)
+
+            server.login(settings.smtp_username, settings.smtp_password)
+            server.sendmail(from_email, [email], msg.as_string())
+            server.quit()
+
+        logger.info(f"SMTP: sent email to {len(to_emails)} recipient(s): {subject[:60]}")
+        return True
+    except smtplib.SMTPAuthenticationError as exc:
+        logger.error(f"SMTP auth failed (check App Password): {exc}")
+        return False
+    except smtplib.SMTPException as exc:
+        logger.error(f"SMTP error: {exc}")
+        return False
     except Exception as exc:
-        logger.error(f"Failed to initialise Mailchimp client: {exc}")
-        return None
-
-
-def _subscriber_hash(email: str) -> str:
-    """Mailchimp uses MD5 of the lower-cased email as a subscriber id."""
-    return hashlib.md5(email.lower().encode()).hexdigest()
+        logger.error(f"Failed to send email: {exc}")
+        return False
 
 
 # ---------------------------------------------------------------------------
-# Subscriber management
+# Notification service
 # ---------------------------------------------------------------------------
 
 class NotificationService:
     """
-    Manages Mailchimp audience subscribers and dispatches email
-    notifications triggered by audit-trail events.
+    Manages notification preferences (DB) and dispatches email
+    notifications via SMTP triggered by audit-trail events.
     """
 
     # Maps ChangeType → NotificationPreference column name
@@ -77,78 +96,6 @@ class NotificationService:
         ChangeType.MOVED.value: "notify_node_moved",
         ChangeType.STATUS_CHANGED.value: "notify_status_changed",
     }
-
-    # ------------------------------------------------------------------
-    # Subscriber helpers
-    # ------------------------------------------------------------------
-
-    def add_subscriber(self, email: str, first_name: str = "", last_name: str = "") -> Optional[str]:
-        """
-        Add or update a contact in the Mailchimp audience.
-        Returns the subscriber hash on success, None on failure.
-        """
-        client = _get_mailchimp_client()
-        if not client:
-            return None
-
-        sub_hash = _subscriber_hash(email)
-        try:
-            client.lists.set_list_member(
-                settings.mailchimp_audience_id,
-                sub_hash,
-                {
-                    "email_address": email,
-                    "status_if_new": "subscribed",
-                    "merge_fields": {
-                        "FNAME": first_name,
-                        "LNAME": last_name,
-                    },
-                },
-            )
-            logger.info(f"Mailchimp: subscriber upserted – {email}")
-            return sub_hash
-        except Exception as exc:
-            logger.error(f"Mailchimp: failed to upsert subscriber {email}: {exc}")
-            return None
-
-    def remove_subscriber(self, email: str) -> bool:
-        """Unsubscribe a contact (sets status to 'unsubscribed')."""
-        client = _get_mailchimp_client()
-        if not client:
-            return False
-
-        sub_hash = _subscriber_hash(email)
-        try:
-            client.lists.update_list_member(
-                settings.mailchimp_audience_id,
-                sub_hash,
-                {"status": "unsubscribed"},
-            )
-            logger.info(f"Mailchimp: unsubscribed – {email}")
-            return True
-        except Exception as exc:
-            logger.error(f"Mailchimp: failed to unsubscribe {email}: {exc}")
-            return False
-
-    def check_subscriber(self, email: str) -> Optional[Dict[str, Any]]:
-        """Return subscriber info or None if not found / error."""
-        client = _get_mailchimp_client()
-        if not client:
-            return None
-
-        sub_hash = _subscriber_hash(email)
-        try:
-            member = client.lists.get_list_member(
-                settings.mailchimp_audience_id,
-                sub_hash,
-            )
-            return {
-                "email": member.get("email_address"),
-                "status": member.get("status"),
-                "subscriber_hash": sub_hash,
-            }
-        except Exception:
-            return None
 
     # ------------------------------------------------------------------
     # Notification preferences (DB)
@@ -162,7 +109,6 @@ class NotificationService:
     ) -> NotificationPreference:
         """
         Return existing preference row or create one with defaults.
-        Also ensures the user is subscribed in Mailchimp.
         """
         pref = (
             db.query(NotificationPreference)
@@ -175,16 +121,9 @@ class NotificationService:
         if pref:
             return pref
 
-        # Resolve user email for Mailchimp
-        user = db.query(User).filter(User.id == user_id).first()
-        sub_hash = None
-        if user and settings.mailchimp_enabled:
-            sub_hash = self.add_subscriber(user.email, first_name=user.username)
-
         pref = NotificationPreference(
             user_id=user_id,
             session_id=session_id,
-            mailchimp_subscriber_hash=sub_hash,
             is_subscribed=True,
         )
         db.add(pref)
@@ -202,24 +141,18 @@ class NotificationService:
         Update notification preference flags.  Accepted keys:
             notify_node_created, notify_node_modified, notify_node_deleted,
             notify_node_moved, notify_status_changed, notify_source_ingested,
-            is_subscribed
+            notify_team_member_added, is_subscribed
         """
         pref = self.get_or_create_preference(db, user_id, session_id)
 
         allowed = {
             "notify_node_created", "notify_node_modified", "notify_node_deleted",
             "notify_node_moved", "notify_status_changed", "notify_source_ingested",
-            "is_subscribed",
+            "notify_team_member_added", "is_subscribed",
         }
         for key, value in updates.items():
             if key in allowed:
                 setattr(pref, key, value)
-
-        # If user turned off everything, unsubscribe from Mailchimp
-        if not pref.is_subscribed and settings.mailchimp_enabled:
-            user = db.query(User).filter(User.id == user_id).first()
-            if user:
-                self.remove_subscriber(user.email)
 
         db.flush()
         return pref
@@ -241,7 +174,65 @@ class NotificationService:
         )
 
     # ------------------------------------------------------------------
-    # Sending notifications
+    # Auto-create preferences for all session participants
+    # ------------------------------------------------------------------
+
+    def _ensure_session_preferences(
+        self,
+        db: DBSession,
+        session_id: UUID,
+    ) -> None:
+        """
+        Ensure that every user who has access to this session (the session
+        owner + all SessionMember users) has a NotificationPreference row.
+
+        Records are created with all notification flags defaulting to True so
+        that users receive notifications even if they have never visited the
+        notification settings page.
+        """
+        # Collect user IDs that already have a preference for this session
+        existing_user_ids = set(
+            uid for (uid,) in
+            db.query(NotificationPreference.user_id)
+            .filter(NotificationPreference.session_id == session_id)
+            .all()
+        )
+
+        # Gather all user IDs that should have preferences
+        target_user_ids: set = set()
+
+        # 1) Session owner
+        session_obj = db.query(Session).filter(Session.id == session_id).first()
+        if session_obj and session_obj.user_id:
+            target_user_ids.add(session_obj.user_id)
+
+        # 2) All SessionMembers
+        members = (
+            db.query(SessionMember.user_id)
+            .filter(SessionMember.session_id == session_id)
+            .all()
+        )
+        for (uid,) in members:
+            target_user_ids.add(uid)
+
+        # Create missing preferences
+        new_ids = target_user_ids - existing_user_ids
+        if new_ids:
+            for uid in new_ids:
+                pref = NotificationPreference(
+                    user_id=uid,
+                    session_id=session_id,
+                    is_subscribed=True,
+                )
+                db.add(pref)
+            db.commit()
+            logger.info(
+                f"Auto-created notification preferences for {len(new_ids)} "
+                f"user(s) in session {session_id}"
+            )
+
+    # ------------------------------------------------------------------
+    # Sending emails
     # ------------------------------------------------------------------
 
     def _build_change_html(
@@ -254,7 +245,7 @@ class NotificationService:
         changed_by_name: str,
         session_name: str,
     ) -> str:
-        """Build a simple HTML body for a change notification email."""
+        """Build a styled HTML body for a change notification email."""
         title_map = {
             "created": "New Requirement Added",
             "modified": "Requirement Modified",
@@ -266,86 +257,81 @@ class NotificationService:
 
         rows = []
         if field_changed:
-            rows.append(f"<tr><td><b>Field</b></td><td>{field_changed}</td></tr>")
+            rows.append(
+                f'<tr><td style="padding:6px 12px;font-weight:bold;color:#374151;">Field</td>'
+                f'<td style="padding:6px 12px;">{field_changed}</td></tr>'
+            )
         if old_value:
-            rows.append(f"<tr><td><b>Previous</b></td><td>{old_value}</td></tr>")
+            rows.append(
+                f'<tr><td style="padding:6px 12px;font-weight:bold;color:#374151;">Previous</td>'
+                f'<td style="padding:6px 12px;color:#DC2626;">{old_value}</td></tr>'
+            )
         if new_value:
-            rows.append(f"<tr><td><b>New</b></td><td>{new_value}</td></tr>")
+            rows.append(
+                f'<tr><td style="padding:6px 12px;font-weight:bold;color:#374151;">New</td>'
+                f'<td style="padding:6px 12px;color:#059669;">{new_value}</td></tr>'
+            )
 
-        detail_table = f"<table>{''.join(rows)}</table>" if rows else ""
+        detail_table = (
+            f'<table style="border-collapse:collapse;margin-top:12px;border:1px solid #E5E7EB;'
+            f'border-radius:6px;width:100%;">{"".join(rows)}</table>'
+            if rows else ""
+        )
 
         return f"""
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;">
-            <h2 style="color:#4F46E5;">{title}</h2>
-            <p><b>Session:</b> {session_name}</p>
-            <p><b>Requirement:</b> {node_question}</p>
-            <p><b>Changed by:</b> {changed_by_name}</p>
-            {detail_table}
-            <hr style="margin-top:24px;"/>
-            <p style="font-size:12px;color:#6B7280;">
-                You are receiving this because you have notifications enabled for this session in MoMetric.
-            </p>
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
+                    background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:24px 28px;">
+                <h2 style="color:#ffffff;margin:0;font-size:20px;">{title}</h2>
+            </div>
+            <div style="padding:24px 28px;">
+                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                    <b style="color:#374151;">Session:</b> {session_name}
+                </p>
+                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                    <b style="color:#374151;">Requirement:</b> {node_question}
+                </p>
+                <p style="margin:0 0 16px;color:#6B7280;font-size:14px;">
+                    <b style="color:#374151;">Changed by:</b> {changed_by_name}
+                </p>
+                {detail_table}
+            </div>
+            <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
+                <p style="margin:0;font-size:12px;color:#9CA3AF;">
+                    You're receiving this because you have notifications enabled
+                    for this session in MoMetric.
+                </p>
+            </div>
         </div>
         """
 
-    def _send_campaign(self, subject: str, html_content: str, recipient_emails: List[str]) -> bool:
+    def send_email(
+        self,
+        subject: str,
+        html_content: str,
+        recipient_emails: List[str],
+    ) -> bool:
         """
-        Create and immediately send a Mailchimp campaign to specific subscribers.
-
-        On the free plan this uses a regular campaign targeted at the
-        supplied emails via a segment condition.  Each call creates a
-        tiny one-off campaign.
+        Send an email via SMTP to the specified recipients (synchronous).
         """
-        client = _get_mailchimp_client()
-        if not client:
+        if not settings.smtp_enabled:
+            logger.info("SMTP is disabled — email not sent")
             return False
+        return _send_email_sync(recipient_emails, subject, html_content)
 
-        if not recipient_emails:
+    async def send_email_async(
+        self,
+        subject: str,
+        html_content: str,
+        recipient_emails: List[str],
+    ) -> bool:
+        """Non-blocking email send via SMTP (runs in thread pool)."""
+        if not settings.smtp_enabled:
+            logger.info("SMTP is disabled — email not sent")
             return False
-
-        try:
-            # Build segment conditions – match any of the supplied emails
-            conditions = [
-                {
-                    "condition_type": "EmailAddress",
-                    "field": "EMAIL",
-                    "op": "is",
-                    "value": email,
-                }
-                for email in recipient_emails
-            ]
-
-            # Create campaign
-            campaign = client.campaigns.create({
-                "type": "regular",
-                "recipients": {
-                    "list_id": settings.mailchimp_audience_id,
-                    "segment_opts": {
-                        "match": "any",
-                        "conditions": conditions,
-                    },
-                },
-                "settings": {
-                    "subject_line": subject,
-                    "from_name": settings.mailchimp_from_name,
-                    "reply_to": settings.mailchimp_from_email,
-                    "title": f"MoMetric – {subject[:60]}",
-                },
-            })
-            campaign_id = campaign["id"]
-
-            # Set content
-            client.campaigns.set_content(campaign_id, {
-                "html": html_content,
-            })
-
-            # Send immediately
-            client.campaigns.send(campaign_id)
-            logger.info(f"Mailchimp: campaign {campaign_id} sent to {len(recipient_emails)} recipient(s)")
-            return True
-        except Exception as exc:
-            logger.error(f"Mailchimp: failed to send campaign: {exc}")
-            return False
+        return await asyncio.to_thread(
+            _send_email_sync, recipient_emails, subject, html_content,
+        )
 
     # ------------------------------------------------------------------
     # Public: fire notification for a node change
@@ -365,18 +351,18 @@ class NotificationService:
         """
         Send notification emails to all subscribed users for this session
         who have the matching preference enabled.
-
         Returns the number of recipients notified.
         """
-        if not settings.mailchimp_enabled:
+        if not settings.smtp_enabled:
             return 0
 
-        # Resolve the preference field for this change type
+        # Auto-create preferences for users who haven't visited settings yet
+        self._ensure_session_preferences(db, session_id)
+
         pref_column = self._CHANGE_PREF_MAP.get(change_type)
         if not pref_column:
             return 0
 
-        # Fetch all preferences for the session where the flag is True
         prefs: List[NotificationPreference] = (
             db.query(NotificationPreference)
             .filter(and_(
@@ -386,22 +372,18 @@ class NotificationService:
             ))
             .all()
         )
-
         if not prefs:
             return 0
 
-        # Exclude the user who made the change (don't notify yourself)
         pref_user_ids = [p.user_id for p in prefs if p.user_id != changed_by]
         if not pref_user_ids:
             return 0
 
-        # Gather emails
         users = db.query(User).filter(User.id.in_(pref_user_ids)).all()
         recipient_emails = [u.email for u in users]
         if not recipient_emails:
             return 0
 
-        # Resolve context
         node = db.query(Node).filter(Node.id == node_id).first()
         node_question = node.question if node else "(deleted node)"
         session_obj = db.query(Session).filter(Session.id == session_id).first()
@@ -421,8 +403,12 @@ class NotificationService:
             session_name=session_name,
         )
 
-        success = self._send_campaign(subject, html, recipient_emails)
+        success = self.send_email(subject, html, recipient_emails)
         return len(recipient_emails) if success else 0
+
+    # ------------------------------------------------------------------
+    # Source ingestion notification
+    # ------------------------------------------------------------------
 
     def notify_source_ingested(
         self,
@@ -436,8 +422,11 @@ class NotificationService:
         Notify subscribed users that a new source has been ingested.
         Returns the number of recipients notified.
         """
-        if not settings.mailchimp_enabled:
+        if not settings.smtp_enabled:
             return 0
+
+        # Auto-create preferences for users who haven't visited settings yet
+        self._ensure_session_preferences(db, session_id)
 
         prefs: List[NotificationPreference] = (
             db.query(NotificationPreference)
@@ -448,7 +437,6 @@ class NotificationService:
             ))
             .all()
         )
-
         if not prefs:
             return 0
 
@@ -463,23 +451,36 @@ class NotificationService:
 
         subject = f"[MoMetric] New source ingested: {source_name[:80]}"
         html = f"""
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;">
-            <h2 style="color:#4F46E5;">New Source Ingested</h2>
-            <p><b>Session:</b> {session_name}</p>
-            <p><b>Source:</b> {source_name}</p>
-            <p><b>Suggestions generated:</b> {suggestions_count}</p>
-            <hr style="margin-top:24px;"/>
-            <p style="font-size:12px;color:#6B7280;">
-                You are receiving this because you have notifications enabled for this session in MoMetric.
-            </p>
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
+                    background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:24px 28px;">
+                <h2 style="color:#ffffff;margin:0;font-size:20px;">New Source Ingested</h2>
+            </div>
+            <div style="padding:24px 28px;">
+                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                    <b style="color:#374151;">Session:</b> {session_name}
+                </p>
+                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                    <b style="color:#374151;">Source:</b> {source_name}
+                </p>
+                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                    <b style="color:#374151;">Suggestions generated:</b> {suggestions_count}
+                </p>
+            </div>
+            <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
+                <p style="margin:0;font-size:12px;color:#9CA3AF;">
+                    You're receiving this because you have notifications enabled
+                    for this session in MoMetric.
+                </p>
+            </div>
         </div>
         """
 
-        success = self._send_campaign(subject, html, recipient_emails)
+        success = self.send_email(subject, html, recipient_emails)
         return len(recipient_emails) if success else 0
 
     # ------------------------------------------------------------------
-    # Card assignment notification (notify assignee when added to a card)
+    # Card assignment notification
     # ------------------------------------------------------------------
 
     def notify_card_assignment(
@@ -492,15 +493,12 @@ class NotificationService:
     ) -> bool:
         """
         Notify a team member by email when they are assigned to a planning card.
-        Uses the same Mailchimp audience (MAILCHIMP_AUDIENCE_ID): adds the
-        contact if needed and sends a one-off campaign to that email.
-
         Returns True if the email was sent, False otherwise.
         """
-        if not settings.mailchimp_enabled:
+        if not settings.smtp_enabled:
             logger.info(
-                "Card assignment notification skipped: Mailchimp is disabled "
-                "(set MAILCHIMP_ENABLED=true and configure API key / audience ID)"
+                "Card assignment notification skipped: SMTP is disabled "
+                "(set SMTP_ENABLED=true and configure SMTP credentials)"
             )
             return False
 
@@ -510,8 +508,8 @@ class NotificationService:
             return False
         if not team_member.email or not team_member.email.strip():
             logger.info(
-                f"Card assignment notification skipped: team member '{team_member.name}' (id={team_member_id}) "
-                "has no email — add an email in the planning board team settings"
+                f"Card assignment notification skipped: team member '{team_member.name}' "
+                f"has no email — add an email in the planning board team settings"
             )
             return False
 
@@ -533,60 +531,211 @@ class NotificationService:
                 assigner_name = assigner.username
 
         logger.info(
-            f"Card assignment notification: sending to {team_member.email} for card '{card_title[:50]}'"
-        )
-
-        # Ensure assignee is in Mailchimp audience (same list used for all notifications)
-        self.add_subscriber(
-            team_member.email,
-            first_name=team_member.name,
-            last_name="",
+            f"Card assignment notification: sending to {team_member.email} "
+            f"for card '{card_title[:50]}'"
         )
 
         subject = f"[MoMetric] You were assigned: {card_title[:60]}"
         html = f"""
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;">
-            <h2 style="color:#4F46E5;">Card assignment</h2>
-            <p>Hi {team_member.name},</p>
-            <p><b>{assigner_name}</b> assigned you to a planning card.</p>
-            <p><b>Session:</b> {session_name}</p>
-            <p><b>Card:</b> {card_title}</p>
-            <p><b>Your role:</b> Assignee</p>
-            <hr style="margin-top:24px;"/>
-            <p style="font-size:12px;color:#6B7280;">
-                You are receiving this because you were added to a card in MoMetric.
-            </p>
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
+                    background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:24px 28px;">
+                <h2 style="color:#ffffff;margin:0;font-size:20px;">Card Assignment</h2>
+            </div>
+            <div style="padding:24px 28px;">
+                <p style="margin:0 0 12px;color:#374151;font-size:15px;">
+                    Hi {team_member.name},
+                </p>
+                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                    <b style="color:#374151;">{assigner_name}</b> assigned you to a planning card.
+                </p>
+                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                    <b style="color:#374151;">Session:</b> {session_name}
+                </p>
+                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                    <b style="color:#374151;">Card:</b> {card_title}
+                </p>
+                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                    <b style="color:#374151;">Role:</b> Assignee
+                </p>
+            </div>
+            <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
+                <p style="margin:0;font-size:12px;color:#9CA3AF;">
+                    You're receiving this because you were added to a card in MoMetric.
+                </p>
+            </div>
         </div>
         """
 
-        success = self._send_campaign(subject, html, [team_member.email])
+        success = self.send_email(subject, html, [team_member.email])
         if success:
             logger.info(f"Card assignment notification sent to {team_member.email} for card {card_id}")
         return success
+
+    # ------------------------------------------------------------------
+    # Team member added notification
+    # ------------------------------------------------------------------
+
+    def notify_team_member_added(
+        self,
+        db: DBSession,
+        session_id: UUID,
+        member_name: str,
+        member_email: Optional[str],
+        member_role: str,
+        added_by: Optional[UUID] = None,
+    ) -> int:
+        """
+        Notify subscribed users that a new team member was added.
+        Also sends a welcome email to the new member if they have an email.
+        Returns the number of recipients notified.
+        """
+        if not settings.smtp_enabled:
+            return 0
+
+        # Auto-create preferences for users who haven't visited settings yet
+        self._ensure_session_preferences(db, session_id)
+
+        # 1. Notify existing subscribed users
+        prefs: List[NotificationPreference] = (
+            db.query(NotificationPreference)
+            .filter(and_(
+                NotificationPreference.session_id == session_id,
+                NotificationPreference.is_subscribed == True,  # noqa: E712
+                NotificationPreference.notify_team_member_added == True,  # noqa: E712
+            ))
+            .all()
+        )
+
+        session_obj = db.query(Session).filter(Session.id == session_id).first()
+        session_name = session_obj.document_filename or "Untitled" if session_obj else "Unknown"
+
+        adder_name = "Someone"
+        if added_by:
+            adder = db.query(User).filter(User.id == added_by).first()
+            if adder:
+                adder_name = adder.username
+
+        notified = 0
+
+        if prefs:
+            pref_user_ids = [p.user_id for p in prefs if p.user_id != added_by]
+            users = db.query(User).filter(User.id.in_(pref_user_ids)).all()
+            recipient_emails = [u.email for u in users]
+
+            if recipient_emails:
+                subject = f"[MoMetric] New team member: {member_name}"
+                html = f"""
+                <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
+                            background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+                    <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:24px 28px;">
+                        <h2 style="color:#ffffff;margin:0;font-size:20px;">New Team Member</h2>
+                    </div>
+                    <div style="padding:24px 28px;">
+                        <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                            <b style="color:#374151;">Session:</b> {session_name}
+                        </p>
+                        <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                            <b style="color:#374151;">Name:</b> {member_name}
+                        </p>
+                        <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                            <b style="color:#374151;">Role:</b> {member_role}
+                        </p>
+                        <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                            <b style="color:#374151;">Added by:</b> {adder_name}
+                        </p>
+                    </div>
+                    <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
+                        <p style="margin:0;font-size:12px;color:#9CA3AF;">
+                            You're receiving this because you have team notifications enabled
+                            for this session in MoMetric.
+                        </p>
+                    </div>
+                </div>
+                """
+                if self.send_email(subject, html, recipient_emails):
+                    notified = len(recipient_emails)
+
+        # 2. Send welcome email to the new team member (if they have an email)
+        if member_email and member_email.strip():
+            welcome_subject = f"[MoMetric] Welcome to {session_name}"
+            welcome_html = f"""
+            <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
+                        background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+                <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:24px 28px;">
+                    <h2 style="color:#ffffff;margin:0;font-size:20px;">Welcome to the Team!</h2>
+                </div>
+                <div style="padding:24px 28px;">
+                    <p style="margin:0 0 12px;color:#374151;font-size:15px;">
+                        Hi {member_name},
+                    </p>
+                    <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                        <b style="color:#374151;">{adder_name}</b> added you to the project
+                        <b style="color:#374151;">{session_name}</b> as <b style="color:#374151;">{member_role}</b>.
+                    </p>
+                    <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
+                        You may receive card assignment notifications when tasks are assigned to you.
+                    </p>
+                </div>
+                <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
+                    <p style="margin:0;font-size:12px;color:#9CA3AF;">Sent from MoMetric.</p>
+                </div>
+            </div>
+            """
+            self.send_email(welcome_subject, welcome_html, [member_email.strip()])
+
+        return notified
 
     # ------------------------------------------------------------------
     # Health / diagnostics
     # ------------------------------------------------------------------
 
     def check_health(self) -> Dict[str, Any]:
-        """Return Mailchimp integration health status."""
-        if not settings.mailchimp_enabled:
-            return {"enabled": False, "status": "disabled"}
+        """Return email notification health status."""
+        if not settings.smtp_enabled:
+            return {"enabled": False, "status": "disabled", "provider": "smtp"}
 
-        client = _get_mailchimp_client()
-        if not client:
-            return {"enabled": True, "status": "error", "detail": "Client init failed"}
+        if not settings.smtp_username or not settings.smtp_password:
+            return {
+                "enabled": True,
+                "status": "error",
+                "provider": "smtp",
+                "detail": "SMTP credentials not configured",
+            }
 
         try:
-            resp = client.ping.get()
+            if settings.smtp_use_tls:
+                server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+            else:
+                server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=10)
+
+            server.login(settings.smtp_username, settings.smtp_password)
+            server.quit()
+
             return {
                 "enabled": True,
                 "status": "ok",
-                "health_check": resp.get("health_status", "unknown"),
-                "audience_id": settings.mailchimp_audience_id,
+                "provider": "smtp",
+                "smtp_host": settings.smtp_host,
+                "from_email": settings.smtp_from_email or settings.smtp_username,
+            }
+        except smtplib.SMTPAuthenticationError:
+            return {
+                "enabled": True,
+                "status": "error",
+                "provider": "smtp",
+                "detail": "Authentication failed — check SMTP_USERNAME and SMTP_PASSWORD (use Gmail App Password)",
             }
         except Exception as exc:
-            return {"enabled": True, "status": "error", "detail": str(exc)}
+            return {
+                "enabled": True,
+                "status": "error",
+                "provider": "smtp",
+                "detail": str(exc),
+            }
 
 
 # Module-level singleton

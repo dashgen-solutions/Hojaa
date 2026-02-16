@@ -7,6 +7,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import ResizableSplitPane from "@/components/layout/ResizableSplitPane";
 import TreeVisualization from "@/components/tree/TreeVisualization";
 import ChatInterface from "@/components/chat/ChatInterface";
+import SessionChatbot from "@/components/chat/SessionChatbot";
 import DocumentUpload from "@/components/upload/DocumentUpload";
 import InitialQuestions from "@/components/questions/InitialQuestions";
 import AddSourceButton from "@/components/sources/AddSourceButton";
@@ -517,6 +518,9 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Session AI Chatbot - floating, admin/owner only */}
+      {sessionId && <SessionChatbot sessionId={sessionId} />}
     </div>
   );
 }
