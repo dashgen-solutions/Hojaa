@@ -731,7 +731,7 @@ class PlanningService:
         Use the LLM to decide which parent node a new card should live under,
         then create a new graph node there and return its id.
         """
-        from app.services.agent_service import agent_service
+        from app.services.agent_service import agent_service, cached_agent_run
 
         # Build a concise map of the current graph for the LLM
         nodes = (
@@ -776,8 +776,11 @@ class PlanningService:
             output_type=_CardPlacementResult,
         )
 
-        # Properly await the async agent within FastAPI's event loop
-        result = await agent.run(prompt)
+        # Properly await the async agent within FastAPI's event loop (RISK-2.3C: logged)
+        result = await cached_agent_run(
+            agent, prompt, task="tree_building",
+            session_id=str(session_id),
+        )
 
         placement = result.output
         # Convert the string id returned by LLM to a proper UUID

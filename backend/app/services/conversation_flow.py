@@ -6,7 +6,7 @@ from typing import Dict, Any, List
 from uuid import UUID
 from sqlalchemy.orm import Session
 from pydantic_ai import RunContext
-from app.services.agent_service import create_conversation_agent
+from app.services.agent_service import create_conversation_agent, cached_agent_run
 from app.models.agent_models import (
     ConversationStartOutput,
     ConversationNextOutput,
@@ -147,8 +147,11 @@ class AIConversationFlow:
                 context, source_context, changes_context
             )
             
-            # Run agent with structured output
-            result = await self.start_agent.run(user_prompt, deps=context)
+            # Run agent with structured output (RISK-2.3C: logged)
+            result = await cached_agent_run(
+                self.start_agent, user_prompt, deps=context,
+                task="conversation", session_id=str(node.session_id),
+            )
             
             # Log usage
             logger.info(f"Token usage: {result.usage()}")
@@ -272,8 +275,11 @@ class AIConversationFlow:
                 context, source_context, changes_context
             )
             
-            # Run agent with structured output
-            result = await self.continue_agent.run(user_prompt, deps=context)
+            # Run agent with structured output (RISK-2.3C: logged)
+            result = await cached_agent_run(
+                self.continue_agent, user_prompt, deps=context,
+                task="conversation",
+            )
             
             # Log usage
             logger.info(f"Token usage: {result.usage()}")

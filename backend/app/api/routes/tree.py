@@ -16,6 +16,10 @@ from app.core.logger import get_logger
 logger = get_logger(__name__)
 router = APIRouter(prefix="/tree", tags=["tree"])
 
+# ── RISK-2.1C  Depth-recommendation constants ──
+DEPTH_WARNING_THRESHOLD = 5     # Show a warning when tree exceeds this depth
+DEPTH_RECOMMEND_COLLAPSE = 4    # Suggest collapsing branches deeper than this
+
 
 def node_to_dict(
     node: Node,
@@ -106,6 +110,42 @@ def node_to_dict(
     }
 
 
+def _compute_tree_stats(tree_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """Walk the materialised tree dict and return depth / size stats.
+    Used by RISK-2.1C to power the frontend depth-recommendation banner.
+    """
+    total_nodes = 0
+    max_depth = 0
+    depth_histogram: Dict[int, int] = {}
+
+    def _walk(node: Dict[str, Any], depth: int = 0) -> None:
+        nonlocal total_nodes, max_depth
+        total_nodes += 1
+        if depth > max_depth:
+            max_depth = depth
+        depth_histogram[depth] = depth_histogram.get(depth, 0) + 1
+        for child in node.get("children") or []:
+            _walk(child, depth + 1)
+
+    _walk(tree_dict)
+
+    depth_warning = None
+    if max_depth > DEPTH_WARNING_THRESHOLD:
+        depth_warning = (
+            f"Your tree is {max_depth} levels deep. "
+            f"Consider collapsing or restructuring branches deeper than "
+            f"level {DEPTH_RECOMMEND_COLLAPSE} for better readability."
+        )
+
+    return {
+        "total_nodes": total_nodes,
+        "max_depth": max_depth,
+        "depth_histogram": depth_histogram,
+        "depth_warning": depth_warning,
+        "recommend_collapse_depth": DEPTH_RECOMMEND_COLLAPSE if max_depth > DEPTH_WARNING_THRESHOLD else None,
+    }
+
+
 @router.get("/{session_id}")
 async def get_tree(
     session_id: UUID,
@@ -151,8 +191,15 @@ async def get_tree(
         
         # Convert to dict with all children loaded recursively
         tree_dict = node_to_dict(root_node, db, max_depth=max_depth)
+
+        # RISK-2.1C — depth stats & recommendations
+        stats = _compute_tree_stats(tree_dict)
         
-        return {"tree": tree_dict, "session_id": session_id}
+        return {
+            "tree": tree_dict,
+            "session_id": session_id,
+            "tree_stats": stats,
+        }
         
     except HTTPException:
         raise

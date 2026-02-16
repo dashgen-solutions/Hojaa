@@ -12,6 +12,7 @@ import {
   ArrowPathIcon,
   FunnelIcon,
   ClockIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { getTree, getPlanningBoard } from "@/lib/api";
 
@@ -63,6 +64,13 @@ export default function TreeVisualization({
   const [showDeferred, setShowDeferred] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string>("");
   const [teamMembers, setTeamMembers] = useState<{ id: string; name: string; avatar_color?: string }[]>([]);
+  const [treeStats, setTreeStats] = useState<{
+    total_nodes: number;
+    max_depth: number;
+    depth_warning: string | null;
+    recommend_collapse_depth: number | null;
+  } | null>(null);
+  const [depthDismissed, setDepthDismissed] = useState(false);
 
   const fetchTree = async () => {
     try {
@@ -102,6 +110,15 @@ export default function TreeVisualization({
 
       const convertedTree = convertNode(response.tree, 0);
       setTreeData(convertedTree);
+
+      // RISK-2.1C — capture depth stats for warning banner
+      if (response.tree_stats) {
+        setTreeStats(response.tree_stats);
+        // Reset dismissed state when stats change significantly
+        if (response.tree_stats.depth_warning && !treeStats?.depth_warning) {
+          setDepthDismissed(false);
+        }
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to load tree");
       console.error("Error fetching tree:", err);
@@ -386,6 +403,31 @@ export default function TreeVisualization({
           </button>
         </div>
       </div>
+
+      {/* RISK-2.1C — Depth recommendation banner */}
+      {treeStats?.depth_warning && !depthDismissed && (
+        <div className="mx-4 mt-2 mb-1 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-3">
+          <ExclamationTriangleIcon className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-amber-800">Deep tree detected</p>
+            <p className="text-[11px] text-amber-700 mt-0.5">
+              {treeStats.depth_warning}
+            </p>
+            <div className="flex items-center gap-3 mt-1.5 text-[11px]">
+              <span className="text-amber-600">
+                {treeStats.total_nodes} nodes · {treeStats.max_depth} levels deep
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => setDepthDismissed(true)}
+            className="text-amber-400 hover:text-amber-600 text-xs px-1"
+            title="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Tree Content + optional Deferred panel */}
       <div className="flex-1 overflow-hidden flex">

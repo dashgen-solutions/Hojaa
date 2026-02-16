@@ -691,4 +691,77 @@ export const listSessions = async () => {
   return response.data;
 };
 
+// ── Success Metrics — Platform Admin (Section 19) ────────────────────────────
+// These use a SEPARATE token stored under "platform_admin_token", completely
+// independent of the regular user auth flow.
+
+const PLATFORM_TOKEN_KEY = "platform_admin_token";
+
+export const platformAdminLogin = async (email: string, password: string) => {
+  const response = await api.post('/api/metrics/login', { email, password });
+  const { access_token } = response.data;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(PLATFORM_TOKEN_KEY, access_token);
+  }
+  return response.data;
+};
+
+export const platformAdminLogout = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(PLATFORM_TOKEN_KEY);
+  }
+};
+
+export const getPlatformToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem(PLATFORM_TOKEN_KEY);
+  }
+  return null;
+};
+
+/** Axios instance that uses the platform admin token */
+const platformApi = axios.create({
+  baseURL: API_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+platformApi.interceptors.request.use((config) => {
+  const token = getPlatformToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const getAllMetrics = async (days: number = 30) => {
+  const response = await platformApi.get(`/api/metrics/all?days=${days}`);
+  return response.data;
+};
+
+export const getProductMetrics = async (days: number = 30) => {
+  const response = await platformApi.get(`/api/metrics/product?days=${days}`);
+  return response.data;
+};
+
+export const getSatisfactionMetrics = async () => {
+  const response = await platformApi.get('/api/metrics/satisfaction');
+  return response.data;
+};
+
+export const getTechnicalMetrics = async () => {
+  const response = await platformApi.get('/api/metrics/technical');
+  return response.data;
+};
+
+export const getMetricsTrends = async (days: number = 30) => {
+  const response = await platformApi.get(`/api/metrics/trends?days=${days}`);
+  return response.data;
+};
+
+// RISK-2.3C: AI usage / budget monitoring
+export const getAIUsageMetrics = async (days: number = 30) => {
+  const response = await platformApi.get(`/api/metrics/ai-usage?days=${days}`);
+  return response.data;
+};
+
 export default api;

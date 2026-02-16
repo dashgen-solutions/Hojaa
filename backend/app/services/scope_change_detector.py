@@ -16,7 +16,7 @@ from typing import List, Dict, Any, Optional
 from uuid import UUID
 from datetime import datetime
 from sqlalchemy.orm import Session as DBSession
-from app.services.agent_service import create_requirements_agent
+from app.services.agent_service import create_requirements_agent, cached_agent_run
 from app.models.agent_models import MeetingNotesOutput
 from app.models.database import (
     Node, NodeType, Source, SourceSuggestion
@@ -90,7 +90,10 @@ class ScopeChangeDetector:
             graph_summary=graph_summary,
         )
 
-        result = await self._agent.run(user_prompt)
+        result = await cached_agent_run(
+            self._agent, user_prompt, task="scope_change",
+            session_id=session_id,
+        )
         output: MeetingNotesOutput = result.output
 
         changes = []

@@ -89,6 +89,7 @@ async def suggest_status(
         _STATUS_SUGGEST_AGENT,
         prompt,
         model_name="status_suggest",
+        task="status_suggest",
         cache_ttl=settings.cache_ttl_seconds,
     )
     return [s.model_dump() for s in result.output.suggestions]
@@ -147,6 +148,7 @@ async def generate_acceptance_criteria(
         _AC_AGENT,
         prompt,
         model_name="ac_generate",
+        task="ac_generate",
         cache_ttl=settings.cache_ttl_seconds,
     )
     return [ac.model_dump() for ac in result.output.acceptance_criteria]
@@ -219,6 +221,7 @@ async def generate_export_summary(
         _SUMMARY_AGENT,
         prompt,
         model_name="summary",
+        task="summary",
         cache_ttl=settings.cache_ttl_seconds,
     )
     return result.output.model_dump()

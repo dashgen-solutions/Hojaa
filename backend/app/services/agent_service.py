@@ -143,6 +143,9 @@ async def cached_agent_run(
     deps=None,
     model_name: str = "",
     cache_ttl: int = 0,
+    task: str = "",
+    session_id=None,
+    org_id=None,
 ):
     """
     Run an agent with optional Redis response caching **and** timeout
@@ -152,8 +155,12 @@ async def cached_agent_run(
     result is stored / reused.  Otherwise falls through to a normal run.
     AI calls are guarded by ``settings.ai_timeout_seconds`` via
     ``asyncio.wait_for``.
+
+    RISK-2.3C: Every call (including cache hits) is persisted to
+    ``ai_usage_logs`` for budget monitoring.
     """
     import asyncio
+    import time
     r = _get_redis()
     key = _cache_key(prompt, model_name) if r and cache_ttl > 0 else ""
 
@@ -163,7 +170,14 @@ async def cached_agent_run(
             cached = r.get(key)
             if cached:
                 logger.debug("Cache hit for LLM prompt")
-                # Return deserialised Pydantic model
+                # RISK-2.3C — log cache hit
+                _log_usage_bg(
+                    task=task or model_name,
+                    model=model_name,
+                    cache_hit=True,
+                    session_id=session_id,
+                    org_id=org_id,
+                )
                 output_type = agent._output_type  # noqa: access private
                 return type("CachedResult", (), {
                     "output": output_type.model_validate_json(cached),
@@ -173,6 +187,7 @@ async def cached_agent_run(
             pass  # cache miss — continue
 
     timeout = settings.ai_timeout_seconds
+    t0 = time.monotonic()
     try:
         result = await asyncio.wait_for(
             agent.run(prompt, deps=deps),
@@ -181,6 +196,7 @@ async def cached_agent_run(
     except asyncio.TimeoutError:
         logger.error(f"AI agent call timed out after {timeout}s")
         raise TimeoutError(f"AI processing exceeded {timeout}s limit")
+    duration_ms = int((time.monotonic() - t0) * 1000)
 
     # Store
     if key and r and cache_ttl > 0:
@@ -189,7 +205,43 @@ async def cached_agent_run(
         except Exception:
             pass
 
+    # RISK-2.3C — log usage
+    usage = result.usage() if callable(getattr(result, "usage", None)) else None
+    prompt_tokens = 0
+    completion_tokens = 0
+    total_tokens = 0
+    if usage and usage != "cached":
+        prompt_tokens = getattr(usage, "request_tokens", 0) or getattr(usage, "prompt_tokens", 0) or 0
+        completion_tokens = getattr(usage, "response_tokens", 0) or getattr(usage, "completion_tokens", 0) or 0
+        total_tokens = getattr(usage, "total_tokens", 0) or (prompt_tokens + completion_tokens)
+
+    _log_usage_bg(
+        task=task or model_name,
+        model=model_name,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
+        duration_ms=duration_ms,
+        cache_hit=False,
+        session_id=session_id,
+        org_id=org_id,
+    )
+
     return result
+
+
+def _log_usage_bg(**kwargs):
+    """Log AI usage in a fire-and-forget fashion using a fresh DB session."""
+    try:
+        from app.db.session import SessionLocal
+        from app.services.ai_usage_service import log_usage
+        db = SessionLocal()
+        try:
+            log_usage(db, **kwargs)
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.debug(f"Background AI usage logging failed: {exc}")
 
 
 class AIService:

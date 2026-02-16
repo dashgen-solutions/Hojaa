@@ -37,6 +37,9 @@ services:
       MAILCHIMP_AUDIENCE_ID: ${MAILCHIMP_AUDIENCE_ID:-}
       MAILCHIMP_FROM_EMAIL: ${MAILCHIMP_FROM_EMAIL:-}
       MAILCHIMP_FROM_NAME: ${MAILCHIMP_FROM_NAME:-}
+      # Platform admin (metrics dashboard)
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-admin@mometric.app}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy

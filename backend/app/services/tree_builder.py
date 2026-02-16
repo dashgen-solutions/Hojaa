@@ -6,7 +6,7 @@ from typing import List, Dict, Any
 from uuid import UUID
 from sqlalchemy.orm import Session
 from pydantic_ai import RunContext
-from app.services.agent_service import create_requirements_agent
+from app.services.agent_service import create_requirements_agent, cached_agent_run
 from app.models.agent_models import (
     TreeStructureOutput,
     SubRequirementsOutput,
@@ -117,8 +117,11 @@ class AITreeBuilder:
             # Generate user prompt
             user_prompt = self._create_tree_building_prompt(answers_text, user_type)
             
-            # Run agent with structured output
-            result = await self.tree_agent.run(user_prompt, deps=context)
+            # Run agent with structured output (RISK-2.3C: logged)
+            result = await cached_agent_run(
+                self.tree_agent, user_prompt, deps=context,
+                task="tree_building", session_id=str(session_id),
+            )
             
             # Log usage
             logger.info(f"Token usage: {result.usage()}")
@@ -257,8 +260,12 @@ class AITreeBuilder:
             # Generate user prompt
             user_prompt = self._create_sub_requirements_prompt(context)
             
-            # Run agent with structured output
-            result = await self.sub_req_agent.run(user_prompt, deps=context)
+            # Run agent with structured output (RISK-2.3C: logged)
+            result = await cached_agent_run(
+                self.sub_req_agent, user_prompt, deps=context,
+                task="tree_building",
+                session_id=str(parent_node.session_id),
+            )
             
             # Log usage
             logger.info(f"Token usage: {result.usage()}")

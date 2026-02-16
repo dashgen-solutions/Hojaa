@@ -135,6 +135,10 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="dev-secret-change-me", alias="SECRET_KEY")
     algorithm: str = Field(default="HS256", alias="ALGORITHM")
     access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+
+    # ── Platform Admin (app developer super-admin, no signup required) ──
+    platform_admin_email: str = Field(default="admin@mometric.app", alias="PLATFORM_ADMIN_EMAIL")
+    platform_admin_password: str = Field(default="", alias="PLATFORM_ADMIN_PASSWORD")
     
     model_config = SettingsConfigDict(
         env_file=_get_env_file(),

@@ -13,7 +13,7 @@ from typing import List, Dict, Any, Optional
 from uuid import UUID
 from datetime import datetime
 from sqlalchemy.orm import Session as DBSession
-from app.services.agent_service import create_requirements_agent
+from app.services.agent_service import create_requirements_agent, cached_agent_run
 from app.models.agent_models import MeetingNotesOutput, MeetingNotesContext
 from app.models.database import (
     Source, SourceSuggestion, Node, NodeType, SourceType
@@ -370,8 +370,11 @@ Identify all scope changes, action items, and unresolved questions."""
                 graph_summary=graph_summary,
             )
 
-            # Step 5: Run AI analysis
-            result = await self.analysis_agent.run(user_prompt)
+            # Step 5: Run AI analysis (RISK-2.3C: logged)
+            result = await cached_agent_run(
+                self.analysis_agent, user_prompt,
+                task="meeting_notes", session_id=str(source.session_id),
+            )
             meeting_output = result.output
 
             logger.info(

@@ -654,3 +654,46 @@ class Assignment(Base):
     card = relationship("Card", back_populates="assignments")
     team_member = relationship("TeamMember", back_populates="assignments")
     assigner = relationship("User", foreign_keys=[assigned_by])
+
+
+# ===== RISK-2.3C: AI Usage Tracking =====
+
+class AIUsageLog(Base):
+    """Tracks per-call LLM token usage and estimated cost for budget monitoring.
+
+    RISK-2.3C — every agent call is logged here so the platform admin
+    can monitor spend, detect spikes, and set future budgets.
+    """
+    __tablename__ = "ai_usage_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+
+    # What triggered this call
+    task = Column(String(100), nullable=False)            # e.g. "tree_building", "meeting_notes"
+    model = Column(String(200), nullable=False)           # e.g. "openai:gpt-4o-mini"
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True)
+
+    # Token counts (from pydantic-ai result.usage())
+    prompt_tokens = Column(Integer, default=0, nullable=False)
+    completion_tokens = Column(Integer, default=0, nullable=False)
+    total_tokens = Column(Integer, default=0, nullable=False)
+
+    # Estimated cost in USD (computed from known per-token pricing)
+    estimated_cost_usd = Column(Float, default=0.0, nullable=False)
+
+    # Whether the result came from cache
+    cache_hit = Column(Boolean, default=False, nullable=False)
+
+    # Timing
+    duration_ms = Column(Integer, default=0, nullable=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("idx_ai_usage_task", "task"),
+        Index("idx_ai_usage_model", "model"),
+        Index("idx_ai_usage_created_at", "created_at"),
+        Index("idx_ai_usage_session_id", "session_id"),
+        Index("idx_ai_usage_org_id", "org_id"),
+    )

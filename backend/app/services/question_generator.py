@@ -5,7 +5,7 @@ Generates initial discovery questions with type-safe, validated outputs.
 from typing import List
 from sqlalchemy.orm import Session
 from pydantic_ai import RunContext
-from app.services.agent_service import create_requirements_agent
+from app.services.agent_service import create_requirements_agent, cached_agent_run
 from app.models.agent_models import (
     QuestionGenerationOutput,
     DocumentContext
@@ -90,8 +90,11 @@ class AIQuestionGenerator:
             # Generate user prompt
             user_prompt = self._create_user_prompt(document_text, user_type)
             
-            # Run agent with structured output
-            result = await self.agent.run(user_prompt, deps=context)
+            # Run agent with structured output (RISK-2.3C: logged)
+            result = await cached_agent_run(
+                self.agent, user_prompt, deps=context,
+                task="question_gen", session_id=str(session_id),
+            )
             
             # Log usage stats
             logger.info(f"Token usage: {result.usage()}")

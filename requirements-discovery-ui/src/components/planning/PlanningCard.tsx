@@ -20,7 +20,7 @@ interface PlanningCardProps {
   onAddAC?: (description: string) => void;
   onDeleteAC?: (criterionId: string) => void;
   onAddComment?: (content: string) => void;
-  onUpdateCard?: (updates: { title?: string; description?: string; estimated_hours?: number; actual_hours?: number }) => void;
+  onUpdateCard?: (updates: { title?: string; description?: string; estimated_hours?: number; actual_hours?: number; priority?: string }) => void;
   onConvertOutOfScope?: (parentNodeId: string) => void;
   onDelete?: () => void;
 }
@@ -31,6 +31,13 @@ const PRIORITY_STYLES: Record<string, string> = {
   high: 'bg-amber-100 text-amber-700',
   critical: 'bg-red-100 text-red-700',
 };
+
+const PRIORITY_OPTIONS = [
+  { value: 'low', label: 'Low', dot: 'bg-neutral-400' },
+  { value: 'medium', label: 'Medium', dot: 'bg-blue-500' },
+  { value: 'high', label: 'High', dot: 'bg-amber-500' },
+  { value: 'critical', label: 'Critical', dot: 'bg-red-500' },
+];
 
 const NODE_TYPE_STYLES: Record<string, string> = {
   feature: 'bg-primary-100 text-primary-700',
@@ -54,6 +61,7 @@ export default function PlanningCardComponent({
   const [convertParentId, setConvertParentId] = useState('');
   const [showConvert, setShowConvert] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
 
   const assignedMemberIds = new Set(card.assignments.map((a) => a.team_member_id));
   const unassignedMembers = teamMembers.filter((m) => !assignedMemberIds.has(m.id));
@@ -102,9 +110,37 @@ export default function PlanningCardComponent({
         <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${NODE_TYPE_STYLES[card.node_type] || NODE_TYPE_STYLES.feature}`}>
           {card.node_type}
         </span>
-        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${PRIORITY_STYLES[card.priority] || PRIORITY_STYLES.medium}`}>
-          {card.priority}
-        </span>
+        <div className="relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); if (!readOnly) setShowPriorityDropdown(!showPriorityDropdown); }}
+            className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${PRIORITY_STYLES[card.priority] || PRIORITY_STYLES.medium} ${readOnly ? '' : 'hover:ring-1 hover:ring-neutral-300 cursor-pointer'} transition-all`}
+          >
+            {card.priority}
+          </button>
+          {showPriorityDropdown && !readOnly && (
+            <div className="absolute top-full left-0 mt-1 w-28 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-20">
+              {PRIORITY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (opt.value !== card.priority) {
+                      onUpdateCard?.({ priority: opt.value });
+                    }
+                    setShowPriorityDropdown(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-neutral-50 transition-colors ${
+                    opt.value === card.priority ? 'font-semibold text-neutral-900' : 'text-neutral-600'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
+                  {opt.label}
+                  {opt.value === card.priority && <CheckCircleIcon className="w-3 h-3 ml-auto text-primary-500" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         {card.is_out_of_scope && (
           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 flex items-center gap-0.5">
             <ExclamationTriangleIcon className="w-3 h-3" /> Out of Scope
