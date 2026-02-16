@@ -259,6 +259,7 @@ class UpdateOrgRequest(BaseModel):
     size: Optional[str] = None
     website: Optional[str] = None
     logo_url: Optional[str] = None
+    scope_approval_policy: Optional[str] = None  # "anyone" | "role_based" | "admin_only"
 
 
 class SessionAccessRequest(BaseModel):
@@ -303,6 +304,10 @@ async def update_organization(
         org.website = body.website
     if body.logo_url is not None:
         org.logo_url = body.logo_url
+    if body.scope_approval_policy is not None:
+        if body.scope_approval_policy not in ("anyone", "role_based", "admin_only"):
+            raise HTTPException(status_code=400, detail="Invalid policy. Must be 'anyone', 'role_based', or 'admin_only'.")
+        org.scope_approval_policy = body.scope_approval_policy
     db.commit()
     db.refresh(org)
     return org

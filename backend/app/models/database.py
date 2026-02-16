@@ -157,6 +157,11 @@ class Organization(Base):
     created_by = Column(UUID(as_uuid=True), nullable=False)  # founding admin user id
     is_active = Column(Boolean, default=True, nullable=False)
 
+    # Configurable policies
+    scope_approval_policy = Column(
+        String(20), default="role_based", nullable=False,
+    )  # "anyone" | "role_based" | "admin_only"
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

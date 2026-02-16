@@ -13,7 +13,7 @@ import {
   FunnelIcon,
   ClockIcon,
 } from "@heroicons/react/24/outline";
-import { getTree } from "@/lib/api";
+import { getTree, getPlanningBoard } from "@/lib/api";
 
 interface TreeNodeData {
   id: string;
@@ -33,6 +33,7 @@ interface TreeNodeData {
   order_index?: number;
   source_name?: string;
   source_type?: string;
+  assignee?: { id: string; name: string; avatar_color?: string } | null;
 }
 
 interface TreeVisualizationProps {
@@ -61,6 +62,7 @@ export default function TreeVisualization({
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeferred, setShowDeferred] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string>("");
+  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string; avatar_color?: string }[]>([]);
 
   const fetchTree = async () => {
     try {
@@ -83,6 +85,7 @@ export default function TreeVisualization({
         completed_at: node.completed_at,
         source_name: node.source_name || undefined,
         source_type: node.source_type || undefined,
+        assignee: node.assignee || null,
         type:
           node.node_type === "ROOT"
             ? "root"
@@ -110,6 +113,12 @@ export default function TreeVisualization({
   useEffect(() => {
     if (sessionId) {
       fetchTree();
+      // Fetch team members for node assignment (DEC-1.3)
+      getPlanningBoard(sessionId).then((data) => {
+        setTeamMembers((data.team_members || []).map((m: any) => ({
+          id: m.id, name: m.name, avatar_color: m.avatar_color,
+        })));
+      }).catch(() => {}); // team members may not exist yet
     }
   }, [sessionId, refreshKey]);
 
@@ -400,6 +409,7 @@ export default function TreeVisualization({
                 isRoot={true}
                 selectedNodeId={selectedNodeId}
                 readOnly={readOnly}
+                teamMembers={teamMembers}
               />
             </div>
           ) : (

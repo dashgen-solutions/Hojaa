@@ -183,6 +183,20 @@ export const moveNode = async (nodeId: string, newParentId?: string) => {
   return response.data;
 };
 
+// ── Node Assignment (DEC-1.3) ──
+
+export const assignNode = async (nodeId: string, teamMemberId: string) => {
+  const response = await api.post(`/api/manage/nodes/${nodeId}/assign`, {
+    team_member_id: teamMemberId,
+  });
+  return response.data;
+};
+
+export const unassignNode = async (nodeId: string) => {
+  const response = await api.delete(`/api/manage/nodes/${nodeId}/assign`);
+  return response.data;
+};
+
 
 // ===== Source Ingestion API (Phase 1) =====
 
@@ -644,6 +658,7 @@ export const updateOrganization = async (data: {
   size?: string;
   website?: string;
   logo_url?: string;
+  scope_approval_policy?: string;
 }) => {
   const response = await api.patch('/api/auth/organization', data);
   return response.data;

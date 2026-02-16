@@ -340,6 +340,20 @@ class PlanningService:
                     # Mark node completed when card is done
                     if status == "done":
                         node.status = NodeStatus.COMPLETED
+                    # Reverse sync: moving card back from done → revert node to active
+                    elif old_status == "done" and status != "done":
+                        if node.status == NodeStatus.COMPLETED:
+                            node.status = NodeStatus.ACTIVE
+                            audit_service.record_change(
+                                database=database,
+                                node_id=node.id,
+                                change_type=ChangeType.STATUS_CHANGED,
+                                field_changed="status",
+                                old_value="completed",
+                                new_value="active",
+                                change_reason="Card moved out of done — reopened",
+                                changed_by=updated_by,
+                            )
         
         if priority:
             card.priority = CardPriority(priority)

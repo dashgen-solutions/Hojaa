@@ -77,6 +77,15 @@ def node_to_dict(
         source_name = node.source.source_name
         source_type = node.source.source_type.value if node.source.source_type else None
 
+    # Assignee info (DEC-1.3)
+    assignee = None
+    if node.assigned_to and node.direct_assignee:
+        assignee = {
+            "id": str(node.direct_assignee.id),
+            "name": node.direct_assignee.name,
+            "avatar_color": node.direct_assignee.avatar_color,
+        }
+
     return {
         "id": node.id,
         "question": node.question,
@@ -93,6 +102,7 @@ def node_to_dict(
         "source_type": source_type,
         "has_children": has_children,
         "children": children_data,
+        "assignee": assignee,
     }
 
 

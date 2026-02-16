@@ -19,7 +19,7 @@ import {
   StarIcon,
   DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
-import { updateNode, deleteNode, addNode, updateNodeStatus } from "@/lib/api";
+import { updateNode, deleteNode, addNode, updateNodeStatus, assignNode, unassignNode } from "@/lib/api";
 
 interface TreeNodeData {
   id: string;
@@ -35,6 +35,7 @@ interface TreeNodeData {
   completed_at?: string;
   source_name?: string;
   source_type?: string;
+  assignee?: { id: string; name: string; avatar_color?: string } | null;
 }
 
 interface RelationshipTreeNodeProps {
@@ -47,6 +48,7 @@ interface RelationshipTreeNodeProps {
   isRoot?: boolean;
   selectedNodeId?: string | null;
   readOnly?: boolean;
+  teamMembers?: { id: string; name: string; avatar_color?: string }[];
 }
 
 export default function RelationshipTreeNode({
@@ -59,6 +61,7 @@ export default function RelationshipTreeNode({
   isRoot = false,
   selectedNodeId,
   readOnly = false,
+  teamMembers = [],
 }: RelationshipTreeNodeProps) {
   const hasChildren = node.children && node.children.length > 0;
   const isSelected = selectedNodeId === node.id;
@@ -74,6 +77,7 @@ export default function RelationshipTreeNode({
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [deferredReason, setDeferredReason] = useState("");
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [showAssignDropdown, setShowAssignDropdown] = useState(false);
 
   const getNodeStyle = () => {
     switch (node.type) {
@@ -252,6 +256,29 @@ export default function RelationshipTreeNode({
     } catch (error) {
       console.error("Error changing node status:", error);
       alert("Failed to change status");
+    }
+  };
+
+  const handleAssignNode = async (teamMemberId: string) => {
+    try {
+      await assignNode(node.id, teamMemberId);
+      setShowAssignDropdown(false);
+      setShowMenu(false);
+      if (onUpdate) onUpdate();
+    } catch (error) {
+      console.error("Error assigning node:", error);
+      alert("Failed to assign node");
+    }
+  };
+
+  const handleUnassignNode = async () => {
+    try {
+      await unassignNode(node.id);
+      setShowMenu(false);
+      if (onUpdate) onUpdate();
+    } catch (error) {
+      console.error("Error unassigning node:", error);
+      alert("Failed to unassign node");
     }
   };
 
@@ -480,6 +507,27 @@ export default function RelationshipTreeNode({
                     </span>
                   )}
 
+                  {/* Assignee badge (DEC-1.3) */}
+                  {node.assignee && (
+                    <span
+                      className="text-xs font-medium px-2 py-0.5 rounded-full border flex items-center gap-1.5"
+                      style={{
+                        backgroundColor: (node.assignee.avatar_color || '#6366f1') + '18',
+                        borderColor: (node.assignee.avatar_color || '#6366f1') + '40',
+                        color: node.assignee.avatar_color || '#6366f1',
+                      }}
+                      title={`Assigned to: ${node.assignee.name}`}
+                    >
+                      <span
+                        className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0"
+                        style={{ backgroundColor: node.assignee.avatar_color || '#6366f1' }}
+                      >
+                        {node.assignee.name.charAt(0).toUpperCase()}
+                      </span>
+                      {node.assignee.name.length > 12 ? node.assignee.name.substring(0, 10) + '…' : node.assignee.name}
+                    </span>
+                  )}
+
                   {/* Status badge — clickable to change status */}
                   {statusIndicator && sessionId && !isRoot ? (
                     <div className="relative">
@@ -615,6 +663,41 @@ export default function RelationshipTreeNode({
                 </div>
               </div>
 
+              {/* Assign team member dropdown (DEC-1.3) */}
+              {showAssignDropdown && teamMembers.length > 0 && (
+                <div className="mt-2">
+                  <div
+                    className="bg-white rounded-xl shadow-soft-lg border border-neutral-200 p-2 animate-fade-in"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <p className="text-xs font-medium text-neutral-500 px-2 mb-1">Assign to:</p>
+                    <div className="max-h-32 overflow-y-auto space-y-0.5">
+                      {teamMembers.map((member) => (
+                        <button
+                          key={member.id}
+                          onClick={() => handleAssignNode(member.id)}
+                          className="w-full px-2 py-1.5 text-left text-xs text-neutral-700 hover:bg-neutral-50 rounded-lg flex items-center gap-2 transition-colors"
+                        >
+                          <span
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+                            style={{ backgroundColor: member.avatar_color || '#6366f1' }}
+                          >
+                            {member.name.charAt(0).toUpperCase()}
+                          </span>
+                          {member.name}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setShowAssignDropdown(false)}
+                      className="w-full mt-1 px-2 py-1 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Action buttons */}
               <div className="flex flex-col gap-1.5 flex-shrink-0">
                 {/* Node Management Menu */}
@@ -666,6 +749,32 @@ export default function RelationshipTreeNode({
                           <ArrowPathIcon className="w-4 h-4" />
                           Change Status
                         </button>
+                        {/* Assign / Unassign (DEC-1.3) */}
+                        {teamMembers.length > 0 && !node.assignee && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowMenu(false);
+                              setShowAssignDropdown(true);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                          >
+                            <PlusIcon className="w-4 h-4" />
+                            Assign Member
+                          </button>
+                        )}
+                        {node.assignee && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUnassignNode();
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                          >
+                            <XMarkIcon className="w-4 h-4" />
+                            Unassign {node.assignee.name}
+                          </button>
+                        )}
                         <div className="border-t border-neutral-100 my-1" />
                         <button
                           onClick={(e) => {
@@ -857,6 +966,7 @@ export default function RelationshipTreeNode({
                   selectedNodeId={selectedNodeId}
                   isRoot={false}
                   readOnly={readOnly}
+                  teamMembers={teamMembers}
                 />
               </div>
             ))}

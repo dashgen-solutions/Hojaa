@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Q
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.auth import get_optional_user
+from app.core.permissions import require_permission, Permission
 from app.models.database import (
     Source, SourceSuggestion, SourceType, User
 )
@@ -667,12 +668,44 @@ async def reanalyze_source(
 async def apply_suggestions(
     request: BulkSuggestionApplyRequest,
     database: Session = Depends(get_db),
-    current_user: User = Depends(get_optional_user),
+    current_user: User = Depends(require_permission(Permission.VIEW)),
 ):
     """
     Apply (approve/reject) a batch of suggestions.
     Approved suggestions modify the graph with full source attribution.
+
+    Approval policy (configurable per organization):
+    - "anyone"     → any authenticated user can approve
+    - "role_based" → requires APPROVE_SCOPE_CHANGE permission (Admin/Owner)
+    - "admin_only" → only org owners can approve
     """
+    from app.core.permissions import has_permission
+    from app.models.database import Organization
+
+    # Determine the approval policy
+    policy = "role_based"  # default
+    if current_user and current_user.organization_id:
+        org = database.query(Organization).filter(
+            Organization.id == current_user.organization_id
+        ).first()
+        if org:
+            policy = org.scope_approval_policy or "role_based"
+
+    # Enforce the policy
+    if policy == "admin_only":
+        if not current_user or current_user.role.value not in ("admin", "owner"):
+            raise HTTPException(
+                status_code=403,
+                detail="Only organization admins can approve scope changes (admin_only policy)",
+            )
+    elif policy == "role_based":
+        if not current_user or not has_permission(current_user.role, Permission.APPROVE_SCOPE_CHANGE):
+            raise HTTPException(
+                status_code=403,
+                detail="Insufficient permissions — requires 'approve_scope_change' (role_based policy)",
+            )
+    # policy == "anyone" → no extra check, any authenticated user can approve
+
     try:
         applied_nodes = []
         rejected_count = 0

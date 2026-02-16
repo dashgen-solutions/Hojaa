@@ -68,6 +68,7 @@ class OrganizationResponse(BaseModel):
     industry: Optional[str] = None
     size: Optional[str] = None
     website: Optional[str] = None
+    scope_approval_policy: str = "role_based"  # "anyone" | "role_based" | "admin_only"
     is_active: bool
     created_at: datetime
     

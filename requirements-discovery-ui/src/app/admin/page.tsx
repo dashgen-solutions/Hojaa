@@ -61,6 +61,7 @@ interface OrgInfo {
   industry: string | null;
   size: string | null;
   website: string | null;
+  scope_approval_policy: string;
   is_active: boolean;
   created_at: string;
 }
@@ -125,7 +126,7 @@ export default function AdminPage() {
   // Organization
   const [org, setOrg] = useState<OrgInfo | null>(null);
   const [editOrg, setEditOrg] = useState(false);
-  const [orgForm, setOrgForm] = useState({ name: "", industry: "", size: "", website: "" });
+  const [orgForm, setOrgForm] = useState({ name: "", industry: "", size: "", website: "", scope_approval_policy: "role_based" });
 
   // Shared
   const [error, setError] = useState("");
@@ -186,7 +187,7 @@ export default function AdminPage() {
     try {
       const data = await getOrganization();
       setOrg(data);
-      setOrgForm({ name: data.name, industry: data.industry || "", size: data.size || "", website: data.website || "" });
+      setOrgForm({ name: data.name, industry: data.industry || "", size: data.size || "", website: data.website || "", scope_approval_policy: data.scope_approval_policy || "role_based" });
     } catch {
       // no org
     }
@@ -877,6 +878,19 @@ export default function AdminPage() {
                         className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
                       />
                     </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-medium text-neutral-500 mb-1">Scope Approval Policy</label>
+                      <select
+                        value={orgForm.scope_approval_policy}
+                        onChange={(e) => setOrgForm({ ...orgForm, scope_approval_policy: e.target.value })}
+                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none bg-white"
+                      >
+                        <option value="anyone">Anyone can approve scope changes</option>
+                        <option value="role_based">Role-based (Admin &amp; Owner only)</option>
+                        <option value="admin_only">Admin only</option>
+                      </select>
+                      <p className="text-xs text-neutral-400 mt-1">Controls who can apply AI-generated scope suggestions to the requirements tree.</p>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -888,7 +902,7 @@ export default function AdminPage() {
                       Save Changes
                     </button>
                     <button
-                      onClick={() => { setEditOrg(false); setOrgForm({ name: org.name, industry: org.industry || "", size: org.size || "", website: org.website || "" }); }}
+                      onClick={() => { setEditOrg(false); setOrgForm({ name: org.name, industry: org.industry || "", size: org.size || "", website: org.website || "", scope_approval_policy: org.scope_approval_policy || "role_based" }); }}
                       className="px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
                     >
                       Cancel
@@ -933,6 +947,15 @@ export default function AdminPage() {
                         {new Date(org.created_at).toLocaleDateString("en-US", {
                           year: "numeric", month: "long", day: "numeric",
                         })}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-neutral-400 uppercase tracking-wider">Scope Approval Policy</dt>
+                      <dd className="text-sm text-neutral-700 mt-0.5">
+                        {org.scope_approval_policy === "anyone" && "Anyone can approve"}
+                        {org.scope_approval_policy === "role_based" && "Role-based (Admin & Owner)"}
+                        {org.scope_approval_policy === "admin_only" && "Admin only"}
+                        {!["anyone", "role_based", "admin_only"].includes(org.scope_approval_policy) && "Role-based"}
                       </dd>
                     </div>
                   </dl>

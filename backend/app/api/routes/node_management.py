@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List, Optional
 from app.db.session import get_db
-from app.models.database import Node, NodeType, NodeStatus, ChangeType, Session as DBSession, Conversation
+from app.models.database import Node, NodeType, NodeStatus, ChangeType, Session as DBSession, Conversation, TeamMember, Assignment, AssignmentRole, Card
 from app.models.schemas import NodeCreate, NodeUpdate, NodeResponse
 from app.core.logger import get_logger
 from app.core.exceptions import resource_not_found_error
@@ -624,4 +624,151 @@ async def suggest_status(
         raise HTTPException(status_code=404, detail=str(error))
     except Exception as error:
         logger.error(f"Error suggesting status: {error}")
+        raise HTTPException(status_code=500, detail=str(error))
+
+
+# ===== DEC-1.3: Node-Level Assignment =====
+
+@router.post("/{node_id}/assign")
+async def assign_node(
+    node_id: str,
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
+):
+    """Assign a team member directly to a node (DEC-1.3)."""
+    try:
+        team_member_id = body.get("team_member_id")
+        if not team_member_id:
+            raise HTTPException(status_code=400, detail="team_member_id is required")
+
+        node = db.query(Node).filter(Node.id == UUID(node_id)).first()
+        if not node:
+            raise resource_not_found_error("Node", node_id)
+
+        member = db.query(TeamMember).filter(TeamMember.id == UUID(team_member_id)).first()
+        if not member:
+            raise resource_not_found_error("Team member", team_member_id)
+
+        # Update the direct_assignee shortcut on the node
+        node.assigned_to = member.id
+
+        # Upsert an Assignment record (node-level)
+        existing = (
+            db.query(Assignment)
+            .filter(Assignment.node_id == UUID(node_id), Assignment.team_member_id == member.id, Assignment.card_id.is_(None))
+            .first()
+        )
+        if not existing:
+            assignment = Assignment(
+                node_id=UUID(node_id),
+                team_member_id=member.id,
+                role=AssignmentRole.ASSIGNEE,
+                assigned_by=current_user.id if current_user else None,
+            )
+            db.add(assignment)
+
+        # Also assign on the linked planning card (if one exists)
+        linked_card = db.query(Card).filter(Card.node_id == UUID(node_id)).first()
+        if linked_card:
+            card_assignment_exists = (
+                db.query(Assignment)
+                .filter(
+                    Assignment.card_id == linked_card.id,
+                    Assignment.team_member_id == member.id,
+                )
+                .first()
+            )
+            if not card_assignment_exists:
+                db.add(Assignment(
+                    card_id=linked_card.id,
+                    node_id=UUID(node_id),
+                    team_member_id=member.id,
+                    role=AssignmentRole.ASSIGNEE,
+                    assigned_by=current_user.id if current_user else None,
+                ))
+
+        # Audit trail
+        audit_service.record_change(
+            database=db,
+            node_id=UUID(node_id),
+            change_type=ChangeType.MODIFIED,
+            field_changed="assigned_to",
+            new_value=member.name,
+            changed_by=current_user.id if current_user else None,
+            session_id=node.session_id,
+        )
+
+        db.commit()
+        db.refresh(node)
+
+        return {
+            "node_id": str(node.id),
+            "assigned_to": str(member.id),
+            "assignee_name": member.name,
+            "assignee_avatar_color": member.avatar_color,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as error:
+        logger.error(f"Error assigning node: {error}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(error))
+
+
+@router.delete("/{node_id}/assign")
+async def unassign_node(
+    node_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
+):
+    """Remove the direct assignment from a node."""
+    try:
+        node = db.query(Node).filter(Node.id == UUID(node_id)).first()
+        if not node:
+            raise resource_not_found_error("Node", node_id)
+
+        old_assignee_name = None
+        if node.assigned_to and node.direct_assignee:
+            old_assignee_name = node.direct_assignee.name
+
+        old_member_id = node.assigned_to
+        node.assigned_to = None
+
+        # Remove node-level assignment records
+        db.query(Assignment).filter(
+            Assignment.node_id == UUID(node_id),
+            Assignment.card_id.is_(None),
+        ).delete(synchronize_session="fetch")
+
+        # Also remove from linked planning card
+        if old_member_id:
+            linked_card = db.query(Card).filter(Card.node_id == UUID(node_id)).first()
+            if linked_card:
+                db.query(Assignment).filter(
+                    Assignment.card_id == linked_card.id,
+                    Assignment.team_member_id == old_member_id,
+                ).delete(synchronize_session="fetch")
+
+        # Audit trail
+        audit_service.record_change(
+            database=db,
+            node_id=UUID(node_id),
+            change_type=ChangeType.MODIFIED,
+            field_changed="assigned_to",
+            old_value=old_assignee_name,
+            new_value=None,
+            changed_by=current_user.id if current_user else None,
+            session_id=node.session_id,
+        )
+
+        db.commit()
+        return {"node_id": str(node.id), "assigned_to": None}
+
+    except HTTPException:
+        raise
+    except Exception as error:
+        logger.error(f"Error unassigning node: {error}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(error))
