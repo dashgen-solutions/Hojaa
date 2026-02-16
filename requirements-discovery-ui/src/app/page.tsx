@@ -15,6 +15,7 @@ import SuggestionReview from "@/components/sources/SuggestionReview";
 import ExportModal from "@/components/export/ExportModal";
 import { createSession, listSources, getSourceDetail } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useViewerMode } from "@/hooks/useViewerMode";
 import { useStore } from "@/stores/useStore";
 import {
   BriefcaseIcon,
@@ -33,6 +34,7 @@ export default function Home() {
   const [showUserTypeModal, setShowUserTypeModal] = useState(false);
   const [userType, setUserType] = useState<'technical' | 'non_technical' | null>(null);
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const readOnly = useViewerMode();
   const router = useRouter();
 
   const [isInitialized, setIsInitialized] = useState(false);
@@ -304,20 +306,22 @@ export default function Home() {
                       )}
 
                       {/* Suggestions */}
-                      <div className="px-5 py-4">
-                        <p className="text-xs font-medium text-neutral-700 mb-3">
-                          Scope Change Suggestions ({currentSourceDetail.suggestions.length})
-                        </p>
-                        <SuggestionReview
-                          suggestions={currentSourceDetail.suggestions}
-                          sourceId={currentSourceDetail.id}
-                          sessionId={sessionId || undefined}
-                          onComplete={() => {
-                            setShowSourceSuggestions(false);
-                            setTreeRefreshKey((previous) => previous + 1);
-                          }}
-                        />
-                      </div>
+                      {!readOnly && (
+                        <div className="px-5 py-4">
+                          <p className="text-xs font-medium text-neutral-700 mb-3">
+                            Scope Change Suggestions ({currentSourceDetail.suggestions.length})
+                          </p>
+                          <SuggestionReview
+                            suggestions={currentSourceDetail.suggestions}
+                            sourceId={currentSourceDetail.id}
+                            sessionId={sessionId || undefined}
+                            onComplete={() => {
+                              setShowSourceSuggestions(false);
+                              setTreeRefreshKey((previous) => previous + 1);
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </>
@@ -330,13 +334,15 @@ export default function Home() {
                       {/* Add Source Button Bar */}
                       <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-100">
                         <div className="flex items-center gap-2">
-                          <AddSourceButton
-                            sessionId={sessionId!}
-                            onSourceAdded={() => {
-                              setShowSourceSuggestions(true);
-                              fetchSources(sessionId!);
-                            }}
-                          />
+                          {!readOnly && (
+                            <AddSourceButton
+                              sessionId={sessionId!}
+                              onSourceAdded={() => {
+                                setShowSourceSuggestions(true);
+                                fetchSources(sessionId!);
+                              }}
+                            />
+                          )}
                           <SourcesList
                             sessionId={sessionId!}
                             onSelectSource={() => setShowSourceSuggestions(true)}
@@ -348,6 +354,7 @@ export default function Home() {
                         onNodeSelect={handleNodeSelect}
                         selectedNodeId={selectedNode}
                         refreshKey={treeRefreshKey}
+                        readOnly={readOnly}
                       />
                     </div>
                   }
@@ -358,6 +365,7 @@ export default function Home() {
                         selectedNodeId={selectedNode}
                         contextMessage="Let's explore this feature in detail..."
                         onClose={() => setSelectedNode(null)}
+                        readOnly={readOnly}
                       />
                     </div>
                   }
@@ -371,13 +379,15 @@ export default function Home() {
                     {/* Add Source Button Bar */}
                     <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-100">
                       <div className="flex items-center gap-2">
-                        <AddSourceButton
-                          sessionId={sessionId!}
-                          onSourceAdded={() => {
-                            setShowSourceSuggestions(true);
-                            fetchSources(sessionId!);
-                          }}
-                        />
+                        {!readOnly && (
+                          <AddSourceButton
+                            sessionId={sessionId!}
+                            onSourceAdded={() => {
+                              setShowSourceSuggestions(true);
+                              fetchSources(sessionId!);
+                            }}
+                          />
+                        )}
                         <SourcesList
                           sessionId={sessionId!}
                           onSelectSource={() => setShowSourceSuggestions(true)}
@@ -389,6 +399,7 @@ export default function Home() {
                       onNodeSelect={handleNodeSelect}
                       selectedNodeId={null}
                       refreshKey={treeRefreshKey}
+                      readOnly={readOnly}
                     />
                   </div>
                 </div>

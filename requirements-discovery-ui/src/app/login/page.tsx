@@ -50,9 +50,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col">
+    <div className="h-screen bg-neutral-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="p-4">
+      <header className="shrink-0 p-4">
         <Link href="/" className="inline-flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-soft-sm">
             <span className="text-white font-bold text-sm">M</span>
@@ -64,7 +64,8 @@ export default function LoginPage() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-full p-4">
         <div className="w-full max-w-md animate-fade-in-up">
           {/* Logo and Title */}
           <div className="text-center mb-8">
@@ -179,6 +180,7 @@ export default function LoginPage() {
               </Link>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

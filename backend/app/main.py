@@ -26,6 +26,11 @@ from app.api.routes import (
 )
 from app.models.schemas import HealthResponse
 from app.middleware.metrics import MetricsMiddleware
+from app.middleware.security import (
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+    CSRFMiddleware,
+)
 
 # Configure logging
 configure_logging()
@@ -41,8 +46,12 @@ app = FastAPI(
     openapi_url="/api/openapi.json"
 )
 
-# Add custom middleware
-app.add_middleware(MetricsMiddleware)
+# ── Middleware stack (outermost → innermost) ──
+# Order matters: first added = outermost wrapper
+app.add_middleware(SecurityHeadersMiddleware)   # SEC-2.7 — XSS / clickjack headers
+app.add_middleware(RateLimitMiddleware)          # SEC-2.5 — rate limiting
+app.add_middleware(CSRFMiddleware)               # SEC-2.8 — CSRF origin check
+app.add_middleware(MetricsMiddleware)            # PERF-1.1 — latency tracking
 
 # Configure CORS
 app.add_middleware(

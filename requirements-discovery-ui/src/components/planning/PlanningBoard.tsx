@@ -9,6 +9,7 @@ import ProgressDashboard from './ProgressDashboard';
 
 interface PlanningBoardProps {
   sessionId: string;
+  readOnly?: boolean;
 }
 
 const BOARD_COLUMNS = [
@@ -19,7 +20,7 @@ const BOARD_COLUMNS = [
   { key: 'done', label: 'Done', color: 'border-green-300', bgColor: 'bg-green-50' },
 ];
 
-export default function PlanningBoard({ sessionId }: PlanningBoardProps) {
+export default function PlanningBoard({ sessionId, readOnly = false }: PlanningBoardProps) {
   const {
     board, teamMembers, isLoadingBoard, workload,
     fetchBoard, bulkAddCards, moveCard, assignTeamMember, addCard,
@@ -188,28 +189,32 @@ export default function PlanningBoard({ sessionId }: PlanningBoardProps) {
             Team ({teamMembers.length})
           </button>
 
-          <button
-            onClick={() => setShowNewCard(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-                       bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors"
-          >
-            <PlusIcon className="w-4 h-4" />
-            New Card
-          </button>
+          {!readOnly && (
+            <>
+              <button
+                onClick={() => setShowNewCard(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
+                           bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors"
+              >
+                <PlusIcon className="w-4 h-4" />
+                New Card
+              </button>
 
-          <button
-            onClick={handleBulkCreate}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium
-                       bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm"
-          >
-            <SparklesIcon className="w-4 h-4" />
-            Generate Cards from Graph
-          </button>
+              <button
+                onClick={handleBulkCreate}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium
+                           bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm"
+              >
+                <SparklesIcon className="w-4 h-4" />
+                Generate Cards from Graph
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Manual Card Creation Dialog */}
-      {showNewCard && (
+      {showNewCard && !readOnly && (
         <div className="px-6 py-3 border-b border-neutral-200 bg-blue-50/50">
           <div className="flex items-start gap-3">
             <div className="flex-1 space-y-2">
@@ -355,8 +360,8 @@ export default function PlanningBoard({ sessionId }: PlanningBoardProps) {
                 <div
                   key={column.key}
                   className="w-72 flex flex-col rounded-xl bg-neutral-50/80 border border-neutral-200"
-                  onDragOver={handleDragOver}
-                  onDrop={() => handleDrop(column.key)}
+                  onDragOver={readOnly ? undefined : handleDragOver}
+                  onDrop={readOnly ? undefined : () => handleDrop(column.key)}
                 >
                   {/* Column Header */}
                   <div className={`px-4 py-3 border-b-2 ${column.color} rounded-t-xl ${column.bgColor}`}>
@@ -375,16 +380,16 @@ export default function PlanningBoard({ sessionId }: PlanningBoardProps) {
                         key={card.id}
                         card={card}
                         teamMembers={teamMembers}
-                        onDragStart={() => handleDragStart(card.id)}
-                        onAssign={(teamMemberId) => assignTeamMember(card.id, teamMemberId)}
-                        onUnassign={(teamMemberId) => unassignTeamMember(card.id, teamMemberId)}
-                        onToggleAC={(criterionId, checked) => toggleAC(criterionId, checked)}
-                        onAddAC={(desc) => addAC(card.id, desc)}
-                        onDeleteAC={(criterionId) => deleteAC(criterionId)}
-                        onAddComment={(content) => addComment(card.id, content)}
-                        onUpdateCard={(updates) => updateCardDetails(card.id, updates)}
-                        onConvertOutOfScope={card.is_out_of_scope ? (parentNodeId) => convertOutOfScope(card.id, parentNodeId) : undefined}
-                        onDelete={() => removeCard(card.id)}
+                        onDragStart={readOnly ? undefined : () => handleDragStart(card.id)}
+                        onAssign={readOnly ? undefined : (teamMemberId) => assignTeamMember(card.id, teamMemberId)}
+                        onUnassign={readOnly ? undefined : (teamMemberId) => unassignTeamMember(card.id, teamMemberId)}
+                        onToggleAC={readOnly ? undefined : (criterionId, checked) => toggleAC(criterionId, checked)}
+                        onAddAC={readOnly ? undefined : (desc) => addAC(card.id, desc)}
+                        onDeleteAC={readOnly ? undefined : (criterionId) => deleteAC(criterionId)}
+                        onAddComment={readOnly ? undefined : (content) => addComment(card.id, content)}
+                        onUpdateCard={readOnly ? undefined : (updates) => updateCardDetails(card.id, updates)}
+                        onConvertOutOfScope={readOnly ? undefined : (card.is_out_of_scope ? (parentNodeId) => convertOutOfScope(card.id, parentNodeId) : undefined)}
+                        onDelete={readOnly ? undefined : () => removeCard(card.id)}
                       />
                     ))}
 

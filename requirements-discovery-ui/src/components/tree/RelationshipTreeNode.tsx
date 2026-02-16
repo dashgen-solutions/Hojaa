@@ -46,6 +46,7 @@ interface RelationshipTreeNodeProps {
   onUpdate?: () => void;
   isRoot?: boolean;
   selectedNodeId?: string | null;
+  readOnly?: boolean;
 }
 
 export default function RelationshipTreeNode({
@@ -57,6 +58,7 @@ export default function RelationshipTreeNode({
   onUpdate,
   isRoot = false,
   selectedNodeId,
+  readOnly = false,
 }: RelationshipTreeNodeProps) {
   const hasChildren = node.children && node.children.length > 0;
   const isSelected = selectedNodeId === node.id;
@@ -616,7 +618,7 @@ export default function RelationshipTreeNode({
               {/* Action buttons */}
               <div className="flex flex-col gap-1.5 flex-shrink-0">
                 {/* Node Management Menu */}
-                {sessionId && !isRoot && (
+                {sessionId && !isRoot && !readOnly && (
                   <div className="relative z-50">
                     <button
                       onClick={(e) => {
@@ -691,7 +693,7 @@ export default function RelationshipTreeNode({
                 )}
 
                 {/* Explore button */}
-                {node.canExpand && (
+                {node.canExpand && !readOnly && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -854,6 +856,7 @@ export default function RelationshipTreeNode({
                   onUpdate={onUpdate}
                   selectedNodeId={selectedNodeId}
                   isRoot={false}
+                  readOnly={readOnly}
                 />
               </div>
             ))}

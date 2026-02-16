@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import Header from '@/components/layout/Header';
 import PlanningBoard from '@/components/planning/PlanningBoard';
+import { useViewerMode } from '@/hooks/useViewerMode';
 
 function PlanningContent() {
   const searchParams = useSearchParams();
@@ -22,11 +23,13 @@ function PlanningContent() {
     );
   }
 
+  const readOnly = useViewerMode();
+
   return (
     <div className="flex flex-col h-screen bg-neutral-50">
       <Header sessionId={sessionId} />
       <div className="flex-1 overflow-hidden">
-        <PlanningBoard sessionId={sessionId} />
+        <PlanningBoard sessionId={sessionId} readOnly={readOnly} />
       </div>
     </div>
   );

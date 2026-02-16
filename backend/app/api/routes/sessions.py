@@ -1,19 +1,40 @@
 """
 Session management API routes.
+Includes SEC-2.3 session sharing controls.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import List, Optional
-from uuid import uuid4
+from uuid import UUID, uuid4
 from pydantic import BaseModel
 from app.db.session import get_db
 from app.models.schemas import SessionResponse, SessionCreate
-from app.models.database import Session as DBSession, SessionStatus, User
-from app.core.auth import get_optional_user, get_current_active_user
+from app.models.database import (
+    Session as DBSession, SessionStatus, User, UserRole, SessionMember, Organization,
+)
+from app.core.auth import get_optional_user, get_current_active_user, get_current_user
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/sessions", tags=["sessions"])
+
+
+def _can_access_session(session: DBSession, user: Optional[User], db: Session) -> bool:
+    """Check if a user can access a session (owner, shared member, or guest session)."""
+    if session.user_id is None:
+        return True  # guest session — open
+    if user is None:
+        return False
+    if session.user_id == user.id:
+        return True
+    # Check session_members table
+    member = (
+        db.query(SessionMember)
+        .filter(SessionMember.session_id == session.id, SessionMember.user_id == user.id)
+        .first()
+    )
+    return member is not None
 
 
 @router.post("", response_model=SessionResponse, status_code=201)
@@ -42,6 +63,7 @@ async def create_session(
         new_session = DBSession(
             id=uuid4(),
             user_id=current_user.id if current_user else None,
+            organization_id=current_user.organization_id if current_user else None,  # Enterprise: org scope
             user_type=session_data.user_type,
             status=SessionStatus.UPLOAD_PENDING,
             document_text=session_data.document_text,
@@ -79,7 +101,28 @@ async def get_sessions(
         
         # Filter by user if authenticated
         if current_user:
-            query = query.filter(DBSession.user_id == current_user.id)
+            if current_user.organization_id:
+                # Enterprise user: see own sessions + sessions shared via session_members
+                query = query.filter(
+                    or_(
+                        DBSession.user_id == current_user.id,
+                        DBSession.id.in_(
+                            db.query(SessionMember.session_id)
+                            .filter(SessionMember.user_id == current_user.id)
+                        ),
+                    )
+                )
+            else:
+                # Individual user: own sessions + shared
+                query = query.filter(
+                    or_(
+                        DBSession.user_id == current_user.id,
+                        DBSession.id.in_(
+                            db.query(SessionMember.session_id)
+                            .filter(SessionMember.user_id == current_user.id)
+                        ),
+                    )
+                )
             logger.info(f"Fetching sessions for user: {current_user.id} (email: {current_user.email})")
         else:
             logger.info("⚠️ WARNING: Fetching all sessions (user not authenticated)")
@@ -119,9 +162,8 @@ async def get_session(
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        # Verify ownership if user is authenticated
-        # Allow access if: session belongs to user OR session has no owner (guest session)
-        if current_user and session.user_id is not None and session.user_id != current_user.id:
+        # Verify access via ownership, guest, or share table
+        if not _can_access_session(session, current_user, db):
             raise HTTPException(status_code=403, detail="Access denied to this session")
         
         return session
@@ -132,6 +174,159 @@ async def get_session(
         raise
     except Exception as e:
         logger.error(f"Error getting session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ===== SEC-2.3: Session Sharing =====
+
+class ShareSessionRequest(BaseModel):
+    email: str
+    role: str = "viewer"  # viewer | editor | admin
+
+
+@router.post("/{session_id}/share")
+async def share_session(
+    session_id: str,
+    body: ShareSessionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Share a session with another user by email (SEC-2.3)."""
+    try:
+        sid = UUID(session_id)
+        session = db.query(DBSession).filter(DBSession.id == sid).first()
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        # Only owner or admin can share
+        from app.core.permissions import effective_role, has_permission, Permission
+        role = effective_role(current_user, sid, db)
+        if not has_permission(role, Permission.SHARE_SESSION):
+            raise HTTPException(status_code=403, detail="You don't have permission to share this session")
+
+        # Find target user
+        target = db.query(User).filter(User.email == body.email).first()
+        if not target:
+            raise HTTPException(status_code=404, detail="User not found")
+        if target.id == current_user.id:
+            raise HTTPException(status_code=400, detail="Cannot share with yourself")
+
+        # Validate role
+        try:
+            share_role = UserRole(body.role)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid role: {body.role}")
+
+        # Upsert membership
+        existing = (
+            db.query(SessionMember)
+            .filter(SessionMember.session_id == sid, SessionMember.user_id == target.id)
+            .first()
+        )
+        if existing:
+            existing.role = share_role
+        else:
+            db.add(SessionMember(
+                session_id=sid,
+                user_id=target.id,
+                role=share_role,
+                invited_by=current_user.id,
+            ))
+        db.commit()
+
+        return {"message": f"Session shared with {body.email} as {share_role.value}"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error sharing session: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.delete("/{session_id}/share/{user_id}")
+async def revoke_session_share(
+    session_id: str,
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Revoke a user's access to a session."""
+    try:
+        sid = UUID(session_id)
+        from app.core.permissions import effective_role, has_permission, Permission
+        role = effective_role(current_user, sid, db)
+        if not has_permission(role, Permission.SHARE_SESSION):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        member = (
+            db.query(SessionMember)
+            .filter(SessionMember.session_id == sid, SessionMember.user_id == UUID(user_id))
+            .first()
+        )
+        if not member:
+            raise HTTPException(status_code=404, detail="Share not found")
+
+        db.delete(member)
+        db.commit()
+        return {"message": "Access revoked"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error revoking share: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/{session_id}/members")
+async def list_session_members(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List users who have access to this session."""
+    try:
+        sid = UUID(session_id)
+        session = db.query(DBSession).filter(DBSession.id == sid).first()
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        if not _can_access_session(session, current_user, db):
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        members = db.query(SessionMember).filter(SessionMember.session_id == sid).all()
+
+        result = []
+        # Include owner
+        if session.user_id:
+            owner = db.query(User).filter(User.id == session.user_id).first()
+            if owner:
+                result.append({
+                    "user_id": str(owner.id),
+                    "email": owner.email,
+                    "username": owner.username,
+                    "role": "owner",
+                    "is_owner": True,
+                })
+
+        for m in members:
+            user = db.query(User).filter(User.id == m.user_id).first()
+            if user:
+                result.append({
+                    "user_id": str(user.id),
+                    "email": user.email,
+                    "username": user.username,
+                    "role": m.role.value,
+                    "is_owner": False,
+                })
+
+        return {"members": result}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing members: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -155,9 +350,8 @@ async def delete_session(
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        # Verify ownership if user is authenticated
-        # Allow deletion if: session belongs to user OR session has no owner (guest session)
-        if current_user and session.user_id is not None and session.user_id != current_user.id:
+        # Verify access via ownership, guest, or share table
+        if not _can_access_session(session, current_user, db):
             raise HTTPException(status_code=403, detail="Access denied to this session")
         
         db.delete(session)
@@ -202,8 +396,8 @@ async def update_session(
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        # Verify ownership if user is authenticated
-        if current_user and session.user_id is not None and session.user_id != current_user.id:
+        # Verify access via ownership, guest, or share table
+        if not _can_access_session(session, current_user, db):
             raise HTTPException(status_code=403, detail="Access denied to this session")
         
         # Update session name if provided

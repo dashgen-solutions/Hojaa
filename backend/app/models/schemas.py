@@ -1,19 +1,56 @@
 """
 Pydantic models for request/response validation.
+
+SEC-2.6: All user-facing write schemas inherit ``SanitizedModel`` which
+automatically strips HTML / script tags from string fields.
 """
 from datetime import datetime, date
 from typing import List, Optional, Dict, Any
 from uuid import UUID
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
+
+
+# ─── SEC-2.6: Sanitization mixin ────────────────────────────
+
+def _sanitize_value(v):
+    """Recursively sanitize strings inside a value."""
+    if isinstance(v, str):
+        from app.middleware.security import sanitize_string
+        return sanitize_string(v)
+    if isinstance(v, dict):
+        return {k: _sanitize_value(val) for k, val in v.items()}
+    if isinstance(v, list):
+        return [_sanitize_value(item) for item in v]
+    return v
+
+
+class SanitizedModel(BaseModel):
+    """Base model that sanitizes all string fields on creation (SEC-2.6)."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _sanitize_inputs(cls, values):
+        if isinstance(values, dict):
+            skip = {"password", "hashed_password", "access_token"}
+            return {
+                k: _sanitize_value(v) if k not in skip else v
+                for k, v in values.items()
+            }
+        return values
 
 
 # ===== Authentication Schemas =====
 
-class UserRegister(BaseModel):
-    """Schema for user registration."""
+class UserRegister(SanitizedModel):
+    """Schema for user registration (individual or enterprise admin)."""
     email: str
     username: str = Field(..., min_length=3, max_length=100)
     password: str = Field(..., min_length=6, max_length=72)
+    # Enterprise registration (optional — if provided, creates org)
+    organization_name: Optional[str] = None
+    industry: Optional[str] = None
+    company_size: Optional[str] = None   # 1-10, 11-50, 51-200, 201-500, 500+
+    website: Optional[str] = None
 
 
 class UserLogin(BaseModel):
@@ -22,12 +59,31 @@ class UserLogin(BaseModel):
     password: str
 
 
+class OrganizationResponse(BaseModel):
+    """Schema for organization response."""
+    id: UUID
+    name: str
+    slug: str
+    logo_url: Optional[str] = None
+    industry: Optional[str] = None
+    size: Optional[str] = None
+    website: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserResponse(BaseModel):
     """Schema for user response."""
     id: UUID
     email: str
     username: str
     is_active: bool
+    role: str = "editor"  # SEC-2.1 RBAC role
+    organization_id: Optional[UUID] = None
+    org_role: Optional[str] = None   # owner | admin | member
+    job_title: Optional[str] = None
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
@@ -139,7 +195,7 @@ class NodeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class NodeCreate(BaseModel):
+class NodeCreate(SanitizedModel):
     """Schema for creating a new node."""
     session_id: str
     parent_id: Optional[str] = None
@@ -150,7 +206,7 @@ class NodeCreate(BaseModel):
     metadata: Optional[Dict[str, Any]] = {}
 
 
-class NodeUpdate(BaseModel):
+class NodeUpdate(SanitizedModel):
     """Schema for updating a node."""
     question: Optional[str] = Field(None, min_length=1, max_length=500)
     answer: Optional[str] = None
@@ -160,13 +216,13 @@ class NodeUpdate(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 
-class NodeStatusUpdate(BaseModel):
+class NodeStatusUpdate(SanitizedModel):
     """Schema for changing node status with a reason."""
     status: str  # 'active', 'deferred', 'completed', 'removed'
     reason: Optional[str] = None
 
 
-class BulkNodeStatusUpdate(BaseModel):
+class BulkNodeStatusUpdate(SanitizedModel):
     """Schema for changing status of multiple nodes at once."""
     node_ids: List[str]
     status: str  # 'active', 'deferred', 'completed', 'removed'
@@ -383,7 +439,7 @@ class TeamMemberResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CardCreate(BaseModel):
+class CardCreate(SanitizedModel):
     """Schema for creating a planning card from a node."""
     node_id: Optional[str] = None
     session_id: str
@@ -394,7 +450,7 @@ class CardCreate(BaseModel):
     is_out_of_scope: bool = False
 
 
-class CardUpdate(BaseModel):
+class CardUpdate(SanitizedModel):
     """Schema for updating a planning card."""
     status: Optional[str] = None
     priority: Optional[str] = None
@@ -487,7 +543,7 @@ class CardCommentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CardCommentCreate(BaseModel):
+class CardCommentCreate(SanitizedModel):
     """Schema for adding a comment to a card."""
     content: str
 

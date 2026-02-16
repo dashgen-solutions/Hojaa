@@ -3,10 +3,12 @@
 import {
   ArrowRightOnRectangleIcon, Squares2X2Icon,
   ViewColumnsIcon, ClockIcon, DocumentArrowDownIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useViewerMode } from "@/hooks/useViewerMode";
 
 interface HeaderProps {
   sessionId?: string | null;
@@ -14,8 +16,9 @@ interface HeaderProps {
 }
 
 export default function Header({ sessionId, onExport }: HeaderProps) {
-  const { user, isAuthenticated, logout, isLoading } = useAuth();
+  const { user, isAuthenticated, isOrgAdmin, logout, isLoading } = useAuth();
   const pathname = usePathname();
+  const isViewer = useViewerMode();
 
   const isNavActive = (path: string) => pathname === path;
 
@@ -60,17 +63,19 @@ export default function Header({ sessionId, onExport }: HeaderProps) {
                 <ViewColumnsIcon className="w-4 h-4" />
                 Planning
               </Link>
-              <Link
-                href={`/audit?session=${sessionId}`}
-                className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-all ${
-                  isNavActive('/audit')
-                    ? 'bg-primary-50 text-primary-700 font-medium'
-                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-                }`}
-              >
-                <ClockIcon className="w-4 h-4" />
-                Audit
-              </Link>
+              {!isViewer && (
+                <Link
+                  href={`/audit?session=${sessionId}`}
+                  className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-all ${
+                    isNavActive('/audit')
+                      ? 'bg-primary-50 text-primary-700 font-medium'
+                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+                  }`}
+                >
+                  <ClockIcon className="w-4 h-4" />
+                  Audit
+                </Link>
+              )}
               {onExport && (
                 <button
                   onClick={onExport}
@@ -98,6 +103,20 @@ export default function Header({ sessionId, onExport }: HeaderProps) {
                     <Squares2X2Icon className="w-4 h-4" />
                     <span className="hidden sm:inline">Sessions</span>
                   </Link>
+
+                  {isOrgAdmin && (
+                    <Link
+                      href="/admin"
+                      className={`flex items-center gap-2 text-sm transition-all px-3 py-2 rounded-lg ${
+                        isNavActive('/admin')
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+                      }`}
+                    >
+                      <ShieldCheckIcon className="w-4 h-4" />
+                      <span className="hidden sm:inline">Admin</span>
+                    </Link>
+                  )}
 
                   <div className="w-px h-5 bg-neutral-200 mx-1"></div>
 

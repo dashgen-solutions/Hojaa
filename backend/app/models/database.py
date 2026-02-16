@@ -119,11 +119,54 @@ class CardPriority(str, enum.Enum):
     CRITICAL = "critical"
 
 
+class UserRole(str, enum.Enum):
+    """Platform-level role for RBAC (SEC-2.1)."""
+    OWNER = "owner"
+    ADMIN = "admin"
+    EDITOR = "editor"
+    VIEWER = "viewer"
+
+
+class OrgRole(str, enum.Enum):
+    """Role within an organization."""
+    OWNER = "owner"        # created the org, full control
+    ADMIN = "admin"        # manage employees & sessions
+    MEMBER = "member"      # regular employee
+
+
 class AssignmentRole(str, enum.Enum):
     """Role of a person assigned to a node/card."""
     OWNER = "owner"
     ASSIGNEE = "assignee"
     REVIEWER = "reviewer"
+
+
+# ===== Enterprise: Organization =====
+
+class Organization(Base):
+    """Enterprise organization — multi-tenant container."""
+    __tablename__ = "organizations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String(255), nullable=False)
+    slug = Column(String(255), unique=True, index=True, nullable=False)  # url-safe identifier
+    logo_url = Column(String(500), nullable=True)
+    industry = Column(String(100), nullable=True)
+    size = Column(String(50), nullable=True)       # 1-10, 11-50, 51-200, 201-500, 500+
+    website = Column(String(500), nullable=True)
+    created_by = Column(UUID(as_uuid=True), nullable=False)  # founding admin user id
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    members = relationship("User", back_populates="organization", cascade="all, delete-orphan")
+    sessions = relationship("Session", back_populates="organization")
+
+    __table_args__ = (
+        Index("idx_org_slug", "slug", unique=True),
+    )
 
 
 class User(Base):
@@ -135,12 +178,20 @@ class User(Base):
     username = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    role = Column(SQLEnum(UserRole), default=UserRole.ADMIN, nullable=False)  # SEC-2.1 global role
+
+    # Enterprise multi-tenancy
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
+    org_role = Column(SQLEnum(OrgRole), default=OrgRole.MEMBER, nullable=False)
+    job_title = Column(String(100), nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
+    organization = relationship("Organization", back_populates="members")
     sessions = relationship("Session", back_populates="user")
+    shared_sessions = relationship("SessionMember", back_populates="user", cascade="all, delete-orphan", foreign_keys="[SessionMember.user_id]")
     
     def verify_password(self, password: str) -> bool:
         """Verify password against hash."""
@@ -164,6 +215,7 @@ class Session(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)  # Enterprise: org scope
     user_type = Column(String(20), default="non_technical", nullable=False)  # "technical" or "non_technical"
     document_text = Column(Text, nullable=True)
     document_type = Column(String(50), nullable=True)
@@ -179,6 +231,7 @@ class Session(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
+    organization = relationship("Organization", back_populates="sessions")
     user = relationship("User", back_populates="sessions")
     questions = relationship("Question", back_populates="session", cascade="all, delete-orphan")
     nodes = relationship("Node", back_populates="session", cascade="all, delete-orphan")
@@ -186,6 +239,7 @@ class Session(Base):
     sources = relationship("Source", back_populates="session", cascade="all, delete-orphan")
     cards = relationship("Card", back_populates="session", cascade="all, delete-orphan")
     team_members = relationship("TeamMember", back_populates="session", cascade="all, delete-orphan")
+    members = relationship("SessionMember", back_populates="session", cascade="all, delete-orphan")  # SEC-2.3
 
 
 class Question(Base):
@@ -549,6 +603,30 @@ class CardComment(Base):
     
     __table_args__ = (
         Index("idx_card_comments_card_id", "card_id"),
+    )
+
+
+# ===== SEC-2.3: Session Sharing =====
+
+class SessionMember(Base):
+    """Controls which users can access a session and at what role (SEC-2.3)."""
+    __tablename__ = "session_members"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role = Column(SQLEnum(UserRole), default=UserRole.VIEWER, nullable=False)  # per-session role
+    invited_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    session = relationship("Session", back_populates="members")
+    user = relationship("User", back_populates="shared_sessions", foreign_keys=[user_id])
+    inviter = relationship("User", foreign_keys=[invited_by])
+
+    __table_args__ = (
+        Index("idx_session_member_unique", "session_id", "user_id", unique=True),
     )
 
 

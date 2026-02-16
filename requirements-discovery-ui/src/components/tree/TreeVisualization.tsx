@@ -40,6 +40,7 @@ interface TreeVisualizationProps {
   onNodeSelect?: (nodeId: string) => void;
   selectedNodeId?: string | null;
   refreshKey?: number;
+  readOnly?: boolean;
 }
 
 export default function TreeVisualization({
@@ -47,6 +48,7 @@ export default function TreeVisualization({
   onNodeSelect,
   selectedNodeId,
   refreshKey,
+  readOnly = false,
 }: TreeVisualizationProps) {
   const [treeData, setTreeData] = useState<TreeNodeData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -397,6 +399,7 @@ export default function TreeVisualization({
                 onUpdate={fetchTree}
                 isRoot={true}
                 selectedNodeId={selectedNodeId}
+                readOnly={readOnly}
               />
             </div>
           ) : (

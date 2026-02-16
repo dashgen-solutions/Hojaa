@@ -4,12 +4,29 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  industry: string | null;
+  size: string | null;
+  website: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
 interface User {
   id: string;
   email: string;
   username: string;
   is_active: boolean;
+  role: string; // owner | admin | editor | viewer
+  organization_id: string | null;
+  org_role: string | null; // owner | admin | member
+  job_title: string | null;
   created_at: string;
+  organization?: Organization | null;
 }
 
 interface AuthContextType {
@@ -17,8 +34,14 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isOrgAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, username: string, password: string) => Promise<void>;
+  register: (email: string, username: string, password: string, orgData?: {
+    organization_name: string;
+    industry?: string;
+    company_size?: string;
+    website?: string;
+  }) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -86,13 +109,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (email: string, username: string, password: string) => {
+  const register = async (email: string, username: string, password: string, orgData?: {
+    organization_name: string;
+    industry?: string;
+    company_size?: string;
+    website?: string;
+  }) => {
     try {
-      // Register user
       await axios.post(`${API_URL}/api/auth/register`, {
         email,
         username,
         password,
+        ...(orgData || {}),
       });
 
       // Auto-login after registration
@@ -126,11 +154,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const isOrgAdmin = !!(user && (user.org_role === "owner" || user.org_role === "admin"));
+
   const value = {
     user,
     token,
     isLoading,
     isAuthenticated: !!user,
+    isOrgAdmin,
     login,
     register,
     logout,

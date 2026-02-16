@@ -13,14 +13,14 @@ import { PlanningCard as PlanningCardType, TeamMember, AcceptanceCriterionItem }
 interface PlanningCardProps {
   card: PlanningCardType;
   teamMembers: TeamMember[];
-  onDragStart: () => void;
-  onAssign: (teamMemberId: string) => void;
-  onUnassign: (teamMemberId: string) => void;
-  onToggleAC: (criterionId: string, checked: boolean) => void;
-  onAddAC: (description: string) => void;
-  onDeleteAC: (criterionId: string) => void;
-  onAddComment: (content: string) => void;
-  onUpdateCard: (updates: { title?: string; description?: string; estimated_hours?: number; actual_hours?: number }) => void;
+  onDragStart?: () => void;
+  onAssign?: (teamMemberId: string) => void;
+  onUnassign?: (teamMemberId: string) => void;
+  onToggleAC?: (criterionId: string, checked: boolean) => void;
+  onAddAC?: (description: string) => void;
+  onDeleteAC?: (criterionId: string) => void;
+  onAddComment?: (content: string) => void;
+  onUpdateCard?: (updates: { title?: string; description?: string; estimated_hours?: number; actual_hours?: number }) => void;
   onConvertOutOfScope?: (parentNodeId: string) => void;
   onDelete?: () => void;
 }
@@ -59,35 +59,37 @@ export default function PlanningCardComponent({
   const unassignedMembers = teamMembers.filter((m) => !assignedMemberIds.has(m.id));
   const acProgress = card.ac_total > 0 ? Math.round((card.ac_completed / card.ac_total) * 100) : 0;
 
+  const readOnly = !onAssign;
+
   const handleAddAC = () => {
-    if (newACText.trim()) {
+    if (newACText.trim() && onAddAC) {
       onAddAC(newACText.trim());
       setNewACText('');
     }
   };
 
   const handleAddComment = () => {
-    if (newComment.trim()) {
+    if (newComment.trim() && onAddComment) {
       onAddComment(newComment.trim());
       setNewComment('');
     }
   };
 
   const handleSaveHours = () => {
-    onUpdateCard({ actual_hours: actualHours });
+    onUpdateCard?.({ actual_hours: actualHours });
     setEditingHours(false);
   };
 
   const handleSaveEstHours = () => {
-    onUpdateCard({ estimated_hours: estHours });
+    onUpdateCard?.({ estimated_hours: estHours });
     setEditingEstHours(false);
   };
 
   return (
     <div
-      draggable
+      draggable={!readOnly}
       onDragStart={onDragStart}
-      className={`bg-white rounded-lg border p-3 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${
+      className={`bg-white rounded-lg border p-3 shadow-sm hover:shadow-md transition-shadow ${readOnly ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${
         card.node_status === 'deferred'
           ? 'border-neutral-300 bg-neutral-50/60 opacity-75'
           : card.is_out_of_scope
@@ -172,45 +174,49 @@ export default function PlanningCardComponent({
               {assignment.team_member_name[0]}
             </span>
             {assignment.team_member_name}
-            <button
-              onClick={(e) => { e.stopPropagation(); onUnassign(assignment.team_member_id); }}
-              className="hidden group-hover:block"
-            >
-              <XMarkIcon className="w-3 h-3 text-neutral-400 hover:text-red-500" />
-            </button>
+            {!readOnly && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onUnassign?.(assignment.team_member_id); }}
+                className="hidden group-hover:block"
+              >
+                <XMarkIcon className="w-3 h-3 text-neutral-400 hover:text-red-500" />
+              </button>
+            )}
           </span>
         ))}
 
         {/* Add assignee */}
-        <div className="relative">
-          <button
-            onClick={() => setShowAssignDropdown(!showAssignDropdown)}
-            className="w-5 h-5 rounded-full border border-dashed border-neutral-300 
-                       flex items-center justify-center hover:border-primary-400 hover:bg-primary-50 transition-colors"
-          >
-            <UserPlusIcon className="w-3 h-3 text-neutral-400" />
-          </button>
+        {!readOnly && (
+          <div className="relative">
+            <button
+              onClick={() => setShowAssignDropdown(!showAssignDropdown)}
+              className="w-5 h-5 rounded-full border border-dashed border-neutral-300 
+                         flex items-center justify-center hover:border-primary-400 hover:bg-primary-50 transition-colors"
+            >
+              <UserPlusIcon className="w-3 h-3 text-neutral-400" />
+            </button>
 
-          {showAssignDropdown && unassignedMembers.length > 0 && (
-            <div className="absolute bottom-full left-0 mb-1 w-40 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-10">
-              {unassignedMembers.map((member) => (
-                <button
-                  key={member.id}
-                  onClick={() => { onAssign(member.id); setShowAssignDropdown(false); }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50 flex items-center gap-2"
-                >
-                  <span
-                    className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold"
-                    style={{ backgroundColor: member.avatar_color || '#6366f1' }}
+            {showAssignDropdown && unassignedMembers.length > 0 && (
+              <div className="absolute bottom-full left-0 mb-1 w-40 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-10">
+                {unassignedMembers.map((member) => (
+                  <button
+                    key={member.id}
+                    onClick={() => { onAssign?.(member.id); setShowAssignDropdown(false); }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50 flex items-center gap-2"
                   >
-                    {member.name[0]}
-                  </span>
-                  {member.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+                    <span
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold"
+                      style={{ backgroundColor: member.avatar_color || '#6366f1' }}
+                    >
+                      {member.name[0]}
+                    </span>
+                    {member.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Expand / Collapse toggle */}
@@ -230,13 +236,23 @@ export default function PlanningCardComponent({
             <ul className="space-y-1">
               {card.acceptance_criteria.map((ac: AcceptanceCriterionItem) => (
                 <li key={ac.id} className="flex items-start gap-1.5 group">
-                  <button onClick={() => onToggleAC(ac.id, !ac.is_completed)} className="mt-0.5 flex-shrink-0">
-                    {ac.is_completed ? (
-                      <CheckCircleSolid className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <CheckCircleIcon className="w-4 h-4 text-neutral-300 hover:text-green-400" />
-                    )}
-                  </button>
+                  {readOnly ? (
+                    <span className="mt-0.5 flex-shrink-0">
+                      {ac.is_completed ? (
+                        <CheckCircleSolid className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <CheckCircleIcon className="w-4 h-4 text-neutral-300" />
+                      )}
+                    </span>
+                  ) : (
+                    <button onClick={() => onToggleAC?.(ac.id, !ac.is_completed)} className="mt-0.5 flex-shrink-0">
+                      {ac.is_completed ? (
+                        <CheckCircleSolid className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <CheckCircleIcon className="w-4 h-4 text-neutral-300 hover:text-green-400" />
+                      )}
+                    </button>
+                  )}
                   <span className={`text-xs ${ac.is_completed ? 'line-through text-neutral-400' : 'text-neutral-700'}`}>
                     {ac.description}
                   </span>
@@ -245,35 +261,39 @@ export default function PlanningCardComponent({
                       <LinkIcon className="w-3 h-3 text-primary-400" />
                     </span>
                   )}
-                  <button
-                    onClick={() => onDeleteAC(ac.id)}
-                    className="ml-auto hidden group-hover:block flex-shrink-0"
-                  >
-                    <XMarkIcon className="w-3 h-3 text-neutral-400 hover:text-red-500" />
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => onDeleteAC?.(ac.id)}
+                      className="ml-auto hidden group-hover:block flex-shrink-0"
+                    >
+                      <XMarkIcon className="w-3 h-3 text-neutral-400 hover:text-red-500" />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
-            <div className="flex items-center gap-1 mt-1">
-              <input
-                type="text"
-                placeholder="Add criterion..."
-                value={newACText}
-                onChange={(e) => setNewACText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddAC()}
-                className="flex-1 text-xs px-2 py-1 border border-neutral-200 rounded"
-              />
-              <button onClick={handleAddAC} className="p-1 text-primary-600 hover:text-primary-800">
-                <PlusIcon className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="flex items-center gap-1 mt-1">
+                <input
+                  type="text"
+                  placeholder="Add criterion..."
+                  value={newACText}
+                  onChange={(e) => setNewACText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddAC()}
+                  className="flex-1 text-xs px-2 py-1 border border-neutral-200 rounded"
+                />
+                <button onClick={handleAddAC} className="p-1 text-primary-600 hover:text-primary-800">
+                  <PlusIcon className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Time Tracking */}
           <div>
             <h5 className="text-[11px] font-semibold text-neutral-700 mb-1">Time Tracking</h5>
             <div className="flex items-center gap-2 text-xs">
-              {editingEstHours ? (
+              {!readOnly && editingEstHours ? (
                 <div className="flex items-center gap-1">
                   <span className="text-neutral-500">Est:</span>
                   <input
@@ -287,14 +307,14 @@ export default function PlanningCardComponent({
                   <button onClick={handleSaveEstHours} className="text-primary-600 text-[10px] font-medium">Save</button>
                 </div>
               ) : (
-                <button
-                  onClick={() => { setEstHours(card.estimated_hours ?? 0); setEditingEstHours(true); }}
-                  className="text-neutral-500 hover:text-primary-600"
+                <span
+                  onClick={readOnly ? undefined : () => { setEstHours(card.estimated_hours ?? 0); setEditingEstHours(true); }}
+                  className={`text-neutral-500 ${readOnly ? '' : 'hover:text-primary-600 cursor-pointer'}`}
                 >
                   Est: {card.estimated_hours ?? '-'}h
-                </button>
+                </span>
               )}
-              {editingHours ? (
+              {!readOnly && editingHours ? (
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
@@ -307,12 +327,12 @@ export default function PlanningCardComponent({
                   <button onClick={handleSaveHours} className="text-primary-600 text-[10px] font-medium">Save</button>
                 </div>
               ) : (
-                <button
-                  onClick={() => { setActualHours(card.actual_hours ?? 0); setEditingHours(true); }}
-                  className="text-neutral-500 hover:text-primary-600"
+                <span
+                  onClick={readOnly ? undefined : () => { setActualHours(card.actual_hours ?? 0); setEditingHours(true); }}
+                  className={`text-neutral-500 ${readOnly ? '' : 'hover:text-primary-600 cursor-pointer'}`}
                 >
                   Actual: {card.actual_hours ?? 0}h
-                </button>
+                </span>
               )}
             </div>
           </div>
@@ -331,19 +351,21 @@ export default function PlanningCardComponent({
                 </span>
               </div>
             ))}
-            <div className="flex items-center gap-1 mt-1">
-              <input
-                type="text"
-                placeholder="Add a note..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
-                className="flex-1 text-xs px-2 py-1 border border-neutral-200 rounded"
-              />
-              <button onClick={handleAddComment} className="p-1 text-primary-600 hover:text-primary-800">
-                <ChatBubbleLeftIcon className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="flex items-center gap-1 mt-1">
+                <input
+                  type="text"
+                  placeholder="Add a note..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+                  className="flex-1 text-xs px-2 py-1 border border-neutral-200 rounded"
+                />
+                <button onClick={handleAddComment} className="p-1 text-primary-600 hover:text-primary-800">
+                  <ChatBubbleLeftIcon className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Delete Card */}

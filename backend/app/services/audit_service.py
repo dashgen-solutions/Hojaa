@@ -1,18 +1,42 @@
 """
 Audit service for tracking all changes to the knowledge graph.
 Provides full history, timeline, and change comparison capabilities.
+
+SEC-2.4: Audit log immutability — SQLAlchemy event listeners prevent
+UPDATE and DELETE on NodeHistory at the ORM level.
 """
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime
 from sqlalchemy.orm import Session as DBSession
-from sqlalchemy import desc, asc, and_, or_
+from sqlalchemy import desc, asc, and_, or_, event
 from app.models.database import (
     NodeHistory, Node, NodeType, NodeStatus, Source, User, ChangeType
 )
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+# ─── SEC-2.4: Immutability listeners ────────────────────────
+
+def _block_history_update(mapper, connection, target):
+    """Prevent modifications to existing audit records."""
+    raise PermissionError(
+        "Audit log records are immutable and cannot be modified (SEC-2.4)."
+    )
+
+
+def _block_history_delete(mapper, connection, target):
+    """Prevent deletion of audit records."""
+    raise PermissionError(
+        "Audit log records are immutable and cannot be deleted (SEC-2.4)."
+    )
+
+
+# Attach listeners — they fire whenever ORM tries to flush an update/delete
+event.listen(NodeHistory, "before_update", _block_history_update)
+event.listen(NodeHistory, "before_delete", _block_history_delete)
 
 
 class AuditService:

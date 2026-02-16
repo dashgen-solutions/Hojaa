@@ -1,17 +1,31 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense, useState, useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import AuditTimeline from '@/components/audit/AuditTimeline';
 import BulkNodeActions from '@/components/audit/BulkNodeActions';
 import TimeTravelView from '@/components/audit/TimeTravelView';
 import NotificationSettings from '@/components/audit/NotificationSettings';
+import { useViewerMode } from '@/hooks/useViewerMode';
 
 function AuditContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session');
   const [activeTab, setActiveTab] = useState<'timeline' | 'nodes' | 'timetravel' | 'notifications'>('timeline');
+  const readOnly = useViewerMode();
+  const router = useRouter();
+
+  // Viewers cannot access the audit page at all
+  useEffect(() => {
+    if (readOnly) {
+      router.replace(sessionId ? `/` : '/sessions');
+    }
+  }, [readOnly, router, sessionId]);
+
+  if (readOnly) {
+    return null;
+  }
 
   if (!sessionId) {
     return (

@@ -593,4 +593,87 @@ export const sendTestNotification = async () => {
   return response.data;
 };
 
+// ── Admin: User Management ───────────────────────────────────────────────
+
+export const listUsers = async (search?: string, role?: string) => {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (role) params.append('role', role);
+  const qs = params.toString();
+  const response = await api.get(`/api/auth/users${qs ? '?' + qs : ''}`);
+  return response.data;
+};
+
+export const updateUserRole = async (userId: string, role: string) => {
+  const response = await api.patch(`/api/auth/users/${userId}/role`, { role });
+  return response.data;
+};
+
+export const adminCreateUser = async (data: {
+  email: string;
+  username: string;
+  password: string;
+  role?: string;
+  org_role?: string;
+  job_title?: string;
+}) => {
+  const response = await api.post('/api/auth/users', data);
+  return response.data;
+};
+
+export const adminDeleteUser = async (userId: string) => {
+  const response = await api.delete(`/api/auth/users/${userId}`);
+  return response.data;
+};
+
+export const adminToggleUserActive = async (userId: string) => {
+  const response = await api.patch(`/api/auth/users/${userId}/toggle-active`);
+  return response.data;
+};
+
+// ── Organization Management ──────────────────────────────────────────────
+
+export const getOrganization = async () => {
+  const response = await api.get('/api/auth/organization');
+  return response.data;
+};
+
+export const updateOrganization = async (data: {
+  name?: string;
+  industry?: string;
+  size?: string;
+  website?: string;
+  logo_url?: string;
+}) => {
+  const response = await api.patch('/api/auth/organization', data);
+  return response.data;
+};
+
+// ── Session Access Management ────────────────────────────────────────────
+
+export const grantSessionAccess = async (userId: string, sessionIds: string[], role: string = 'viewer') => {
+  const response = await api.post(`/api/auth/users/${userId}/session-access`, {
+    session_ids: sessionIds,
+    role,
+  });
+  return response.data;
+};
+
+export const revokeSessionAccess = async (userId: string, sessionId: string) => {
+  const response = await api.delete(`/api/auth/users/${userId}/session-access/${sessionId}`);
+  return response.data;
+};
+
+export const getUserSessionAccess = async (userId: string) => {
+  const response = await api.get(`/api/auth/users/${userId}/session-access`);
+  return response.data;
+};
+
+// ── Sessions List ────────────────────────────────────────────────────────
+
+export const listSessions = async () => {
+  const response = await api.get('/api/sessions');
+  return response.data;
+};
+
 export default api;
