@@ -135,12 +135,12 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-md shadow-sm w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-neutral-200">
           <h2 className="text-lg font-semibold text-neutral-900">Export Scope Document</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-neutral-100">
+          <button onClick={onClose} className="p-1 rounded hover:bg-neutral-100">
             <XMarkIcon className="w-5 h-5 text-neutral-500" />
           </button>
         </div>
@@ -154,17 +154,17 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
                 <button
                   key={format.key}
                   onClick={() => changeFormat(format.key)}
-                  className={`p-3 rounded-xl border-2 text-left transition-all ${
+                  className={`p-3 rounded-md border-2 text-left transition-all ${
                     selectedFormat === format.key
-                      ? 'border-primary-500 bg-primary-50'
+                      ? 'border-neutral-200 bg-neutral-50'
                       : 'border-neutral-200 hover:border-neutral-300'
                   }`}
                 >
                   <format.icon className={`w-5 h-5 mb-1 ${
-                    selectedFormat === format.key ? 'text-primary-600' : 'text-neutral-400'
+                    selectedFormat === format.key ? 'text-neutral-900' : 'text-neutral-400'
                   }`} />
                   <p className={`text-sm font-medium ${
-                    selectedFormat === format.key ? 'text-primary-700' : 'text-neutral-700'
+                    selectedFormat === format.key ? 'text-neutral-900' : 'text-neutral-700'
                   }`}>{format.label}</p>
                   <p className="text-[10px] text-neutral-500 mt-0.5">{format.description}</p>
                 </button>
@@ -186,7 +186,7 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
               ].map((option) => (
                 <label
                   key={option.key}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-neutral-50 cursor-pointer"
+                  className="flex items-center gap-3 p-3 rounded hover:bg-neutral-50 cursor-pointer"
                 >
                   <div className="relative">
                     <input
@@ -197,7 +197,7 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
                     />
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                       option.value
-                        ? 'bg-primary-600 border-primary-600'
+                        ? 'bg-neutral-900 border-neutral-900'
                         : 'border-neutral-300'
                     }`}>
                       {option.value && <CheckIcon className="w-3 h-3 text-white" />}
@@ -218,9 +218,9 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
             <select
               value={detailLevel}
               onChange={(e) => changeDetailLevel(e.target.value as 'summary' | 'detailed' | 'full')}
-              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm 
-                         text-neutral-800 bg-white focus:outline-none focus:ring-2 
-                         focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 rounded border border-neutral-200 text-sm
+                         text-neutral-800 bg-white focus:outline-none focus:ring-2
+                         focus:ring-neutral-400 focus:border-neutral-400"
             >
               <option value="summary">Summary — titles only</option>
               <option value="detailed">Detailed — titles & descriptions</option>
@@ -240,14 +240,14 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
                   <button
                     key={tpl.key}
                     onClick={() => changeTemplate(tpl.key as typeof pdfTemplate)}
-                    className={`p-2 rounded-lg border text-left transition-all ${
+                    className={`p-2 rounded border text-left transition-all ${
                       pdfTemplate === tpl.key
-                        ? 'border-primary-500 bg-primary-50'
+                        ? 'border-neutral-200 bg-neutral-50'
                         : 'border-neutral-200 hover:border-neutral-300'
                     }`}
                   >
                     <p className={`text-xs font-medium ${
-                      pdfTemplate === tpl.key ? 'text-primary-700' : 'text-neutral-700'
+                      pdfTemplate === tpl.key ? 'text-neutral-900' : 'text-neutral-700'
                     }`}>{tpl.label}</p>
                     <p className="text-[10px] text-neutral-500">{tpl.desc}</p>
                   </button>
@@ -257,7 +257,7 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
 
           {/* Success banner */}
           {exportSuccess && (
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+            <div className="flex items-center gap-3 p-3 rounded bg-green-50 border border-green-200">
               <CheckIcon className="w-5 h-5 text-green-600 flex-shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-green-800">Export downloaded successfully!</p>
@@ -272,7 +272,7 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
           {exportedContent && (
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-2">Preview</label>
-              <pre className="bg-neutral-50 rounded-lg p-3 text-xs text-neutral-700 
+              <pre className="bg-neutral-50 rounded p-3 text-xs text-neutral-700
                             max-h-48 overflow-y-auto border border-neutral-200 whitespace-pre-wrap">
                 {exportedContent.slice(0, 2000)}
                 {exportedContent.length > 2000 && '\n\n... (truncated)'}
@@ -287,18 +287,18 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
         <div className="flex items-center justify-end gap-3 p-6 border-t border-neutral-200">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 
-                       rounded-lg transition-colors"
+            className="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100
+                       rounded transition-colors"
           >
             Close
           </button>
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className={`px-6 py-2 text-sm font-medium text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 ${
+            className={`px-6 py-2 text-sm font-medium text-white rounded transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 ${
               exportSuccess
                 ? 'bg-green-600 hover:bg-green-700'
-                : 'bg-primary-600 hover:bg-primary-700'
+                : 'bg-neutral-900 hover:bg-neutral-800'
             }`}
           >
             {isExporting ? (

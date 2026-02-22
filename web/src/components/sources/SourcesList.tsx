@@ -83,8 +83,8 @@ export default function SourcesList({ sessionId, onSelectSource }: SourcesListPr
 
       {/* Full-screen overlay modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-md shadow w-full max-w-md mx-4 overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200">
               <div>
@@ -95,7 +95,7 @@ export default function SourcesList({ sessionId, onSelectSource }: SourcesListPr
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
+                className="p-1.5 rounded-md hover:bg-neutral-100 transition-colors"
               >
                 <XMarkIcon className="w-5 h-5 text-neutral-500" />
               </button>
@@ -156,7 +156,7 @@ export default function SourcesList({ sessionId, onSelectSource }: SourcesListPr
                     <button
                       onClick={(event) => handleReanalyze(event, source.id)}
                       disabled={reanalyzingSourceId === source.id}
-                      className="p-2 rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 
+                      className="p-2 rounded-md text-neutral-400 hover:text-blue-600 hover:bg-blue-50
                                  transition-colors disabled:opacity-50 shrink-0"
                       title="Re-analyze source"
                     >
@@ -171,7 +171,7 @@ export default function SourcesList({ sessionId, onSelectSource }: SourcesListPr
                     <button
                       onClick={(event) => handleDeleteSource(event, source.id)}
                       disabled={isDeleting}
-                      className="p-2 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 
+                      className="p-2 rounded-md text-neutral-400 hover:text-red-600 hover:bg-red-50
                                  transition-colors disabled:opacity-50 shrink-0"
                       title="Delete source"
                     >

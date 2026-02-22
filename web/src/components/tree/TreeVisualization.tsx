@@ -21,7 +21,7 @@ interface TreeNodeData {
   question: string;
   answer?: string;
   node_type?: string;
-  type?: "root" | "feature" | "detail";
+  type: "root" | "feature" | "detail";
   status?: string;
   deferred_reason?: string;
   completed_at?: string;
@@ -227,7 +227,7 @@ export default function TreeVisualization({
         <div className="text-center animate-fade-in">
           <div className="relative w-16 h-16 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-900 border-t-transparent animate-spin"></div>
           </div>
           <p className="text-neutral-600 font-medium">
             Loading requirements map...
@@ -241,7 +241,7 @@ export default function TreeVisualization({
     return (
       <div className="h-full flex items-center justify-center bg-neutral-50 p-8">
         <div className="text-center max-w-md animate-fade-in">
-          <div className="w-16 h-16 rounded-2xl bg-danger-100 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-md bg-danger-100 flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl">⚠️</span>
           </div>
           <h3 className="text-lg font-semibold text-neutral-900 mb-2">
@@ -263,7 +263,7 @@ export default function TreeVisualization({
         <div className="text-center">
           <div className="relative w-12 h-12 mx-auto mb-4">
             <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-900 border-t-transparent animate-spin"></div>
           </div>
           <p className="text-neutral-500">Building requirements map…</p>
           <p className="text-neutral-400 text-sm mt-1">Complete the questions first to generate the tree</p>
@@ -294,8 +294,8 @@ export default function TreeVisualization({
         <div className="p-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-primary-100 flex items-center justify-center">
-                <DocumentTextIcon className="w-4 h-4 text-primary-600" />
+              <div className="w-8 h-8 rounded-md bg-neutral-50 flex items-center justify-center">
+                <DocumentTextIcon className="w-4 h-4 text-neutral-900" />
               </div>
               Requirements Map
             </h2>
@@ -307,24 +307,24 @@ export default function TreeVisualization({
           </div>
 
           {/* Zoom Controls */}
-          <div className="flex items-center gap-1 bg-neutral-100 rounded-xl p-1">
+          <div className="flex items-center gap-1 bg-neutral-100 rounded-md p-1">
             <button
               onClick={handleZoomOut}
-              className="p-2 hover:bg-white rounded-lg transition-all duration-200 hover:shadow-soft-sm"
+              className="p-2 hover:bg-white rounded-md transition-all duration-200 hover:shadow-sm"
               title="Zoom out"
             >
               <MagnifyingGlassMinusIcon className="w-4 h-4 text-neutral-600" />
             </button>
             <button
               onClick={handleZoomReset}
-              className="px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-white rounded-lg transition-all duration-200 min-w-[52px] hover:shadow-soft-sm"
+              className="px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-white rounded-md transition-all duration-200 min-w-[52px] hover:shadow-sm"
               title="Reset zoom"
             >
               {zoom}%
             </button>
             <button
               onClick={handleZoomIn}
-              className="p-2 hover:bg-white rounded-lg transition-all duration-200 hover:shadow-soft-sm"
+              className="p-2 hover:bg-white rounded-md transition-all duration-200 hover:shadow-sm"
               title="Zoom in"
             >
               <MagnifyingGlassPlusIcon className="w-4 h-4 text-neutral-600" />
@@ -342,8 +342,8 @@ export default function TreeVisualization({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search nodes..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-neutral-200 bg-neutral-50
-                         focus:border-primary-300 focus:ring-1 focus:ring-primary-200 focus:bg-white transition-colors"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded border border-neutral-200 bg-neutral-50
+                         focus:border-neutral-200 focus:ring-1 focus:ring-neutral-200 focus:bg-white transition-colors"
             />
           </div>
 
@@ -356,7 +356,7 @@ export default function TreeVisualization({
                 onClick={() => setStatusFilter(opt.value)}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-200 ${
                   statusFilter === opt.value
-                    ? "bg-primary-600 text-white shadow-sm"
+                    ? "bg-neutral-900 text-white shadow-sm"
                     : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
                 }`}
               >
@@ -370,7 +370,7 @@ export default function TreeVisualization({
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
-              className="text-[11px] border border-neutral-200 rounded-lg px-2 py-1 bg-white text-neutral-600"
+              className="text-[11px] border border-neutral-200 rounded-md px-2 py-1 bg-white text-neutral-600"
             >
               <option value="">All Sources</option>
               {uniqueSources.map((s) => (
@@ -382,9 +382,9 @@ export default function TreeVisualization({
           {/* Active scope toggle */}
           <button
             onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
-            className={`ml-auto px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-200 border ${
+            className={`ml-auto px-3 py-1.5 rounded-md text-[11px] font-medium transition-all duration-200 border ${
               statusFilter === "active"
-                ? "bg-primary-50 text-primary-700 border-primary-200"
+                ? "bg-neutral-50 text-neutral-900 border-neutral-200"
                 : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
             }`}
           >
@@ -392,7 +392,7 @@ export default function TreeVisualization({
           </button>
           <button
             onClick={() => setShowDeferred(!showDeferred)}
-            className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-200 border flex items-center gap-1 ${
+            className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-all duration-200 border flex items-center gap-1 ${
               showDeferred
                 ? "bg-neutral-700 text-white border-neutral-700"
                 : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
@@ -406,7 +406,7 @@ export default function TreeVisualization({
 
       {/* RISK-2.1C — Depth recommendation banner */}
       {treeStats?.depth_warning && !depthDismissed && (
-        <div className="mx-4 mt-2 mb-1 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-3">
+        <div className="mx-4 mt-2 mb-1 px-4 py-2.5 rounded-md bg-amber-50 border border-amber-200 flex items-start gap-3">
           <ExclamationTriangleIcon className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-amber-800">Deep tree detected</p>
@@ -431,7 +431,7 @@ export default function TreeVisualization({
 
       {/* Tree Content + optional Deferred panel */}
       <div className="flex-1 overflow-hidden flex">
-        <div className="flex-1 overflow-auto p-8 bg-neutral-50/50">
+        <div className="flex-1 overflow-auto p-8 bg-neutral-50/50 bg-dot-pattern">
           {filteredTree ? (
             <div
               className="inline-block min-w-full"
@@ -460,7 +460,7 @@ export default function TreeVisualization({
               <p className="text-sm font-medium">No nodes match the current filter</p>
               <button
                 onClick={() => { setStatusFilter("all"); setSearchQuery(""); setSourceFilter(""); }}
-                className="mt-2 text-xs text-primary-600 hover:underline"
+                className="mt-2 text-xs text-primary-500 hover:underline"
               >
                 Clear filters
               </button>
@@ -481,15 +481,15 @@ export default function TreeVisualization({
         <div className="flex items-center justify-center gap-4 text-xs flex-wrap">
           {/* Type legend */}
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-md bg-gradient-to-br from-primary-500 to-primary-600"></div>
+            <div className="w-3 h-3 rounded-md bg-neutral-900"></div>
             <span className="text-neutral-600 font-medium">Project</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-md bg-gradient-to-br from-warning-500 to-warning-600"></div>
+            <div className="w-3 h-3 rounded-md bg-warning-500"></div>
             <span className="text-neutral-600 font-medium">Feature</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-md bg-gradient-to-br from-success-500 to-success-600"></div>
+            <div className="w-3 h-3 rounded-md bg-success-500"></div>
             <span className="text-neutral-600 font-medium">Requirement</span>
           </div>
 

@@ -119,81 +119,88 @@ export default function Sidebar({ currentSessionId, sessionName, onSessionNameUp
   return (
     <div
       className={`${
-        isCollapsed ? "w-16" : "w-72"
-      } bg-white border-r border-neutral-200/60 flex flex-col transition-all duration-300 ease-smooth relative`}
+        isCollapsed ? "w-12" : ""
+      } flex flex-col transition-all duration-200 relative border-r border-neutral-200`}
+      style={{
+        width: isCollapsed ? "48px" : "220px",
+        backgroundColor: "#f8f8f8",
+      }}
     >
       {/* Toggle Button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-6 z-10 w-6 h-6 bg-white border border-neutral-200 rounded-full flex items-center justify-center shadow-soft hover:shadow-soft-md hover:border-neutral-300 transition-all duration-200"
+        className="absolute -right-3 top-4 z-10 w-5 h-5 bg-white border border-neutral-200 rounded flex items-center justify-center hover:bg-neutral-50 transition-colors"
         title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}
       >
         {isCollapsed ? (
-          <ChevronRightIcon className="w-3.5 h-3.5 text-neutral-500" />
+          <ChevronRightIcon className="w-3 h-3 text-neutral-500" />
         ) : (
-          <ChevronLeftIcon className="w-3.5 h-3.5 text-neutral-500" />
+          <ChevronLeftIcon className="w-3 h-3 text-neutral-500" />
         )}
       </button>
 
-      {/* Sidebar Content - Hidden when collapsed */}
+      {/* Sidebar Content */}
       {!isCollapsed && (
         <>
           {/* New Discovery Button */}
-          <div className="p-4">
+          <div className="p-3">
             <button
               onClick={handleNewDiscovery}
-              className="w-full bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 font-medium text-sm transition-all shadow-soft-sm hover:shadow-soft"
+              className="w-full bg-neutral-900 hover:bg-neutral-800 text-white px-3 flex items-center justify-center gap-1.5 font-medium text-[13px] transition-colors"
+              style={{ height: "28px", borderRadius: "6px" }}
             >
-              <PlusIcon className="w-4 h-4" />
+              <PlusIcon className="w-3.5 h-3.5" />
               New Discovery
             </button>
           </div>
 
           {/* Current Session */}
           {currentSessionId && (
-            <div className="px-4 pb-4">
-              <div className="bg-primary-50/50 border border-primary-100 rounded-xl p-3">
-                <div className="text-[10px] font-semibold text-primary-600/70 uppercase tracking-wider mb-2">
+            <div className="px-3 pb-3">
+              <div className="bg-white border border-neutral-200 p-2.5" style={{ borderRadius: "6px" }}>
+                <div className="section-title mb-1.5" style={{ fontSize: "10px" }}>
                   Current Session
                 </div>
                 {isEditingName ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <input
                       type="text"
                       value={editedName}
                       onChange={(e) => setEditedName(e.target.value)}
                       onKeyPress={(e) => e.key === "Enter" && handleSaveSessionName()}
-                      className="flex-1 px-2.5 py-1.5 text-sm bg-white border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400"
+                      className="flex-1 px-2 text-[13px] bg-white border border-neutral-200 focus:outline-none focus:border-primary-500"
+                      style={{ height: "26px", borderRadius: "4px" }}
                       placeholder="Session name..."
                       autoFocus
                     />
                     <button
                       onClick={handleSaveSessionName}
-                      className="p-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                      className="p-1 bg-neutral-900 text-white rounded hover:bg-neutral-800 transition-colors"
                     >
-                      <CheckIcon className="w-3.5 h-3.5" />
+                      <CheckIcon className="w-3 h-3" />
                     </button>
                     <button
                       onClick={() => {
                         setIsEditingName(false);
                         setEditedName(sessionName || "");
                       }}
-                      className="p-1.5 bg-neutral-200 text-neutral-600 rounded-lg hover:bg-neutral-300 transition-colors"
+                      className="p-1 bg-neutral-100 text-neutral-600 rounded hover:bg-neutral-200 transition-colors"
                     >
-                      <XMarkIcon className="w-3.5 h-3.5" />
+                      <XMarkIcon className="w-3 h-3" />
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between group">
-                    <div className="text-sm font-medium text-neutral-800 truncate pr-2">
+                    <div className="text-[13px] font-medium text-neutral-900 truncate pr-2">
                       {sessionName || "Untitled Session"}
                     </div>
                     <button
                       onClick={() => setIsEditingName(true)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary-100 rounded-lg transition-all"
+                      className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-neutral-100 rounded transition-all"
                       title="Rename session"
                     >
-                      <PencilSquareIcon className="w-4 h-4 text-primary-600" />
+                      <PencilSquareIcon className="w-3.5 h-3.5 text-neutral-500" />
                     </button>
                   </div>
                 )}
@@ -201,46 +208,47 @@ export default function Sidebar({ currentSessionId, sessionName, onSessionNameUp
             </div>
           )}
 
-          <div className="divider mx-4" />
+          <div className="divider mx-3" />
 
           {/* Recent Sessions */}
           {isAuthenticated && (
-            <div className="flex-1 overflow-y-auto px-4 py-4">
-              <div className="section-title px-2 mb-3">Recent Sessions</div>
+            <div className="flex-1 overflow-y-auto px-3 py-3">
+              <div className="section-title px-2 mb-2">Recent Sessions</div>
 
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {recentSessions.length > 0 ? (
                   recentSessions.map((session) => (
                     <button
                       key={session.id}
                       onClick={() => handleSessionClick(session.id, session.status)}
-                      className={`w-full px-3 py-2.5 rounded-xl text-left transition-all duration-200 ${
+                      className={`w-full px-2 py-1.5 text-left transition-colors ${
                         session.id === currentSessionId
-                          ? "bg-primary-50 border border-primary-200/60"
-                          : "hover:bg-neutral-100 border border-transparent"
+                          ? "bg-neutral-200 text-neutral-900"
+                          : "hover:bg-neutral-100 text-neutral-600"
                       }`}
+                      style={{ borderRadius: "6px", height: "auto", minHeight: "30px" }}
                     >
-                      <div className="flex items-start gap-2.5">
+                      <div className="flex items-start gap-2">
                         <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${
                             session.id === currentSessionId
-                              ? "bg-primary-100"
-                              : "bg-neutral-100"
+                              ? "bg-neutral-300"
+                              : "bg-neutral-200"
                           }`}
                         >
                           <ChatBubbleLeftRightIcon
-                            className={`w-4 h-4 ${
+                            className={`w-3.5 h-3.5 ${
                               session.id === currentSessionId
-                                ? "text-primary-600"
+                                ? "text-neutral-700"
                                 : "text-neutral-500"
                             }`}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div
-                            className={`text-sm font-medium truncate ${
+                            className={`text-[13px] truncate ${
                               session.id === currentSessionId
-                                ? "text-primary-900"
+                                ? "font-medium text-neutral-900"
                                 : "text-neutral-700"
                             }`}
                           >
@@ -248,7 +256,7 @@ export default function Sidebar({ currentSessionId, sessionName, onSessionNameUp
                           </div>
                           <div className="flex items-center gap-1 mt-0.5">
                             <ClockIcon className="w-3 h-3 text-neutral-400" />
-                            <span className="text-xs text-neutral-500">
+                            <span className="text-[11px] text-neutral-500">
                               {formatDate(session.created_at)}
                             </span>
                           </div>
@@ -258,10 +266,10 @@ export default function Sidebar({ currentSessionId, sessionName, onSessionNameUp
                   ))
                 ) : (
                   <div className="text-center py-6">
-                    <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center mx-auto mb-2">
-                      <FolderIcon className="w-5 h-5 text-neutral-400" />
+                    <div className="w-8 h-8 rounded bg-neutral-200 flex items-center justify-center mx-auto mb-2">
+                      <FolderIcon className="w-4 h-4 text-neutral-400" />
                     </div>
-                    <p className="text-sm text-neutral-500">No sessions yet</p>
+                    <p className="text-[12px] text-neutral-500">No sessions yet</p>
                   </div>
                 )}
               </div>
@@ -270,12 +278,13 @@ export default function Sidebar({ currentSessionId, sessionName, onSessionNameUp
 
           {/* Bottom Section */}
           {isAuthenticated && (
-            <div className="p-4 border-t border-neutral-200/60">
+            <div className="p-3 border-t border-neutral-200">
               <button
                 onClick={handleViewAllSessions}
-                className="w-full px-3 py-2.5 rounded-xl text-sm text-neutral-600 hover:bg-neutral-100 flex items-center justify-center gap-2 transition-colors"
+                className="w-full px-2 py-1.5 text-[13px] text-neutral-600 hover:bg-neutral-100 flex items-center justify-center gap-1.5 transition-colors"
+                style={{ borderRadius: "6px" }}
               >
-                <FolderIcon className="w-4 h-4" />
+                <FolderIcon className="w-3.5 h-3.5" />
                 View All Sessions
               </button>
             </div>
@@ -285,33 +294,33 @@ export default function Sidebar({ currentSessionId, sessionName, onSessionNameUp
 
       {/* Collapsed State */}
       {isCollapsed && (
-        <div className="flex flex-col items-center py-4 gap-3">
+        <div className="flex flex-col items-center py-3 gap-2">
           <button
             onClick={handleNewDiscovery}
-            className="p-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl transition-all shadow-soft-sm hover:shadow-soft"
+            className="p-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded transition-colors"
             title="New Discovery"
           >
-            <PlusIcon className="w-5 h-5" />
+            <PlusIcon className="w-4 h-4" />
           </button>
 
           {currentSessionId && (
             <div
-              className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center"
+              className="w-8 h-8 rounded bg-neutral-200 flex items-center justify-center"
               title={sessionName || "Current Session"}
             >
-              <ChatBubbleLeftRightIcon className="w-5 h-5 text-primary-600" />
+              <ChatBubbleLeftRightIcon className="w-4 h-4 text-neutral-600" />
             </div>
           )}
 
-          <div className="w-8 h-px bg-neutral-200 my-1" />
+          <div className="w-6 h-px bg-neutral-200 my-0.5" />
 
           {isAuthenticated && (
             <button
               onClick={handleViewAllSessions}
-              className="p-2.5 hover:bg-neutral-100 rounded-xl transition-colors"
+              className="p-2 hover:bg-neutral-100 rounded transition-colors"
               title="View All Sessions"
             >
-              <FolderIcon className="w-5 h-5 text-neutral-500" />
+              <FolderIcon className="w-4 h-4 text-neutral-500" />
             </button>
           )}
         </div>

@@ -155,7 +155,7 @@ export default function Home() {
         <div className="text-center animate-fade-in">
           <div className="relative w-16 h-16 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-500 border-t-transparent animate-spin"></div>
           </div>
           <p className="text-neutral-500 font-medium">Setting things up...</p>
         </div>
@@ -169,7 +169,7 @@ export default function Home() {
         <div className="text-center animate-fade-in">
           <div className="relative w-16 h-16 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-500 border-t-transparent animate-spin"></div>
           </div>
           <p className="text-neutral-500 font-medium">Loading...</p>
         </div>
@@ -183,7 +183,7 @@ export default function Home() {
 
       {/* Guest User Banner */}
       {!isAuthenticated && currentStep === "upload" && (
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-4 py-2.5 text-center text-sm">
+        <div className="bg-neutral-900 text-white px-4 py-2.5 text-center text-sm">
           <span className="opacity-90">You're exploring as a guest.</span>
           <a href="/login" className="ml-2 font-semibold hover:underline">
             Sign in
@@ -207,22 +207,24 @@ export default function Home() {
         <main className="flex-1 flex overflow-hidden">
           {currentStep === "upload" && (
             <div className="w-full h-full overflow-y-auto flex items-center justify-center p-6">
-              <DocumentUpload sessionId={sessionId} onUpload={handleDocumentUpload} />
+              <DocumentUpload sessionId={sessionId!} onUpload={handleDocumentUpload} />
             </div>
           )}
 
           {currentStep === "questions" && (
-            <div className="w-full h-full overflow-y-auto flex items-center justify-center p-6">
-              <InitialQuestions
-                sessionId={sessionId}
-                onComplete={handleQuestionsComplete}
-              />
+            <div className="w-full h-full overflow-y-auto">
+              <div className="min-h-full flex items-center justify-center p-6">
+                <InitialQuestions
+                  sessionId={sessionId!}
+                  onComplete={handleQuestionsComplete}
+                />
+              </div>
             </div>
           )}
 
           {currentStep === "tree" && (
             <>
-              {/* Source suggestions panel — fixed right overlay */}
+              {/* Source suggestions panel -- fixed right overlay */}
               {showSourceSuggestions && currentSourceDetail?.suggestions && (
                 <>
                   {/* Backdrop */}
@@ -231,7 +233,7 @@ export default function Home() {
                     onClick={() => setShowSourceSuggestions(false)}
                   />
                   {/* Panel */}
-                  <div className="fixed inset-y-0 right-0 z-[95] w-[460px] bg-white shadow-2xl border-l border-neutral-200 flex flex-col">
+                  <div className="fixed inset-y-0 right-0 z-[95] w-[460px] bg-white shadow-lg border-l border-neutral-200 flex flex-col">
                     {/* Header */}
                     <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 shrink-0">
                       <div>
@@ -245,7 +247,7 @@ export default function Home() {
                       </div>
                       <button
                         onClick={() => setShowSourceSuggestions(false)}
-                        className="p-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
+                        className="p-1.5 rounded hover:bg-neutral-100 transition-colors"
                       >
                         <span className="sr-only">Close</span>
                         <svg className="w-5 h-5 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -257,9 +259,9 @@ export default function Home() {
                     <div className="flex-1 overflow-y-auto">
                       {/* Source Summary */}
                       {currentSourceDetail.processed_summary && (
-                        <div className="px-5 py-3 bg-primary-50 border-b border-primary-100">
-                          <p className="text-xs font-medium text-primary-700 mb-1">AI Summary</p>
-                          <p className="text-xs text-primary-900 leading-relaxed">
+                        <div className="px-5 py-3 bg-neutral-50 border-b border-neutral-200">
+                          <p className="text-xs font-medium text-neutral-900 mb-1">AI Summary</p>
+                          <p className="text-xs text-neutral-900 leading-relaxed">
                             {currentSourceDetail.processed_summary}
                           </p>
                         </div>
@@ -300,7 +302,7 @@ export default function Home() {
                           <summary className="text-xs font-medium text-neutral-700 cursor-pointer hover:text-neutral-900">
                             Original Content
                           </summary>
-                          <pre className="mt-2 text-xs text-neutral-600 whitespace-pre-wrap bg-neutral-50 rounded-lg p-3 max-h-40 overflow-y-auto">
+                          <pre className="mt-2 text-xs text-neutral-600 whitespace-pre-wrap bg-neutral-50 rounded-md p-3 max-h-40 overflow-y-auto">
                             {currentSourceDetail.raw_content}
                           </pre>
                         </details>
@@ -331,7 +333,7 @@ export default function Home() {
               {selectedNode ? (
                 <ResizableSplitPane
                   leftPanel={
-                    <div className="h-full bg-white overflow-hidden rounded-xl shadow-soft-sm m-2 mr-1">
+                    <div className="h-full bg-white overflow-hidden rounded-md shadow-sm m-2 mr-1">
                       {/* Add Source Button Bar */}
                       <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-100">
                         <div className="flex items-center gap-2">
@@ -351,7 +353,7 @@ export default function Home() {
                         </div>
                       </div>
                       <TreeVisualization
-                        sessionId={sessionId}
+                        sessionId={sessionId!}
                         onNodeSelect={handleNodeSelect}
                         selectedNodeId={selectedNode}
                         refreshKey={treeRefreshKey}
@@ -360,9 +362,9 @@ export default function Home() {
                     </div>
                   }
                   rightPanel={
-                    <div className="h-full flex flex-col rounded-xl shadow-soft-sm m-2 ml-1 overflow-hidden">
+                    <div className="h-full flex flex-col rounded-md shadow-sm m-2 ml-1 overflow-hidden">
                       <ChatInterface
-                        sessionId={sessionId}
+                        sessionId={sessionId!}
                         selectedNodeId={selectedNode}
                         contextMessage="Let's explore this feature in detail..."
                         onClose={() => setSelectedNode(null)}
@@ -376,7 +378,7 @@ export default function Home() {
                 />
               ) : (
                 <div className="w-full h-full p-2">
-                  <div className="h-full bg-white overflow-hidden rounded-xl shadow-soft-sm">
+                  <div className="h-full bg-white overflow-hidden rounded-md shadow-sm">
                     {/* Add Source Button Bar */}
                     <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-100">
                       <div className="flex items-center gap-2">
@@ -396,7 +398,7 @@ export default function Home() {
                       </div>
                     </div>
                     <TreeVisualization
-                      sessionId={sessionId}
+                      sessionId={sessionId!}
                       onNodeSelect={handleNodeSelect}
                       selectedNodeId={null}
                       refreshKey={treeRefreshKey}
@@ -420,11 +422,11 @@ export default function Home() {
 
       {/* User Type Selection Modal */}
       {showUserTypeModal && (
-        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-soft-xl max-w-2xl w-full overflow-hidden animate-scale-in">
+        <div className="fixed inset-0 bg-neutral-900/60 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-md shadow max-w-2xl w-full overflow-hidden animate-scale-in">
             {/* Header */}
             <div className="px-8 pt-10 pb-6 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 mb-6 shadow-glow">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-md bg-neutral-900 mb-6">
                 <SparklesIcon className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-neutral-900 mb-2">
@@ -441,13 +443,13 @@ export default function Home() {
                 {/* Non-Technical Option */}
                 <button
                   onClick={() => handleUserTypeSelection('non_technical')}
-                  className="group relative bg-white border-2 border-neutral-200 hover:border-primary-400 rounded-2xl p-6 transition-all duration-300 text-left hover:shadow-soft-md"
+                  className="group relative bg-white border-2 border-neutral-200 hover:border-neutral-300 rounded-md p-6 transition-all duration-200 text-left hover:shadow-sm"
                 >
                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ArrowRightIcon className="w-5 h-5 text-primary-500" />
+                    <ArrowRightIcon className="w-5 h-5 text-neutral-700" />
                   </div>
 
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-4 shadow-soft-sm">
+                  <div className="w-12 h-12 rounded-md bg-amber-500 flex items-center justify-center mb-4 shadow-sm">
                     <BriefcaseIcon className="w-6 h-6 text-white" />
                   </div>
 
@@ -460,15 +462,15 @@ export default function Home() {
 
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-neutral-600">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-neutral-900"></div>
                       <span>Business-focused questions</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-neutral-600">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-neutral-900"></div>
                       <span>Clear, simple language</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-neutral-600">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-neutral-900"></div>
                       <span>Problems & solutions focus</span>
                     </div>
                   </div>
@@ -477,13 +479,13 @@ export default function Home() {
                 {/* Technical Option */}
                 <button
                   onClick={() => handleUserTypeSelection('technical')}
-                  className="group relative bg-white border-2 border-neutral-200 hover:border-primary-400 rounded-2xl p-6 transition-all duration-300 text-left hover:shadow-soft-md"
+                  className="group relative bg-white border-2 border-neutral-200 hover:border-neutral-300 rounded-md p-6 transition-all duration-200 text-left hover:shadow-sm"
                 >
                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ArrowRightIcon className="w-5 h-5 text-primary-500" />
+                    <ArrowRightIcon className="w-5 h-5 text-neutral-700" />
                   </div>
 
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-4 shadow-soft-sm">
+                  <div className="w-12 h-12 rounded-md bg-violet-600 flex items-center justify-center mb-4 shadow-sm">
                     <CodeBracketIcon className="w-6 h-6 text-white" />
                   </div>
 
@@ -496,15 +498,15 @@ export default function Home() {
 
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-neutral-600">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-neutral-900"></div>
                       <span>Technical + business questions</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-neutral-600">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-neutral-900"></div>
                       <span>Architecture details</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-neutral-600">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-neutral-900"></div>
                       <span>Tech stack & integrations</span>
                     </div>
                   </div>

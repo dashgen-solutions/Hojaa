@@ -248,7 +248,7 @@ export default function ChatInterface({
     return (
       <div className="h-full flex items-center justify-center bg-white">
         <div className="text-center max-w-md px-6 animate-fade-in">
-          <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-neutral-100 rounded-md flex items-center justify-center mx-auto mb-4">
             <SparklesIcon className="w-8 h-8 text-neutral-400" />
           </div>
           <h3 className="text-lg font-semibold text-neutral-900 mb-2">
@@ -267,10 +267,10 @@ export default function ChatInterface({
     <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* Chat Header */}
       <div className="flex-shrink-0 border-b border-neutral-200/60 p-4 bg-white relative z-10">
-        <div className="bg-warning-50 border border-warning-200 rounded-xl p-3">
+        <div className="bg-warning-50 border border-warning-200 rounded-md p-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2 text-warning-700 min-w-0 flex-1">
-              <div className="w-8 h-8 rounded-lg bg-warning-100 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-md bg-warning-100 flex items-center justify-center flex-shrink-0">
                 <SparklesIcon className="w-4 h-4" />
               </div>
               <span className="text-sm font-semibold truncate">
@@ -292,7 +292,7 @@ export default function ChatInterface({
               {onClose && (
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-danger-50 text-neutral-500 hover:text-danger-600 rounded-lg transition-all border border-transparent hover:border-danger-200"
+                  className="p-2 hover:bg-danger-50 text-neutral-500 hover:text-danger-600 rounded-md transition-all border border-transparent hover:border-danger-200"
                   title="Close chat"
                 >
                   <XMarkIcon className="w-5 h-5" />
@@ -304,7 +304,7 @@ export default function ChatInterface({
 
         {/* Error Message */}
         {error && (
-          <div className="mt-3 p-3 bg-danger-50 border border-danger-200 rounded-xl text-danger-700 text-sm animate-fade-in">
+          <div className="mt-3 p-3 bg-danger-50 border border-danger-200 rounded-md text-danger-700 text-sm animate-fade-in">
             {error}
           </div>
         )}
@@ -319,11 +319,11 @@ export default function ChatInterface({
 
           {isLoading && (
             <div className="flex items-start gap-3 animate-fade-in">
-              <div className="flex-none w-9 h-9 rounded-xl bg-primary-100 flex items-center justify-center">
-                <span className="text-primary-600 font-bold text-xs">M</span>
+              <div className="flex-none w-9 h-9 rounded-md bg-neutral-50 flex items-center justify-center">
+                <span className="text-neutral-900 font-bold text-xs">M</span>
               </div>
               <div className="flex-1 max-w-[75%]">
-                <div className="inline-block bg-neutral-100 px-4 py-3 rounded-2xl border border-neutral-200">
+                <div className="inline-block bg-neutral-100 px-4 py-3 rounded-md border border-neutral-200">
                   <LoadingDots />
                 </div>
               </div>
@@ -345,7 +345,7 @@ export default function ChatInterface({
               <button
                 key={index}
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="inline-flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-lg bg-white hover:bg-primary-50 border border-neutral-200 hover:border-primary-300 transition-all duration-200"
+                className="inline-flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-md bg-white hover:bg-neutral-100 border border-neutral-200 hover:border-neutral-200 transition-all duration-200"
               >
                 <SparklesIcon className="w-3.5 h-3.5 text-primary-500" />
                 <span className="text-neutral-700">{suggestion}</span>
@@ -375,7 +375,7 @@ export default function ChatInterface({
           }}
           className="w-full"
         >
-          <div className="flex items-end gap-2 bg-neutral-50 rounded-xl border border-neutral-200 p-3 focus-within:border-primary-400 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
+          <div className="flex items-end gap-2 bg-neutral-50 rounded-md border border-neutral-200 p-3 focus-within:border-neutral-400 focus-within:ring-2 focus-within:ring-neutral-100 transition-all">
             <textarea
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
@@ -389,10 +389,10 @@ export default function ChatInterface({
               type="button"
               onClick={handleAudioRecord}
               disabled={isLoading || isProcessing || isTranscribing}
-              className={`flex-shrink-0 w-10 h-10 rounded-xl border-2 transition-all duration-200 flex items-center justify-center ${
+              className={`flex-shrink-0 w-10 h-10 rounded-md border-2 transition-all duration-200 flex items-center justify-center ${
                 isRecording
                   ? "bg-danger-500 border-danger-600 text-white animate-pulse"
-                  : "bg-white border-neutral-200 text-neutral-500 hover:border-primary-300 hover:text-primary-600"
+                  : "bg-white border-neutral-200 text-neutral-500 hover:border-neutral-200 hover:text-neutral-900"
               } disabled:opacity-40 disabled:cursor-not-allowed`}
               title={isRecording ? "Stop recording" : "Start voice recording"}
             >
@@ -405,7 +405,7 @@ export default function ChatInterface({
             <button
               type="submit"
               disabled={!inputMessage.trim() || isLoading || isTranscribing}
-              className="flex-shrink-0 w-10 h-10 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-soft-sm hover:shadow-soft"
+              className="flex-shrink-0 w-10 h-10 bg-neutral-900 text-white rounded-md hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow"
               title="Send message"
             >
               <PaperAirplaneIcon className="w-5 h-5" />
@@ -416,20 +416,20 @@ export default function ChatInterface({
           {(isRecording || isProcessing || isTranscribing) && (
             <div className="flex items-center gap-2 mt-2 px-1">
               {isRecording && (
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-danger-50 border border-danger-200 rounded-lg text-danger-700 text-xs font-medium">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-danger-50 border border-danger-200 rounded-md text-danger-700 text-xs font-medium">
                   <span className="w-2 h-2 bg-danger-500 rounded-full animate-pulse"></span>
                   Recording... Speak now
                 </span>
               )}
               {isProcessing && (
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-lg text-primary-700 text-xs font-medium">
-                  <div className="w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-md text-neutral-700 text-xs font-medium">
+                  <div className="w-3 h-3 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></div>
                   Processing audio...
                 </span>
               )}
               {isTranscribing && (
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-lg text-primary-700 text-xs font-medium">
-                  <div className="w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-md text-neutral-700 text-xs font-medium">
+                  <div className="w-3 h-3 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></div>
                   Transcribing...
                 </span>
               )}
@@ -438,7 +438,7 @@ export default function ChatInterface({
 
           {/* Audio Error */}
           {audioError && (
-            <div className="mt-2 p-3 bg-danger-50 border border-danger-200 rounded-xl">
+            <div className="mt-2 p-3 bg-danger-50 border border-danger-200 rounded-md">
               <p className="text-xs text-danger-700 font-medium mb-1">
                 Recording Error
               </p>

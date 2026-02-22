@@ -66,7 +66,7 @@ export default function NodeHistoryPanel({ nodeId, nodeTitle, onClose }: NodeHis
   }, [nodeId, compareSelection, compareVersions]);
 
   return (
-    <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-2xl border-l border-neutral-200 z-50 flex flex-col">
+    <div className="fixed inset-y-0 right-0 w-96 bg-white shadow border-l border-neutral-200 z-50 flex flex-col">
       {/* Header */}
       <div className="px-5 py-4 border-b border-neutral-200">
         <div className="flex items-center justify-between">
@@ -91,7 +91,7 @@ export default function NodeHistoryPanel({ nodeId, nodeTitle, onClose }: NodeHis
             {compareSelection.length === 2 && (
               <button
                 onClick={handleCompare}
-                className="px-2.5 py-1 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors flex items-center gap-1"
+                className="px-2.5 py-1 bg-neutral-900 text-white rounded-md hover:bg-neutral-800 transition-colors flex items-center gap-1"
               >
                 <ArrowsPointingOutIcon className="w-3 h-3" />
                 Compare
@@ -113,7 +113,7 @@ export default function NodeHistoryPanel({ nodeId, nodeTitle, onClose }: NodeHis
           <div className="font-medium text-neutral-700 mb-1">Version Comparison</div>
           <div className="grid grid-cols-2 gap-2">
             {/* Version A */}
-            <div className="bg-white rounded-lg p-2 border border-neutral-200">
+            <div className="bg-white rounded-md p-2 border border-neutral-200">
               <div className="font-medium text-neutral-600 mb-1">Version A</div>
               <div className="text-[10px] text-neutral-400 mb-1">
                 {new Date(comparisonResult.version_a.changed_at).toLocaleString()}
@@ -128,7 +128,7 @@ export default function NodeHistoryPanel({ nodeId, nodeTitle, onClose }: NodeHis
               )}
             </div>
             {/* Version B */}
-            <div className="bg-white rounded-lg p-2 border border-neutral-200">
+            <div className="bg-white rounded-md p-2 border border-neutral-200">
               <div className="font-medium text-neutral-600 mb-1">Version B</div>
               <div className="text-[10px] text-neutral-400 mb-1">
                 {new Date(comparisonResult.version_b.changed_at).toLocaleString()}
@@ -177,7 +177,7 @@ export default function NodeHistoryPanel({ nodeId, nodeTitle, onClose }: NodeHis
                       onClick={() => toggleCompareSelection(entry.id)}
                       className={`absolute left-2 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
                         isSelected
-                          ? 'bg-primary-600 ring-2 ring-primary-300'
+                          ? 'bg-neutral-900 ring-2 ring-neutral-300'
                           : `${config.bgColor}`
                       }`}
                       title="Select for comparison"
@@ -191,7 +191,7 @@ export default function NodeHistoryPanel({ nodeId, nodeTitle, onClose }: NodeHis
                       )}
                     </button>
 
-                    <div className="bg-neutral-50 rounded-lg p-3">
+                    <div className="bg-neutral-50 rounded-md p-3">
                       <div className="flex items-center justify-between mb-1">
                         <span className={`text-xs font-medium ${config.color}`}>{config.label}</span>
                         <div className="flex items-center gap-1.5">
@@ -233,7 +233,7 @@ export default function NodeHistoryPanel({ nodeId, nodeTitle, onClose }: NodeHis
                       <div className="flex items-center gap-2 mt-1.5 text-[10px] text-neutral-400">
                         {entry.changed_by_name && <span>by {entry.changed_by_name}</span>}
                         {entry.source_name && (
-                          <span className="bg-neutral-200 px-1.5 py-0.5 rounded text-primary-600 font-medium cursor-pointer hover:underline">
+                          <span className="bg-neutral-200 px-1.5 py-0.5 rounded text-primary-500 font-medium cursor-pointer hover:underline">
                             {entry.source_name}
                           </span>
                         )}

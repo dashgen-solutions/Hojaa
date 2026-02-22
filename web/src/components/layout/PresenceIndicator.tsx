@@ -33,7 +33,7 @@ export default function PresenceIndicator({ connected, onlineUsers }: PresenceIn
         {shown.map((u) => (
           <div
             key={u.user_id}
-            className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center border-2 border-white shadow-sm"
+            className="w-7 h-7 rounded-full bg-neutral-900 flex items-center justify-center border-2 border-white shadow-sm"
             title={u.username}
           >
             <span className="text-white text-[10px] font-semibold">

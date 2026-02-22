@@ -117,7 +117,7 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
   if (isLoadingAudit) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-3 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" />
       </div>
     );
   }
@@ -137,7 +137,7 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
               disabled={isExporting}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-neutral-300
                          hover:bg-neutral-50 transition-colors text-sm text-neutral-700 disabled:opacity-50"
               title="Export audit report"
             >
@@ -150,7 +150,7 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
               <ChevronDownIcon className="w-3 h-3" />
             </button>
             {showExportMenu && (
-              <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border
+              <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-md shadow border
                               border-neutral-200 py-1 z-20">
                 <button
                   onClick={() => handleExport('pdf')}
@@ -178,8 +178,8 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
               <select
                 value={userFilter || ''}
                 onChange={(e) => setUserFilter(e.target.value || null)}
-                className="pl-8 pr-3 py-1.5 rounded-lg border border-neutral-300 text-sm
-                           focus:border-primary-500 outline-none appearance-none"
+                className="pl-8 pr-3 py-1.5 rounded-md border border-neutral-300 text-sm
+                           focus:border-neutral-400 outline-none appearance-none"
               >
                 <option value="">All users</option>
                 {sessionUsers.map((u) => (
@@ -194,8 +194,8 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(Number(e.target.value))}
-            className="px-3 py-1.5 rounded-lg border border-neutral-300 text-sm 
-                       focus:border-primary-500 outline-none"
+            className="px-3 py-1.5 rounded-md border border-neutral-300 text-sm
+                       focus:border-neutral-400 outline-none"
           >
             {TIME_RANGE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
@@ -207,8 +207,8 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
             <select
               value={changeTypeFilter || ''}
               onChange={(e) => setChangeTypeFilter(e.target.value || null)}
-              className="pl-8 pr-3 py-1.5 rounded-lg border border-neutral-300 text-sm 
-                         focus:border-primary-500 outline-none appearance-none"
+              className="pl-8 pr-3 py-1.5 rounded-md border border-neutral-300 text-sm
+                         focus:border-neutral-400 outline-none appearance-none"
             >
               <option value="">All changes</option>
               {Object.entries(CHANGE_TYPE_CONFIG).map(([key, config]) => (
@@ -249,7 +249,7 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
                   return (
                     <div
                       key={entry.id}
-                      className="rounded-lg hover:bg-neutral-50 transition-colors"
+                      className="rounded-md hover:bg-neutral-50 transition-colors"
                     >
                       {/* Collapsed row */}
                       <div
@@ -310,7 +310,7 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
                                     window.location.hash = `source-${(entry as any).source_id}`;
                                   }
                                 }}
-                                className="text-primary-600 hover:underline font-medium"
+                                className="text-primary-500 hover:underline font-medium"
                               >
                                 from {entry.source_name}
                               </button>

@@ -2,10 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Inter Font - Modern, highly legible */
+/* Inter Font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Base Styles */
+/* Base Styles — ERPNext / Frappe Design System */
 html,
 body {
   height: 100%;
@@ -17,11 +17,14 @@ body {
 }
 
 body {
-  @apply antialiased bg-neutral-50 text-neutral-900;
+  @apply antialiased text-neutral-600;
+  background-color: #f8f8f8;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* Root container */
@@ -30,28 +33,23 @@ body {
   width: 100%;
 }
 
-/* ==================== Custom Scrollbar ==================== */
+/* ==================== Scrollbar — 4px, subtle ==================== */
 * {
   &::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 4px;
+    height: 4px;
   }
 
   &::-webkit-scrollbar-track {
     background: transparent;
-    border-radius: 100px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.12);
     border-radius: 100px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-    transition: background-color 0.2s ease;
 
     &:hover {
       background: rgba(0, 0, 0, 0.2);
-      background-clip: content-box;
     }
   }
 
@@ -60,106 +58,134 @@ body {
   }
 
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
 }
 
-/* ==================== Component Layer ==================== */
+/* ==================== Component Layer — ERPNext ==================== */
 @layer components {
-  /* Modern Card */
+  /* Card — flat, #e2e2e2 border, 8px radius */
   .card {
-    @apply bg-white rounded-2xl border border-neutral-200/60 shadow-soft;
+    @apply bg-white rounded-md border border-neutral-200;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
 
   .card-hover {
-    @apply transition-all duration-200 ease-smooth hover:shadow-soft-md hover:border-neutral-300/60;
+    @apply transition-all duration-150 hover:shadow-md;
   }
 
-  /* Glass Effect */
-  .glass {
-    @apply bg-white/70 backdrop-blur-xl border border-white/20;
-  }
-
-  .glass-dark {
-    @apply bg-neutral-900/70 backdrop-blur-xl border border-white/10;
-  }
-
-  /* Modern Button Base */
+  /* Button Base — 28px height, 6px radius */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ease-smooth focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-1.5 px-3 text-[13px] font-medium transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed;
+    height: 28px;
+    border-radius: 6px;
   }
 
+  /* Primary Button — BLACK, not blue */
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-soft-sm hover:shadow-soft;
+    @apply btn text-white;
+    background-color: #171717;
+  }
+  .btn-primary:hover {
+    background-color: #262626;
+  }
+  .btn-primary:focus-visible {
+    box-shadow: 0 0 0 2px #0289f7;
   }
 
+  /* Secondary Button — white with border */
   .btn-secondary {
-    @apply btn bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300 focus:ring-neutral-500;
+    @apply btn bg-white text-neutral-700 border border-neutral-200;
+  }
+  .btn-secondary:hover {
+    @apply bg-neutral-50 border-neutral-300;
   }
 
+  /* Ghost Button — no border */
   .btn-ghost {
-    @apply btn bg-transparent text-neutral-600 hover:bg-neutral-100 focus:ring-neutral-500;
+    @apply btn bg-transparent text-neutral-600;
+  }
+  .btn-ghost:hover {
+    @apply bg-neutral-100;
   }
 
-  /* Modern Input */
+  /* Input — 28px height, #f3f3f3 bg, 6px radius */
   .input {
-    @apply w-full px-4 py-3 text-sm bg-white border border-neutral-200 rounded-xl transition-all duration-200 ease-smooth placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500;
+    @apply w-full px-2.5 text-[13px] border border-neutral-200 placeholder:text-neutral-400 focus:outline-none;
+    height: 28px;
+    background-color: #f3f3f3;
+    border-radius: 6px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .input:focus {
+    border-color: #0289f7;
+    box-shadow: 0 0 0 2px rgba(2, 137, 247, 0.15);
+    background-color: #fff;
   }
 
   .input-error {
-    @apply border-danger-500 focus:ring-danger-500/20 focus:border-danger-500;
+    @apply border-danger-500;
+  }
+  .input-error:focus {
+    border-color: #e24c4c;
+    box-shadow: 0 0 0 2px rgba(226, 76, 76, 0.15);
   }
 
-  /* Badge */
+  /* Badge — surface color pairs */
   .badge {
-    @apply inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full;
+    @apply inline-flex items-center px-2 py-0.5 text-[11px] font-medium;
+    border-radius: 4px;
   }
 
   .badge-primary {
-    @apply badge bg-primary-100 text-primary-700;
+    @apply badge;
+    background-color: #eff8ff;
+    color: #0289f7;
   }
 
   .badge-success {
-    @apply badge bg-success-100 text-success-700;
+    @apply badge;
+    background-color: #f4fff0;
+    color: #28a745;
   }
 
   .badge-warning {
-    @apply badge bg-warning-100 text-warning-700;
+    @apply badge;
+    background-color: #fff8e1;
+    color: #b07810;
+  }
+
+  .badge-danger {
+    @apply badge;
+    background-color: #fff5f5;
+    color: #e24c4c;
   }
 
   .badge-neutral {
-    @apply badge bg-neutral-100 text-neutral-600;
+    @apply badge;
+    background-color: #f3f3f3;
+    color: #525252;
   }
 
-  /* Divider */
+  /* Divider — subtle */
   .divider {
-    @apply h-px bg-gradient-to-r from-transparent via-neutral-200 to-transparent;
+    @apply h-px;
+    background-color: #e2e2e2;
   }
 
-  /* Section Header */
+  /* Section Header — 11px uppercase, ERPNext style */
   .section-title {
-    @apply text-xs font-semibold uppercase tracking-wider text-neutral-500;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #7c7c7c;
   }
 }
 
 /* ==================== Utilities Layer ==================== */
 @layer utilities {
-  /* Text Gradient */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-accent-500;
-  }
-
-  /* Subtle Background Pattern */
-  .bg-grid-pattern {
-    background-image:
-      linear-gradient(to right, rgba(0, 0, 0, 0.02) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
-    background-size: 24px 24px;
-  }
-
-  /* Dot Pattern */
-  .bg-dot-pattern {
-    background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px);
-    background-size: 20px 20px;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-primary-600;
   }
 
   /* Hide scrollbar but keep functionality */
@@ -171,9 +197,12 @@ body {
     }
   }
 
-  /* Smooth focus ring */
+  /* Focus ring — blue, ERPNext style */
   .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:ring-offset-2;
+    @apply focus:outline-none;
+  }
+  .focus-ring:focus-visible {
+    box-shadow: 0 0 0 2px #0289f7;
   }
 
   /* Line clamp utilities */
@@ -211,21 +240,23 @@ body {
 
 /* ==================== Tree Node Styles ==================== */
 .tree-node {
-  @apply transition-all duration-300 ease-smooth;
+  @apply transition-all duration-200;
 }
 
 .tree-node:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 /* ==================== Loading Skeleton ==================== */
 .skeleton {
-  @apply relative overflow-hidden bg-neutral-200 rounded-lg;
+  @apply relative overflow-hidden rounded;
+  background-color: #e2e2e2;
 }
 
 .skeleton::after {
   content: "";
-  @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent;
+  @apply absolute inset-0 -translate-x-full;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
   animation: shimmer 1.5s infinite;
 }
 
@@ -242,22 +273,26 @@ body {
   }
 
   .btn {
-    @apply py-3;
+    height: 36px;
+    @apply px-4;
   }
 
   .input {
-    @apply py-3.5;
+    height: 36px;
+    @apply px-3;
   }
 }
 
-/* ==================== Selection Styles ==================== */
+/* ==================== Selection ==================== */
 ::selection {
-  @apply bg-primary-500/20 text-primary-900;
+  background-color: rgba(2, 137, 247, 0.15);
+  color: #171717;
 }
 
 /* ==================== Focus Visible ==================== */
 :focus-visible {
-  @apply outline-none ring-2 ring-primary-500/40 ring-offset-2;
+  outline: none;
+  box-shadow: 0 0 0 2px #0289f7;
 }
 
 /* ==================== Reduce Motion ==================== */

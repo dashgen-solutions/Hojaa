@@ -33,13 +33,13 @@ export default function ResizableSplitPane({
     const containerRect = containerRef.current.getBoundingClientRect();
     const containerWidth = containerRect.width;
     const mouseX = event.clientX - containerRect.left;
-    
+
     // Calculate new width as percentage
     let newWidth = (mouseX / containerWidth) * 100;
-    
+
     // Apply min/max constraints
     newWidth = Math.max(minLeftWidth, Math.min(maxLeftWidth, newWidth));
-    
+
     console.log('Resizing to:', newWidth.toFixed(1), '%'); // Debug log
     setLeftWidth(newWidth);
   };
@@ -131,8 +131,8 @@ export default function ResizableSplitPane({
       {/* Resizer Handle */}
       <div
         className={`
-          relative flex-shrink-0 bg-gray-300 hover:bg-blue-500 transition-all cursor-col-resize group
-          ${isDragging ? "bg-blue-600 w-3 shadow-lg" : "w-1.5"}
+          relative flex-shrink-0 bg-gray-300 hover:bg-neutral-500 transition-all cursor-col-resize group
+          ${isDragging ? "bg-neutral-600 w-3 shadow" : "w-1.5"}
         `}
         onMouseDown={() => {
           console.log('Starting drag from:', leftWidth.toFixed(1), '%'); // Debug log
@@ -143,17 +143,17 @@ export default function ResizableSplitPane({
       >
         {/* Pulsing indicator line */}
         <div className={`
-          absolute inset-0 bg-blue-600 transition-opacity
+          absolute inset-0 bg-neutral-600 transition-opacity
           ${isDragging ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
         `} />
-        
+
         {/* Grab handle - shows on hover and during drag */}
         <div className={`
-          absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
+          absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
           transition-all duration-200
           ${isDragging ? "opacity-100 scale-110" : "opacity-0 group-hover:opacity-100 scale-100"}
         `}>
-          <div className="bg-gradient-to-b from-blue-500 to-blue-600 text-white rounded-lg px-1.5 py-3 shadow-lg border border-blue-400">
+          <div className="bg-neutral-900 text-white rounded-md px-1.5 py-3 shadow border border-neutral-200">
             {/* Vertical dots */}
             <div className="flex flex-col gap-1">
               <div className="w-1 h-1 bg-white rounded-full"></div>
@@ -166,7 +166,7 @@ export default function ResizableSplitPane({
         {/* Width indicator - shows during drag */}
         {isDragging && (
           <div className="absolute -top-10 left-1/2 -translate-x-1/2 pointer-events-none">
-            <div className="bg-gray-900 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg font-medium">
+            <div className="bg-gray-900 text-white text-xs px-3 py-1.5 rounded-md shadow font-medium">
               {leftWidth.toFixed(0)}% | {(100 - leftWidth).toFixed(0)}%
             </div>
           </div>
@@ -174,11 +174,11 @@ export default function ResizableSplitPane({
 
         {/* Hover hint */}
         <div className={`
-          absolute -bottom-12 left-1/2 -translate-x-1/2 
+          absolute -bottom-12 left-1/2 -translate-x-1/2
           transition-opacity pointer-events-none whitespace-nowrap
           ${isDragging ? "opacity-0" : "opacity-0 group-hover:opacity-100"}
         `}>
-          <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded shadow-lg">
+          <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded shadow">
             Drag to resize
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function ResizableSplitPane({
               e.stopPropagation();
               setLeftWidth(25);
             }}
-            className="bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded px-2 py-1 text-xs font-medium text-gray-700 hover:text-blue-700 shadow-sm transition-colors whitespace-nowrap"
+            className="bg-white hover:bg-neutral-100 border border-neutral-200 hover:border-neutral-300 rounded px-2 py-1 text-xs font-medium text-gray-700 hover:text-neutral-900 shadow-sm transition-colors whitespace-nowrap"
             title="Set to 25%"
           >
             25%
@@ -206,7 +206,7 @@ export default function ResizableSplitPane({
               e.stopPropagation();
               setLeftWidth(50);
             }}
-            className="bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded px-2 py-1 text-xs font-medium text-gray-700 hover:text-blue-700 shadow-sm transition-colors whitespace-nowrap"
+            className="bg-white hover:bg-neutral-100 border border-neutral-200 hover:border-neutral-300 rounded px-2 py-1 text-xs font-medium text-gray-700 hover:text-neutral-900 shadow-sm transition-colors whitespace-nowrap"
             title="Set to 50%"
           >
             50%
@@ -217,7 +217,7 @@ export default function ResizableSplitPane({
               e.stopPropagation();
               setLeftWidth(75);
             }}
-            className="bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded px-2 py-1 text-xs font-medium text-gray-700 hover:text-blue-700 shadow-sm transition-colors whitespace-nowrap"
+            className="bg-white hover:bg-neutral-100 border border-neutral-200 hover:border-neutral-300 rounded px-2 py-1 text-xs font-medium text-gray-700 hover:text-neutral-900 shadow-sm transition-colors whitespace-nowrap"
             title="Set to 75%"
           >
             75%

@@ -142,7 +142,7 @@ export default function ProgressDashboard({ board, workload }: ProgressDashboard
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Cards per column */}
-        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+        <div className="rounded-md border border-neutral-200 bg-white p-4">
           <h4 className="text-sm font-semibold text-neutral-800 mb-3">Cards per Status</h4>
           <div className="space-y-2">
             {stats.columnCounts.map((col) => (
@@ -161,7 +161,7 @@ export default function ProgressDashboard({ board, workload }: ProgressDashboard
         </div>
 
         {/* Priority breakdown */}
-        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+        <div className="rounded-md border border-neutral-200 bg-white p-4">
           <h4 className="text-sm font-semibold text-neutral-800 mb-3">Priority Breakdown</h4>
           <div className="space-y-2">
             {Object.entries(PRIORITY_COLORS).map(([priority, color]) => {
@@ -183,7 +183,7 @@ export default function ProgressDashboard({ board, workload }: ProgressDashboard
         </div>
 
         {/* Hours tracking */}
-        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+        <div className="rounded-md border border-neutral-200 bg-white p-4">
           <h4 className="text-sm font-semibold text-neutral-800 mb-3">Time Tracking</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -214,7 +214,7 @@ export default function ProgressDashboard({ board, workload }: ProgressDashboard
         </div>
 
         {/* AC progress + flags */}
-        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+        <div className="rounded-md border border-neutral-200 bg-white p-4">
           <h4 className="text-sm font-semibold text-neutral-800 mb-3">Acceptance Criteria</h4>
           <div className="flex items-center gap-4 mb-3">
             <div>
@@ -248,7 +248,7 @@ export default function ProgressDashboard({ board, workload }: ProgressDashboard
 
       {/* Team workload */}
       {workload.length > 0 && (
-        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+        <div className="rounded-md border border-neutral-200 bg-white p-4">
           <h4 className="text-sm font-semibold text-neutral-800 mb-3">Team Workload</h4>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -301,7 +301,7 @@ function KPI({ label, value, icon: Icon, color }: {
   color: string;
 }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+    <div className="rounded-md border border-neutral-200 bg-white p-4">
       <div className="flex items-center gap-2 mb-1">
         <Icon className={`w-4 h-4 ${color}`} />
         <span className="text-[10px] uppercase tracking-wide text-neutral-400">{label}</span>

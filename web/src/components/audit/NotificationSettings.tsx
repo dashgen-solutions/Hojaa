@@ -77,11 +77,11 @@ export default function NotificationSettings({ sessionId }: NotificationSettings
   const isConnected = notificationHealth?.status === 'ok';
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <BellIcon className="h-5 w-5 text-primary-600" />
+          <BellIcon className="h-5 w-5 text-neutral-900" />
           <div>
             <h3 className="text-sm font-semibold text-gray-900">Email Notifications</h3>
             <p className="text-xs text-gray-500">Email notifications via SMTP</p>
@@ -128,8 +128,8 @@ export default function NotificationSettings({ sessionId }: NotificationSettings
             <button
               onClick={() => handleToggleAll(!notificationPreferences.is_subscribed)}
               disabled={saving === 'is_subscribed'}
-              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                notificationPreferences.is_subscribed ? 'bg-primary-600' : 'bg-gray-200'
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2 ${
+                notificationPreferences.is_subscribed ? 'bg-neutral-900' : 'bg-gray-200'
               }`}
             >
               <span
@@ -152,8 +152,8 @@ export default function NotificationSettings({ sessionId }: NotificationSettings
                   <button
                     onClick={() => handleToggle(opt.key)}
                     disabled={saving === opt.key}
-                    className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 ${
-                      notificationPreferences[opt.key] ? 'bg-primary-600' : 'bg-gray-200'
+                    className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-1 ${
+                      notificationPreferences[opt.key] ? 'bg-neutral-900' : 'bg-gray-200'
                     }`}
                   >
                     <span

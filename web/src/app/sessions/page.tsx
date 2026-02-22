@@ -177,7 +177,7 @@ export default function SessionsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neutral-900 mx-auto"></div>
           <p className="mt-4 text-secondary-600">Loading your sessions...</p>
         </div>
       </div>
@@ -192,7 +192,7 @@ export default function SessionsPage() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-primary-400 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-neutral-900 rounded-md flex items-center justify-center">
                   <span className="text-white font-bold text-lg">M</span>
                 </div>
                 <div>
@@ -209,7 +209,7 @@ export default function SessionsPage() {
               {!isViewer && (
                 <button
                   onClick={handleCreateNewSession}
-                  className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+                  className="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded-md hover:bg-neutral-800 transition-colors"
                 >
                   <PlusIcon className="w-5 h-5" />
                   <span>New Session</span>
@@ -236,13 +236,13 @@ export default function SessionsPage() {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
               {error}
             </div>
           )}
 
           {sessions.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+            <div className="bg-white rounded-md shadow-sm p-12 text-center">
               <DocumentTextIcon className="w-16 h-16 text-secondary-300 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-secondary-900 mb-2">
                 No Sessions Yet
@@ -252,7 +252,7 @@ export default function SessionsPage() {
               </p>
               <button
                 onClick={handleCreateNewSession}
-                className="inline-flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors"
+                className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-md hover:bg-neutral-800 transition-colors"
               >
                 <PlusIcon className="w-5 h-5" />
                 <span>Create Your First Session</span>
@@ -267,10 +267,10 @@ export default function SessionsPage() {
                 return (
                 <div
                   key={session.id}
-                  className="bg-white rounded-xl shadow-sm border border-secondary-200 p-6 hover:shadow-md transition-shadow flex flex-col"
+                  className="bg-white rounded-md shadow-sm border border-secondary-200 p-6 hover:shadow transition-shadow flex flex-col"
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <DocumentTextIcon className="w-8 h-8 text-primary-600 flex-shrink-0" />
+                    <DocumentTextIcon className="w-8 h-8 text-neutral-900 flex-shrink-0" />
                     <div className="flex items-center gap-2">
                       {isShared && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-600 border border-indigo-200">
@@ -294,10 +294,10 @@ export default function SessionsPage() {
                   <div className="flex gap-2 mt-auto">
                     <button
                       onClick={() => handleResumeSession(session.id)}
-                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${
                         isViewer || (isShared && !isOwned)
                           ? "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
-                          : "bg-primary-600 text-white hover:bg-primary-700"
+                          : "bg-neutral-900 text-white hover:bg-neutral-800"
                       }`}
                     >
                       {isViewer ? (
@@ -315,7 +315,7 @@ export default function SessionsPage() {
                     {isOwned && !isViewer && (
                       <button
                         onClick={() => handleDeleteSession(session.id)}
-                        className="flex items-center justify-center p-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                        className="flex items-center justify-center p-2 border border-red-200 text-red-600 rounded-md hover:bg-red-50 transition-colors"
                       >
                         <TrashIcon className="w-5 h-5" />
                       </button>

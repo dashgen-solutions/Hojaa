@@ -206,13 +206,13 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-md shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
 
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-neutral-200">
           <h2 className="text-lg font-semibold text-neutral-900">Add Source</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-neutral-100 transition-colors">
             <XMarkIcon className="w-5 h-5 text-neutral-500" />
           </button>
         </div>
@@ -230,17 +230,17 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
                     setSelectedType(sourceType.value);
                     setSourceFormat('raw');
                   }}
-                  className={`p-2.5 rounded-xl border-2 text-center transition-all ${
+                  className={`p-2.5 rounded-md border-2 text-center transition-all ${
                     selectedType === sourceType.value
-                      ? 'border-primary-500 bg-primary-50'
+                      ? 'border-neutral-200 bg-neutral-50'
                       : 'border-neutral-200 hover:border-neutral-300'
                   }`}
                 >
                   <sourceType.icon className={`w-5 h-5 mx-auto mb-1 ${
-                    selectedType === sourceType.value ? 'text-primary-600' : 'text-neutral-400'
+                    selectedType === sourceType.value ? 'text-neutral-900' : 'text-neutral-400'
                   }`} />
                   <p className={`text-xs font-medium ${
-                    selectedType === sourceType.value ? 'text-primary-700' : 'text-neutral-700'
+                    selectedType === sourceType.value ? 'text-neutral-900' : 'text-neutral-700'
                   }`}>{sourceType.label}</p>
                 </button>
               ))}
@@ -256,9 +256,9 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
                   <button
                     key={format.value}
                     onClick={() => setSourceFormat(format.value)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
                       sourceFormat === format.value
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        ? 'border-neutral-200 bg-neutral-50 text-neutral-900'
                         : 'border-neutral-200 text-neutral-600 hover:border-neutral-300'
                     }`}
                   >
@@ -284,8 +284,8 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
                 selectedType === 'slack' ? 'e.g., #product-decisions Jan 10' :
                 'e.g., Updated Requirements Doc'
               }
-              className="w-full px-3 py-2 rounded-lg border border-neutral-300 focus:border-primary-500
-                         focus:ring-2 focus:ring-primary-200 outline-none text-sm"
+              className="w-full px-3 py-2 rounded-md border border-neutral-300 focus:border-neutral-400
+                         focus:ring-2 focus:ring-neutral-200 outline-none text-sm"
             />
           </div>
 
@@ -299,8 +299,8 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
                     type="date"
                     value={meetingDate}
                     onChange={(e) => setMeetingDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-neutral-300 focus:border-primary-500
-                               focus:ring-2 focus:ring-primary-200 outline-none text-sm"
+                    className="w-full px-3 py-2 rounded-md border border-neutral-300 focus:border-neutral-400
+                               focus:ring-2 focus:ring-neutral-200 outline-none text-sm"
                   />
                 </div>
                 <div>
@@ -308,8 +308,8 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
                   <select
                     value={meetingType}
                     onChange={(e) => setMeetingType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-neutral-300 focus:border-primary-500
-                               focus:ring-2 focus:ring-primary-200 outline-none text-sm"
+                    className="w-full px-3 py-2 rounded-md border border-neutral-300 focus:border-neutral-400
+                               focus:ring-2 focus:ring-neutral-200 outline-none text-sm"
                   >
                     {MEETING_TYPES.map((mt) => (
                       <option key={mt.value} value={mt.value}>{mt.label}</option>
@@ -324,8 +324,8 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
                   value={attendees}
                   onChange={(e) => setAttendees(e.target.value)}
                   placeholder="e.g., John, Sarah, Mike (leave blank for auto-detection from transcript)"
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-300 focus:border-primary-500
-                             focus:ring-2 focus:ring-primary-200 outline-none text-sm"
+                  className="w-full px-3 py-2 rounded-md border border-neutral-300 focus:border-neutral-400
+                             focus:ring-2 focus:ring-neutral-200 outline-none text-sm"
                 />
                 <p className="text-xs text-neutral-400 mt-0.5">
                   If left blank, participants will be auto-detected from Otter/Fireflies/Slack transcripts.
@@ -340,10 +340,10 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
               <label className="block text-sm font-medium text-neutral-700">
                 Content <span className="text-red-500">*</span>
               </label>
-              <div className="flex gap-1 bg-neutral-100 rounded-lg p-0.5">
+              <div className="flex gap-1 bg-neutral-100 rounded-md p-0.5">
                 <button
                   onClick={() => setInputMode('paste')}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                     inputMode === 'paste'
                       ? 'bg-white text-neutral-900 shadow-sm'
                       : 'text-neutral-500 hover:text-neutral-700'
@@ -354,7 +354,7 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
                 </button>
                 <button
                   onClick={() => setInputMode('upload')}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                     inputMode === 'upload'
                       ? 'bg-white text-neutral-900 shadow-sm'
                       : 'text-neutral-500 hover:text-neutral-700'
@@ -374,8 +374,8 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
                   onChange={(e) => setRawContent(e.target.value)}
                   placeholder={getPlaceholder()}
                   rows={10}
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-300 focus:border-primary-500
-                             focus:ring-2 focus:ring-primary-200 outline-none text-sm resize-y font-mono"
+                  className="w-full px-3 py-2 rounded-md border border-neutral-300 focus:border-neutral-400
+                             focus:ring-2 focus:ring-neutral-200 outline-none text-sm resize-y font-mono"
                 />
                 <p className="text-xs text-neutral-400 mt-1">
                   AI will analyze this content and suggest scope changes for your review.
@@ -387,9 +387,9 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
             {inputMode === 'upload' && (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+                className={`border-2 border-dashed rounded-md p-8 text-center cursor-pointer transition-colors ${
                   selectedFile
-                    ? 'border-primary-300 bg-primary-50'
+                    ? 'border-neutral-200 bg-neutral-50'
                     : 'border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50'
                 }`}
               >
@@ -402,9 +402,9 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
                 />
                 {selectedFile ? (
                   <div>
-                    <DocumentArrowUpIcon className="w-8 h-8 mx-auto text-primary-500 mb-2" />
-                    <p className="text-sm font-medium text-primary-700">{selectedFile.name}</p>
-                    <p className="text-xs text-primary-500 mt-0.5">
+                    <DocumentArrowUpIcon className="w-8 h-8 mx-auto text-neutral-900 mb-2" />
+                    <p className="text-sm font-medium text-neutral-900">{selectedFile.name}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">
                       {(selectedFile.size / 1024).toFixed(1)} KB
                     </p>
                     <button
@@ -433,7 +433,7 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
 
           {/* Error */}
           {error && (
-            <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>
+            <div className="p-3 rounded-md bg-red-50 text-red-700 text-sm">{error}</div>
           )}
         </div>
 
@@ -442,15 +442,15 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100
-                       rounded-lg transition-colors"
+                       rounded-md transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={isSubmitting || !isFormValid}
-            className="px-6 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700
-                       rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed
+            className="px-6 py-2 text-sm font-medium text-white bg-neutral-900 hover:bg-neutral-800
+                       rounded-md transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed
                        flex items-center gap-2"
           >
             {isSubmitting ? (

@@ -51,12 +51,12 @@ export default function SettingsPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-neutral-200/60 rounded-xl p-1 mb-8 w-fit">
+        <div className="flex gap-1 bg-neutral-200/60 rounded-md p-1 mb-8 w-fit">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
                 tab === t.key
                   ? "bg-white text-neutral-900 shadow-sm"
                   : "text-neutral-600 hover:text-neutral-800"
@@ -160,10 +160,10 @@ function IntegrationsTab() {
   return (
     <div className="space-y-8">
       {/* Jira */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+      <div className="bg-white rounded-md border border-neutral-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-100 rounded-md flex items-center justify-center">
               <span className="text-blue-600 font-bold text-sm">J</span>
             </div>
             <div>
@@ -177,14 +177,14 @@ function IntegrationsTab() {
           </label>
         </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <input value={jiraUrl} onChange={(e) => setJiraUrl(e.target.value)} placeholder="Base URL (e.g. https://company.atlassian.net)" className="col-span-2 border rounded-lg px-3 py-2 text-sm" />
-          <input value={jiraEmail} onChange={(e) => setJiraEmail(e.target.value)} placeholder="Email" className="border rounded-lg px-3 py-2 text-sm" />
-          <input value={jiraToken} onChange={(e) => setJiraToken(e.target.value)} placeholder="API Token" type="password" className="border rounded-lg px-3 py-2 text-sm" />
-          <input value={jiraProject} onChange={(e) => setJiraProject(e.target.value)} placeholder="Project Key (e.g. REQ)" className="border rounded-lg px-3 py-2 text-sm" />
+          <input value={jiraUrl} onChange={(e) => setJiraUrl(e.target.value)} placeholder="Base URL (e.g. https://company.atlassian.net)" className="col-span-2 border rounded-md px-3 py-2 text-sm" />
+          <input value={jiraEmail} onChange={(e) => setJiraEmail(e.target.value)} placeholder="Email" className="border rounded-md px-3 py-2 text-sm" />
+          <input value={jiraToken} onChange={(e) => setJiraToken(e.target.value)} placeholder="API Token" type="password" className="border rounded-md px-3 py-2 text-sm" />
+          <input value={jiraProject} onChange={(e) => setJiraProject(e.target.value)} placeholder="Project Key (e.g. REQ)" className="border rounded-md px-3 py-2 text-sm" />
         </div>
         <div className="flex gap-2">
-          <button onClick={saveJira} className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800">Save</button>
-          <button onClick={() => doTest("jira")} className="px-4 py-2 border text-sm rounded-lg hover:bg-neutral-50">Test Connection</button>
+          <button onClick={saveJira} className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-md hover:bg-neutral-800">Save</button>
+          <button onClick={() => doTest("jira")} className="px-4 py-2 border text-sm rounded-md hover:bg-neutral-50">Test Connection</button>
         </div>
         {testResult?.type === "jira" && (
           <div className={`mt-3 flex items-center gap-2 text-sm ${testResult.status === "ok" ? "text-green-600" : "text-red-600"}`}>
@@ -195,10 +195,10 @@ function IntegrationsTab() {
       </div>
 
       {/* Slack */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+      <div className="bg-white rounded-md border border-neutral-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-purple-100 rounded-md flex items-center justify-center">
               <span className="text-purple-600 font-bold text-sm">S</span>
             </div>
             <div>
@@ -212,13 +212,13 @@ function IntegrationsTab() {
           </label>
         </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <input value={slackWebhook} onChange={(e) => setSlackWebhook(e.target.value)} placeholder="Webhook URL" type="password" className="col-span-2 border rounded-lg px-3 py-2 text-sm" />
-          <input value={slackBotToken} onChange={(e) => setSlackBotToken(e.target.value)} placeholder="Bot Token (optional)" type="password" className="border rounded-lg px-3 py-2 text-sm" />
-          <input value={slackChannel} onChange={(e) => setSlackChannel(e.target.value)} placeholder="Channel ID (for bot)" className="border rounded-lg px-3 py-2 text-sm" />
+          <input value={slackWebhook} onChange={(e) => setSlackWebhook(e.target.value)} placeholder="Webhook URL" type="password" className="col-span-2 border rounded-md px-3 py-2 text-sm" />
+          <input value={slackBotToken} onChange={(e) => setSlackBotToken(e.target.value)} placeholder="Bot Token (optional)" type="password" className="border rounded-md px-3 py-2 text-sm" />
+          <input value={slackChannel} onChange={(e) => setSlackChannel(e.target.value)} placeholder="Channel ID (for bot)" className="border rounded-md px-3 py-2 text-sm" />
         </div>
         <div className="flex gap-2">
-          <button onClick={saveSlack} className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800">Save</button>
-          <button onClick={() => doTest("slack")} className="px-4 py-2 border text-sm rounded-lg hover:bg-neutral-50">Test Connection</button>
+          <button onClick={saveSlack} className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-md hover:bg-neutral-800">Save</button>
+          <button onClick={() => doTest("slack")} className="px-4 py-2 border text-sm rounded-md hover:bg-neutral-50">Test Connection</button>
         </div>
         {testResult?.type === "slack" && (
           <div className={`mt-3 flex items-center gap-2 text-sm ${testResult.status === "ok" ? "text-green-600" : "text-red-600"}`}>
@@ -230,7 +230,7 @@ function IntegrationsTab() {
 
       {/* Recent Sync Log */}
       {syncs.length > 0 && (
-        <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+        <div className="bg-white rounded-md border border-neutral-200 p-6">
           <h3 className="font-semibold text-neutral-900 mb-4">Recent Sync Activity</h3>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {syncs.map((s: any) => (
@@ -297,30 +297,30 @@ function BrandingTab() {
   return (
     <div className="space-y-8">
       {/* Identity */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+      <div className="bg-white rounded-md border border-neutral-200 p-6">
         <h3 className="font-semibold text-neutral-900 mb-4">Identity</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-xs font-medium text-neutral-600 mb-1 block">App Name</label>
-            <input value={brand.app_name} onChange={(e) => update("app_name", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            <input value={brand.app_name} onChange={(e) => update("app_name", e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" />
           </div>
           <div>
             <label className="text-xs font-medium text-neutral-600 mb-1 block">Tagline</label>
-            <input value={brand.tagline || ""} onChange={(e) => update("tagline", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            <input value={brand.tagline || ""} onChange={(e) => update("tagline", e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" />
           </div>
           <div>
             <label className="text-xs font-medium text-neutral-600 mb-1 block">Logo URL</label>
-            <input value={brand.logo_url || ""} onChange={(e) => update("logo_url", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="https://..." />
+            <input value={brand.logo_url || ""} onChange={(e) => update("logo_url", e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" placeholder="https://..." />
           </div>
           <div>
             <label className="text-xs font-medium text-neutral-600 mb-1 block">Favicon URL</label>
-            <input value={brand.favicon_url || ""} onChange={(e) => update("favicon_url", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="https://..." />
+            <input value={brand.favicon_url || ""} onChange={(e) => update("favicon_url", e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" placeholder="https://..." />
           </div>
         </div>
       </div>
 
       {/* Colors */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+      <div className="bg-white rounded-md border border-neutral-200 p-6">
         <h3 className="font-semibold text-neutral-900 mb-4">Colors</h3>
         <div className="grid grid-cols-5 gap-4">
           {(["primary_color", "secondary_color", "accent_color", "background_color", "text_color"] as const).map((key) => (
@@ -336,7 +336,7 @@ function BrandingTab() {
                 <input
                   value={brand[key]}
                   onChange={(e) => update(key, e.target.value)}
-                  className="w-full border rounded-lg px-2 py-1.5 text-xs font-mono"
+                  className="w-full border rounded-md px-2 py-1.5 text-xs font-mono"
                 />
               </div>
             </div>
@@ -344,12 +344,12 @@ function BrandingTab() {
         </div>
 
         {/* Preview */}
-        <div className="mt-6 p-4 rounded-xl border" style={{ backgroundColor: brand.background_color, color: brand.text_color, fontFamily: brand.font_family }}>
+        <div className="mt-6 p-4 rounded-md border" style={{ backgroundColor: brand.background_color, color: brand.text_color, fontFamily: brand.font_family }}>
           <div className="flex items-center gap-3 mb-3">
             {brand.logo_url ? (
               <img src={brand.logo_url} alt="Logo" className="h-8 w-8 rounded" />
             ) : (
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: brand.primary_color }}>
+              <div className="w-8 h-8 rounded-md flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: brand.primary_color }}>
                 {brand.app_name.charAt(0)}
               </div>
             )}
@@ -364,34 +364,34 @@ function BrandingTab() {
       </div>
 
       {/* Typography & Export */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+      <div className="bg-white rounded-md border border-neutral-200 p-6">
         <h3 className="font-semibold text-neutral-900 mb-4">Typography & Export</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-xs font-medium text-neutral-600 mb-1 block">Font Family</label>
-            <input value={brand.font_family} onChange={(e) => update("font_family", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            <input value={brand.font_family} onChange={(e) => update("font_family", e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" />
           </div>
           <div>
             <label className="text-xs font-medium text-neutral-600 mb-1 block">Email From Name</label>
-            <input value={brand.email_from_name || ""} onChange={(e) => update("email_from_name", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            <input value={brand.email_from_name || ""} onChange={(e) => update("email_from_name", e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" />
           </div>
           <div>
             <label className="text-xs font-medium text-neutral-600 mb-1 block">PDF Header Text</label>
-            <input value={brand.pdf_header_text || ""} onChange={(e) => update("pdf_header_text", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            <input value={brand.pdf_header_text || ""} onChange={(e) => update("pdf_header_text", e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" />
           </div>
           <div>
             <label className="text-xs font-medium text-neutral-600 mb-1 block">PDF Footer Text</label>
-            <input value={brand.pdf_footer_text || ""} onChange={(e) => update("pdf_footer_text", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            <input value={brand.pdf_footer_text || ""} onChange={(e) => update("pdf_footer_text", e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" />
           </div>
           <div>
             <label className="text-xs font-medium text-neutral-600 mb-1 block">Custom Domain</label>
-            <input value={brand.custom_domain || ""} onChange={(e) => update("custom_domain", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="app.yourdomain.com" />
+            <input value={brand.custom_domain || ""} onChange={(e) => update("custom_domain", e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" placeholder="app.yourdomain.com" />
           </div>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        <button onClick={save} disabled={saving} className="px-6 py-2.5 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800 disabled:opacity-50">
+        <button onClick={save} disabled={saving} className="px-6 py-2.5 bg-neutral-900 text-white text-sm rounded-md hover:bg-neutral-800 disabled:opacity-50">
           {saving ? "Saving..." : "Save Branding"}
         </button>
         {saved && (
@@ -473,12 +473,12 @@ function APIKeysTab() {
     <div className="space-y-6">
       {/* New key warning */}
       {newRawKey && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-5">
           <div className="flex items-start gap-3">
             <ExclamationTriangleIcon className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="font-semibold text-amber-900 text-sm mb-1">Copy your API key now — it won&apos;t be shown again</p>
-              <div className="flex items-center gap-2 bg-white rounded-lg border border-amber-300 px-3 py-2 mt-2">
+              <div className="flex items-center gap-2 bg-white rounded-md border border-amber-300 px-3 py-2 mt-2">
                 <code className="text-sm font-mono flex-1 break-all select-all">{newRawKey}</code>
                 <button onClick={copyKey} className="flex-shrink-0 p-1.5 hover:bg-amber-100 rounded">
                   <ClipboardDocumentIcon className="w-4 h-4 text-amber-700" />
@@ -495,7 +495,7 @@ function APIKeysTab() {
       )}
 
       {/* Create new key */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+      <div className="bg-white rounded-md border border-neutral-200 p-6">
         <h3 className="font-semibold text-neutral-900 mb-4">Create API Key</h3>
         <p className="text-xs text-neutral-500 mb-4">
           API keys allow third-party tools to access your MoMetric data programmatically.
@@ -506,13 +506,13 @@ function APIKeysTab() {
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder="Key name (e.g. CI Pipeline, Jira Sync)"
-            className="flex-1 border rounded-lg px-3 py-2 text-sm"
+            className="flex-1 border rounded-md px-3 py-2 text-sm"
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
           />
           <button
             onClick={handleCreate}
             disabled={creating || !newKeyName.trim()}
-            className="px-5 py-2 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800 disabled:opacity-50"
+            className="px-5 py-2 bg-neutral-900 text-white text-sm rounded-md hover:bg-neutral-800 disabled:opacity-50"
           >
             {creating ? "Creating..." : "Create Key"}
           </button>
@@ -520,16 +520,16 @@ function APIKeysTab() {
       </div>
 
       {/* Key list */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+      <div className="bg-white rounded-md border border-neutral-200 p-6">
         <h3 className="font-semibold text-neutral-900 mb-4">Your API Keys</h3>
         {keys.length === 0 ? (
           <p className="text-sm text-neutral-500">No API keys created yet.</p>
         ) : (
           <div className="space-y-3">
             {keys.map((k) => (
-              <div key={k.id} className={`flex items-center justify-between p-4 rounded-xl border ${k.is_active ? "border-neutral-200" : "border-neutral-100 opacity-60"}`}>
+              <div key={k.id} className={`flex items-center justify-between p-4 rounded-md border ${k.is_active ? "border-neutral-200" : "border-neutral-100 opacity-60"}`}>
                 <div className="flex items-center gap-4">
-                  <div className="w-9 h-9 bg-neutral-100 rounded-lg flex items-center justify-center">
+                  <div className="w-9 h-9 bg-neutral-100 rounded-md flex items-center justify-center">
                     <KeyIcon className="w-4 h-4 text-neutral-500" />
                   </div>
                   <div>
@@ -549,7 +549,7 @@ function APIKeysTab() {
                   </div>
                 </div>
                 {k.is_active && (
-                  <button onClick={() => handleRevoke(k.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg" title="Revoke key">
+                  <button onClick={() => handleRevoke(k.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-md" title="Revoke key">
                     <TrashIcon className="w-4 h-4" />
                   </button>
                 )}
@@ -560,7 +560,7 @@ function APIKeysTab() {
       </div>
 
       {/* API docs preview */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+      <div className="bg-white rounded-md border border-neutral-200 p-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-neutral-900">API Usage Guide</h3>
           <button onClick={() => setShowDocs(!showDocs)} className="text-xs text-indigo-600 hover:underline">
@@ -569,7 +569,7 @@ function APIKeysTab() {
         </div>
 
         {!showDocs ? (
-          <div className="bg-neutral-900 text-neutral-100 rounded-xl p-4 text-sm font-mono overflow-x-auto relative group">
+          <div className="bg-neutral-900 text-neutral-100 rounded-md p-4 text-sm font-mono overflow-x-auto relative group">
             <button
               onClick={() => copySnippet(`curl -H "X-API-Key: ${displayKey}" ${baseUrl}/api/sessions`, "quick")}
               className="absolute top-2 right-2 p-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -586,7 +586,7 @@ curl -H "X-API-Key: ${displayKey}" \\
             <div>
               <h4 className="text-sm font-semibold text-neutral-800 mb-2">Authentication</h4>
               <p className="text-xs text-neutral-500 mb-3">Include your API key in the <code className="bg-neutral-100 px-1 rounded">X-API-Key</code> header with every request.</p>
-              <div className="bg-neutral-900 text-neutral-100 rounded-xl p-4 text-sm font-mono overflow-x-auto relative group">
+              <div className="bg-neutral-900 text-neutral-100 rounded-md p-4 text-sm font-mono overflow-x-auto relative group">
                 <button
                   onClick={() => copySnippet(`curl -H "X-API-Key: ${displayKey}" ${baseUrl}/api/sessions`, "auth")}
                   className="absolute top-2 right-2 p-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -603,7 +603,7 @@ curl -H "X-API-Key: ${displayKey}" \\
             <div>
               <h4 className="text-sm font-semibold text-neutral-800 mb-2">List Sessions</h4>
               <p className="text-xs text-neutral-500 mb-3">Retrieve all sessions in your workspace.</p>
-              <div className="bg-neutral-900 text-neutral-100 rounded-xl p-4 text-sm font-mono overflow-x-auto relative group">
+              <div className="bg-neutral-900 text-neutral-100 rounded-md p-4 text-sm font-mono overflow-x-auto relative group">
                 <button
                   onClick={() => copySnippet(`curl -H "X-API-Key: ${displayKey}" ${baseUrl}/api/sessions`, "sessions")}
                   className="absolute top-2 right-2 p-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -630,7 +630,7 @@ curl -H "X-API-Key: ${displayKey}" \\
             <div>
               <h4 className="text-sm font-semibold text-neutral-800 mb-2">Get Requirement Tree</h4>
               <p className="text-xs text-neutral-500 mb-3">Fetch the full requirement tree for a session.</p>
-              <div className="bg-neutral-900 text-neutral-100 rounded-xl p-4 text-sm font-mono overflow-x-auto relative group">
+              <div className="bg-neutral-900 text-neutral-100 rounded-md p-4 text-sm font-mono overflow-x-auto relative group">
                 <button
                   onClick={() => copySnippet(`curl -H "X-API-Key: ${displayKey}" ${baseUrl}/api/tree/{session_id}`, "tree")}
                   className="absolute top-2 right-2 p-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -663,7 +663,7 @@ curl -H "X-API-Key: ${displayKey}" \\
             <div>
               <h4 className="text-sm font-semibold text-neutral-800 mb-2">Export Session</h4>
               <p className="text-xs text-neutral-500 mb-3">Export the full session as JSON, CSV, or PDF.</p>
-              <div className="bg-neutral-900 text-neutral-100 rounded-xl p-4 text-sm font-mono overflow-x-auto relative group">
+              <div className="bg-neutral-900 text-neutral-100 rounded-md p-4 text-sm font-mono overflow-x-auto relative group">
                 <button
                   onClick={() => copySnippet(`curl -H "X-API-Key: ${displayKey}" "${baseUrl}/api/export/{session_id}?format=json"`, "export")}
                   className="absolute top-2 right-2 p-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -692,7 +692,7 @@ curl -H "X-API-Key: ${displayKey}" \\
             <div>
               <h4 className="text-sm font-semibold text-neutral-800 mb-2">List Planning Cards</h4>
               <p className="text-xs text-neutral-500 mb-3">Retrieve all planning cards for a session.</p>
-              <div className="bg-neutral-900 text-neutral-100 rounded-xl p-4 text-sm font-mono overflow-x-auto relative group">
+              <div className="bg-neutral-900 text-neutral-100 rounded-md p-4 text-sm font-mono overflow-x-auto relative group">
                 <button
                   onClick={() => copySnippet(`curl -H "X-API-Key: ${displayKey}" ${baseUrl}/api/planning/cards/{session_id}`, "cards")}
                   className="absolute top-2 right-2 p-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -721,7 +721,7 @@ curl -H "X-API-Key: ${displayKey}" \\
             <div>
               <h4 className="text-sm font-semibold text-neutral-800 mb-2">Python Example</h4>
               <p className="text-xs text-neutral-500 mb-3">Use the API from Python with the <code className="bg-neutral-100 px-1 rounded">requests</code> library.</p>
-              <div className="bg-neutral-900 text-neutral-100 rounded-xl p-4 text-sm font-mono overflow-x-auto relative group">
+              <div className="bg-neutral-900 text-neutral-100 rounded-md p-4 text-sm font-mono overflow-x-auto relative group">
                 <button
                   onClick={() => copySnippet(`import requests\n\nAPI_KEY = "${displayKey}"\nBASE_URL = "${baseUrl}"\n\nheaders = {"X-API-Key": API_KEY}\n\n# List all sessions\nresp = requests.get(f"{BASE_URL}/api/sessions", headers=headers)\nprint(resp.json())\n\n# Get tree for a session\nsession_id = resp.json()[0]["id"]\ntree = requests.get(f"{BASE_URL}/api/tree/{session_id}", headers=headers)\nprint(tree.json())`, "python")}
                   className="absolute top-2 right-2 p-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -754,7 +754,7 @@ print(tree.json())`}</pre>
             <div>
               <h4 className="text-sm font-semibold text-neutral-800 mb-2">JavaScript / Node.js Example</h4>
               <p className="text-xs text-neutral-500 mb-3">Use <code className="bg-neutral-100 px-1 rounded">fetch</code> (built-in for Node 18+ and browsers).</p>
-              <div className="bg-neutral-900 text-neutral-100 rounded-xl p-4 text-sm font-mono overflow-x-auto relative group">
+              <div className="bg-neutral-900 text-neutral-100 rounded-md p-4 text-sm font-mono overflow-x-auto relative group">
                 <button
                   onClick={() => copySnippet(`const API_KEY = "${displayKey}";\nconst BASE_URL = "${baseUrl}";\n\nconst res = await fetch(\`\${BASE_URL}/api/sessions\`, {\n  headers: { "X-API-Key": API_KEY }\n});\nconst sessions = await res.json();\nconsole.log(sessions);`, "js")}
                   className="absolute top-2 right-2 p-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity"

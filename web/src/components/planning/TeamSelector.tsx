@@ -57,8 +57,8 @@ export default function TeamSelector({
             value={memberName}
             onChange={(e) => setMemberName(e.target.value)}
             placeholder="e.g., John Smith"
-            className="w-full px-2.5 py-1.5 rounded-lg border border-neutral-300 text-sm 
-                       focus:border-primary-500 focus:ring-1 focus:ring-primary-200 outline-none"
+            className="w-full px-2.5 py-1.5 rounded-md border border-neutral-300 text-sm 
+                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none"
             onKeyDown={(e) => e.key === 'Enter' && handleAddMember()}
           />
         </div>
@@ -69,8 +69,8 @@ export default function TeamSelector({
             value={memberEmail}
             onChange={(e) => setMemberEmail(e.target.value)}
             placeholder="john@company.com"
-            className="w-full px-2.5 py-1.5 rounded-lg border border-neutral-300 text-sm 
-                       focus:border-primary-500 focus:ring-1 focus:ring-primary-200 outline-none"
+            className="w-full px-2.5 py-1.5 rounded-md border border-neutral-300 text-sm 
+                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none"
           />
         </div>
         <div className="w-32">
@@ -78,8 +78,8 @@ export default function TeamSelector({
           <select
             value={memberRole}
             onChange={(e) => setMemberRole(e.target.value)}
-            className="w-full px-2.5 py-1.5 rounded-lg border border-neutral-300 text-sm 
-                       focus:border-primary-500 outline-none"
+            className="w-full px-2.5 py-1.5 rounded-md border border-neutral-300 text-sm 
+                       focus:border-neutral-400 outline-none"
           >
             {ROLE_OPTIONS.map((role) => (
               <option key={role} value={role}>{role}</option>
@@ -89,8 +89,8 @@ export default function TeamSelector({
         <button
           onClick={handleAddMember}
           disabled={isAdding || !memberName.trim()}
-          className="px-3 py-1.5 rounded-lg bg-primary-600 text-white text-sm font-medium 
-                     hover:bg-primary-700 transition-colors disabled:opacity-50"
+          className="px-3 py-1.5 rounded-md bg-neutral-900 text-white text-sm font-medium
+                     hover:bg-neutral-800 transition-colors disabled:opacity-50"
         >
           <PlusIcon className="w-4 h-4" />
         </button>

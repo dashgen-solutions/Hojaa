@@ -338,7 +338,7 @@ export default function AdminPage() {
   if (authLoading || (!isAuthenticated && !authLoading)) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-neutral-900 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -357,7 +357,7 @@ export default function AdminPage() {
         <div className="flex items-start justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
-              <BuildingOffice2Icon className="w-7 h-7 text-primary-600" />
+              <BuildingOffice2Icon className="w-7 h-7 text-neutral-900" />
               {org?.name || "Enterprise"} Admin
             </h1>
             <p className="text-neutral-500 mt-1 text-sm">
@@ -373,14 +373,14 @@ export default function AdminPage() {
 
         {/* Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-neutral-200 p-4">
+          <div className="bg-white rounded-md border border-neutral-200 p-4">
             <div className="flex items-center gap-2 mb-1">
               <UsersIcon className="w-4 h-4 text-neutral-400" />
               <span className="text-xs text-neutral-500">Total Employees</span>
             </div>
             <span className="text-2xl font-bold text-neutral-900">{employees.length}</span>
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 p-4">
+          <div className="bg-white rounded-md border border-neutral-200 p-4">
             <div className="flex items-center gap-2 mb-1">
               <CheckIcon className="w-4 h-4 text-green-500" />
               <span className="text-xs text-neutral-500">Active</span>
@@ -389,7 +389,7 @@ export default function AdminPage() {
               {employees.filter((e) => e.is_active).length}
             </span>
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 p-4">
+          <div className="bg-white rounded-md border border-neutral-200 p-4">
             <div className="flex items-center gap-2 mb-1">
               <ShieldCheckIcon className="w-4 h-4 text-purple-500" />
               <span className="text-xs text-neutral-500">Admins</span>
@@ -398,7 +398,7 @@ export default function AdminPage() {
               {employees.filter((e) => e.org_role === "owner" || e.org_role === "admin").length}
             </span>
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 p-4">
+          <div className="bg-white rounded-md border border-neutral-200 p-4">
             <div className="flex items-center gap-2 mb-1">
               <EyeIcon className="w-4 h-4 text-neutral-400" />
               <span className="text-xs text-neutral-500">Viewers</span>
@@ -410,10 +410,10 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-neutral-100 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 mb-6 bg-neutral-100 p-1 rounded-md w-fit">
           <button
             onClick={() => setActiveTab("employees")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-all ${
               activeTab === "employees"
                 ? "bg-white text-neutral-900 shadow-sm"
                 : "text-neutral-500 hover:text-neutral-700"
@@ -424,7 +424,7 @@ export default function AdminPage() {
           </button>
           <button
             onClick={() => setActiveTab("organization")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-all ${
               activeTab === "organization"
                 ? "bg-white text-neutral-900 shadow-sm"
                 : "text-neutral-500 hover:text-neutral-700"
@@ -437,7 +437,7 @@ export default function AdminPage() {
 
         {/* Messages */}
         {error && (
-          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center justify-between">
+          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700 flex items-center justify-between">
             <span>{error}</span>
             <button onClick={() => setError("")} className="ml-2 text-red-500 hover:text-red-700">
               <XMarkIcon className="w-4 h-4" />
@@ -445,7 +445,7 @@ export default function AdminPage() {
           </div>
         )}
         {successMsg && (
-          <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 animate-fade-in">
+          <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded-md text-sm text-green-700 animate-fade-in">
             <CheckIcon className="w-4 h-4 inline mr-1" />
             {successMsg}
           </div>
@@ -463,13 +463,13 @@ export default function AdminPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search employees..."
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-md focus:ring-2 focus:ring-neutral-400 focus:border-neutral-400 outline-none bg-white"
                 />
               </div>
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="text-sm border border-neutral-200 rounded-xl px-3 py-2 bg-white focus:ring-2 focus:ring-primary-500 outline-none"
+                className="text-sm border border-neutral-200 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-neutral-400 outline-none"
               >
                 <option value="">All roles</option>
                 {APP_ROLES.map((r) => (
@@ -478,14 +478,14 @@ export default function AdminPage() {
               </select>
               <button
                 onClick={() => fetchEmployees()}
-                className="text-sm px-4 py-2 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+                className="text-sm px-4 py-2 border border-neutral-200 rounded-md hover:bg-neutral-50 transition-colors"
               >
                 Search
               </button>
               {!showAddForm && (
                 <button
                   onClick={() => setShowAddForm(true)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-colors shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors shadow-sm"
                 >
                   <UserPlusIcon className="w-4 h-4" />
                   Add Employee
@@ -495,9 +495,9 @@ export default function AdminPage() {
 
             {/* Add Employee Form */}
             {showAddForm && (
-              <div className="bg-white rounded-xl border border-primary-200 p-5 shadow-sm">
+              <div className="bg-white rounded-md border border-neutral-200 p-5 shadow-sm">
                 <h3 className="font-semibold text-neutral-900 mb-4 flex items-center gap-2 text-sm">
-                  <UserPlusIcon className="w-5 h-5 text-primary-600" />
+                  <UserPlusIcon className="w-5 h-5 text-neutral-900" />
                   Add New Employee
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -507,7 +507,7 @@ export default function AdminPage() {
                       type="email"
                       value={newUser.email}
                       onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                      className="w-full text-sm border border-neutral-200 rounded px-3 py-2 focus:ring-2 focus:ring-neutral-400 outline-none"
                       placeholder="employee@company.com"
                     />
                   </div>
@@ -517,7 +517,7 @@ export default function AdminPage() {
                       type="text"
                       value={newUser.username}
                       onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                      className="w-full text-sm border border-neutral-200 rounded px-3 py-2 focus:ring-2 focus:ring-neutral-400 outline-none"
                       placeholder="johndoe"
                     />
                   </div>
@@ -527,7 +527,7 @@ export default function AdminPage() {
                       type="password"
                       value={newUser.password}
                       onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                      className="w-full text-sm border border-neutral-200 rounded px-3 py-2 focus:ring-2 focus:ring-neutral-400 outline-none"
                       placeholder="••••••••"
                     />
                   </div>
@@ -537,7 +537,7 @@ export default function AdminPage() {
                       type="text"
                       value={newUser.job_title}
                       onChange={(e) => setNewUser({ ...newUser, job_title: e.target.value })}
-                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                      className="w-full text-sm border border-neutral-200 rounded px-3 py-2 focus:ring-2 focus:ring-neutral-400 outline-none"
                       placeholder="Software Engineer"
                     />
                   </div>
@@ -546,7 +546,7 @@ export default function AdminPage() {
                     <select
                       value={newUser.role}
                       onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                      className="w-full text-sm border border-neutral-200 rounded px-3 py-2 focus:ring-2 focus:ring-neutral-400 outline-none"
                     >
                       {APP_ROLES.map((r) => (
                         <option key={r.value} value={r.value}>{r.label}</option>
@@ -558,7 +558,7 @@ export default function AdminPage() {
                     <select
                       value={newUser.org_role}
                       onChange={(e) => setNewUser({ ...newUser, org_role: e.target.value })}
-                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                      className="w-full text-sm border border-neutral-200 rounded px-3 py-2 focus:ring-2 focus:ring-neutral-400 outline-none"
                     >
                       <option value="member">Member</option>
                       <option value="admin">Admin</option>
@@ -569,14 +569,14 @@ export default function AdminPage() {
                   <button
                     onClick={handleCreateUser}
                     disabled={saving}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-50 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded disabled:opacity-50 transition-colors"
                   >
                     <PlusIcon className="w-4 h-4" />
                     Add Employee
                   </button>
                   <button
                     onClick={() => { setShowAddForm(false); setNewUser({ email: "", username: "", password: "", role: "editor", org_role: "member", job_title: "" }); }}
-                    className="px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
+                    className="px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-100 rounded transition-colors"
                   >
                     Cancel
                   </button>
@@ -585,7 +585,7 @@ export default function AdminPage() {
             )}
 
             {/* Employee List */}
-            <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <div className="bg-white rounded-md border border-neutral-200 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-neutral-100 flex items-center justify-between">
                 <h2 className="font-semibold text-neutral-900 text-sm">
                   Employees <span className="text-neutral-400 font-normal">({employees.length})</span>
@@ -594,7 +594,7 @@ export default function AdminPage() {
 
               {isLoadingUsers ? (
                 <div className="flex items-center justify-center py-16">
-                  <div className="animate-spin w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full" />
+                  <div className="animate-spin w-6 h-6 border-2 border-neutral-900 border-t-transparent rounded-full" />
                 </div>
               ) : employees.length === 0 ? (
                 <div className="text-center py-16 text-neutral-400 text-sm">No employees found</div>
@@ -610,7 +610,7 @@ export default function AdminPage() {
                         {/* Employee Row */}
                         <div className="flex items-center gap-4 px-5 py-3.5 hover:bg-neutral-50/50 transition-colors">
                           {/* Avatar */}
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${emp.is_active ? "bg-gradient-to-br from-primary-400 to-primary-600" : "bg-neutral-300"}`}>
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${emp.is_active ? "bg-neutral-900" : "bg-neutral-300"}`}>
                             <span className="text-white text-sm font-semibold">
                               {emp.username?.charAt(0).toUpperCase()}
                             </span>
@@ -623,7 +623,7 @@ export default function AdminPage() {
                                 {emp.username}
                               </span>
                               {isSelf && (
-                                <span className="text-[10px] px-1.5 py-0.5 bg-primary-100 text-primary-600 rounded-full font-medium">YOU</span>
+                                <span className="text-[10px] px-1.5 py-0.5 bg-neutral-50 text-neutral-900 rounded-full font-medium">YOU</span>
                               )}
                               {emp.job_title && (
                                 <span className="text-xs text-neutral-400 hidden sm:inline">
@@ -641,7 +641,7 @@ export default function AdminPage() {
                                 <select
                                   value={selectedRole}
                                   onChange={(e) => setSelectedRole(e.target.value)}
-                                  className="text-xs border border-neutral-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-primary-500 outline-none"
+                                  className="text-xs border border-neutral-300 rounded px-2 py-1 focus:ring-2 focus:ring-neutral-400 outline-none"
                                 >
                                   {APP_ROLES.map((r) => (
                                     <option key={r.value} value={r.value}>{r.label}</option>
@@ -650,7 +650,7 @@ export default function AdminPage() {
                                 <button
                                   onClick={() => handleSaveRole(emp.id)}
                                   disabled={saving || selectedRole === emp.role}
-                                  className="p-1 text-primary-600 hover:bg-primary-50 rounded disabled:opacity-50"
+                                  className="p-1 text-neutral-900 hover:bg-neutral-100 rounded disabled:opacity-50"
                                 >
                                   <CheckIcon className="w-4 h-4" />
                                 </button>
@@ -678,7 +678,7 @@ export default function AdminPage() {
                               <button
                                 onClick={() => toggleExpandUser(emp.id)}
                                 title="Manage session access"
-                                className="p-1.5 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
                               >
                                 <KeyIcon className="w-4 h-4" />
                               </button>
@@ -686,7 +686,7 @@ export default function AdminPage() {
                                 <button
                                   onClick={() => { setEditingUserId(emp.id); setSelectedRole(emp.role); }}
                                   title="Change role"
-                                  className="p-1.5 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                  className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
                                 >
                                   <PencilSquareIcon className="w-4 h-4" />
                                 </button>
@@ -694,7 +694,7 @@ export default function AdminPage() {
                               <button
                                 onClick={() => handleToggleActive(emp.id)}
                                 title={emp.is_active ? "Disable" : "Enable"}
-                                className={`p-1.5 rounded-lg transition-colors ${emp.is_active ? "text-neutral-400 hover:text-amber-600 hover:bg-amber-50" : "text-amber-500 hover:text-green-600 hover:bg-green-50"}`}
+                                className={`p-1.5 rounded transition-colors ${emp.is_active ? "text-neutral-400 hover:text-amber-600 hover:bg-amber-50" : "text-amber-500 hover:text-green-600 hover:bg-green-50"}`}
                               >
                                 <NoSymbolIcon className="w-4 h-4" />
                               </button>
@@ -704,7 +704,7 @@ export default function AdminPage() {
                                     <button
                                       onClick={() => handleDeleteUser(emp.id)}
                                       disabled={saving}
-                                      className="px-2 py-1 text-[11px] font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50"
+                                      className="px-2 py-1 text-[11px] font-medium text-white bg-red-600 hover:bg-red-700 rounded disabled:opacity-50"
                                     >
                                       Confirm
                                     </button>
@@ -716,7 +716,7 @@ export default function AdminPage() {
                                   <button
                                     onClick={() => setConfirmDeleteId(emp.id)}
                                     title="Remove employee"
-                                    className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                                   >
                                     <TrashIcon className="w-4 h-4" />
                                   </button>
@@ -724,7 +724,7 @@ export default function AdminPage() {
                               )}
                               <button
                                 onClick={() => toggleExpandUser(emp.id)}
-                                className="p-1.5 text-neutral-300 hover:text-neutral-500 rounded-lg transition-colors"
+                                className="p-1.5 text-neutral-300 hover:text-neutral-500 rounded transition-colors"
                               >
                                 {isExpanded ? (
                                   <ChevronDownIcon className="w-4 h-4" />
@@ -750,7 +750,7 @@ export default function AdminPage() {
                                 <select
                                   value={grantSessionId}
                                   onChange={(e) => setGrantSessionId(e.target.value)}
-                                  className="flex-1 text-xs border border-neutral-200 rounded-lg px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-primary-500 outline-none"
+                                  className="flex-1 text-xs border border-neutral-200 rounded px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-neutral-400 outline-none"
                                 >
                                   <option value="">Select a session to grant...</option>
                                   {allSessions
@@ -764,7 +764,7 @@ export default function AdminPage() {
                                 <select
                                   value={grantRole}
                                   onChange={(e) => setGrantRole(e.target.value)}
-                                  className="text-xs border border-neutral-200 rounded-lg px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-primary-500 outline-none"
+                                  className="text-xs border border-neutral-200 rounded px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-neutral-400 outline-none"
                                 >
                                   <option value="viewer">Viewer</option>
                                   <option value="editor">Editor</option>
@@ -772,7 +772,7 @@ export default function AdminPage() {
                                 <button
                                   onClick={() => handleGrantAccess(emp.id)}
                                   disabled={!grantSessionId || saving}
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-50 transition-colors"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded disabled:opacity-50 transition-colors"
                                 >
                                   <PlusIcon className="w-3.5 h-3.5" />
                                   Grant
@@ -787,7 +787,7 @@ export default function AdminPage() {
                                   {access.map((a) => (
                                     <div
                                       key={a.session_id}
-                                      className="flex items-center justify-between bg-white border border-neutral-200 rounded-lg px-3 py-2"
+                                      className="flex items-center justify-between bg-white border border-neutral-200 rounded px-3 py-2"
                                     >
                                       <div className="flex items-center gap-2">
                                         <FolderIcon className="w-3.5 h-3.5 text-neutral-400" />
@@ -822,16 +822,16 @@ export default function AdminPage() {
         {/* ═══ ORGANIZATION TAB ═══════════════════════════════════ */}
         {activeTab === "organization" && org && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <div className="bg-white rounded-md border border-neutral-200 overflow-hidden">
               <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
                 <h2 className="font-semibold text-neutral-900 text-sm flex items-center gap-2">
-                  <BuildingOffice2Icon className="w-5 h-5 text-primary-500" />
+                  <BuildingOffice2Icon className="w-5 h-5 text-neutral-500" />
                   Organization Profile
                 </h2>
                 {isOwner && !editOrg && (
                   <button
                     onClick={() => setEditOrg(true)}
-                    className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-medium"
+                    className="inline-flex items-center gap-1 text-xs text-primary-500 hover:text-primary-600 font-medium"
                   >
                     <PencilSquareIcon className="w-3.5 h-3.5" />
                     Edit
@@ -848,7 +848,7 @@ export default function AdminPage() {
                         type="text"
                         value={orgForm.name}
                         onChange={(e) => setOrgForm({ ...orgForm, name: e.target.value })}
-                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                        className="w-full text-sm border border-neutral-200 rounded px-3 py-2 focus:ring-2 focus:ring-neutral-400 outline-none"
                       />
                     </div>
                     <div>
@@ -857,7 +857,7 @@ export default function AdminPage() {
                         type="text"
                         value={orgForm.industry}
                         onChange={(e) => setOrgForm({ ...orgForm, industry: e.target.value })}
-                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                        className="w-full text-sm border border-neutral-200 rounded px-3 py-2 focus:ring-2 focus:ring-neutral-400 outline-none"
                       />
                     </div>
                     <div>
@@ -866,7 +866,7 @@ export default function AdminPage() {
                         type="text"
                         value={orgForm.size}
                         onChange={(e) => setOrgForm({ ...orgForm, size: e.target.value })}
-                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                        className="w-full text-sm border border-neutral-200 rounded px-3 py-2 focus:ring-2 focus:ring-neutral-400 outline-none"
                       />
                     </div>
                     <div>
@@ -875,7 +875,7 @@ export default function AdminPage() {
                         type="url"
                         value={orgForm.website}
                         onChange={(e) => setOrgForm({ ...orgForm, website: e.target.value })}
-                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                        className="w-full text-sm border border-neutral-200 rounded px-3 py-2 focus:ring-2 focus:ring-neutral-400 outline-none"
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -883,7 +883,7 @@ export default function AdminPage() {
                       <select
                         value={orgForm.scope_approval_policy}
                         onChange={(e) => setOrgForm({ ...orgForm, scope_approval_policy: e.target.value })}
-                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none bg-white"
+                        className="w-full text-sm border border-neutral-200 rounded px-3 py-2 focus:ring-2 focus:ring-neutral-400 outline-none bg-white"
                       >
                         <option value="anyone">Anyone can approve scope changes</option>
                         <option value="role_based">Role-based (Admin &amp; Owner only)</option>
@@ -896,14 +896,14 @@ export default function AdminPage() {
                     <button
                       onClick={handleUpdateOrg}
                       disabled={saving}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-50 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded disabled:opacity-50 transition-colors"
                     >
                       <CheckIcon className="w-4 h-4" />
                       Save Changes
                     </button>
                     <button
                       onClick={() => { setEditOrg(false); setOrgForm({ name: org.name, industry: org.industry || "", size: org.size || "", website: org.website || "", scope_approval_policy: org.scope_approval_policy || "role_based" }); }}
-                      className="px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
+                      className="px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-100 rounded transition-colors"
                     >
                       Cancel
                     </button>
@@ -932,7 +932,7 @@ export default function AdminPage() {
                       <dt className="text-xs font-medium text-neutral-400 uppercase tracking-wider">Website</dt>
                       <dd className="text-sm mt-0.5">
                         {org.website ? (
-                          <a href={org.website} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline flex items-center gap-1">
+                          <a href={org.website} target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline flex items-center gap-1">
                             <GlobeAltIcon className="w-3.5 h-3.5" />
                             {org.website}
                           </a>

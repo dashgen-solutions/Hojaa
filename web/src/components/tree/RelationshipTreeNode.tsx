@@ -51,6 +51,8 @@ interface RelationshipTreeNodeProps {
   teamMembers?: { id: string; name: string; avatar_color?: string }[];
 }
 
+const CHILD_SLOT_WIDTH = 400;
+
 export default function RelationshipTreeNode({
   node,
   sessionId,
@@ -83,55 +85,43 @@ export default function RelationshipTreeNode({
     switch (node.type) {
       case "root":
         return {
-          gradient: "from-primary-500 to-primary-600",
-          border: "border-primary-300",
-          bg: "bg-primary-50/50",
-          hoverBg: "hover:bg-primary-50",
+          accentColor: "#171717",
+          border: "border-neutral-200",
           icon: CubeIcon,
-          iconColor: "text-primary-600",
-          iconBg: "bg-primary-100",
+          iconColor: "text-neutral-700",
+          iconBg: "bg-neutral-100",
           badge: "Project",
-          badgeColor: "bg-primary-600 text-white",
-          accentColor: "#8b5cf6",
+          badgeColor: "bg-neutral-900 text-white",
         };
       case "feature":
         return {
-          gradient: "from-warning-500 to-warning-600",
-          border: "border-warning-300",
-          bg: "bg-warning-50/50",
-          hoverBg: "hover:bg-warning-50",
+          accentColor: "#f0ad4e",
+          border: "border-neutral-200",
           icon: SparklesIcon,
           iconColor: "text-warning-600",
-          iconBg: "bg-warning-100",
+          iconBg: "bg-warning-50",
           badge: "Feature",
-          badgeColor: "bg-warning-600 text-white",
-          accentColor: "#f59e0b",
+          badgeColor: "bg-warning-50 text-warning-700",
         };
       case "detail":
         return {
-          gradient: "from-success-500 to-success-600",
-          border: "border-success-300",
-          bg: "bg-success-50/50",
-          hoverBg: "hover:bg-success-50",
+          accentColor: "#28a745",
+          border: "border-neutral-200",
           icon: DocumentCheckIcon,
           iconColor: "text-success-600",
-          iconBg: "bg-success-100",
+          iconBg: "bg-success-50",
           badge: "Requirement",
-          badgeColor: "bg-success-600 text-white",
-          accentColor: "#10b981",
+          badgeColor: "bg-success-50 text-success-700",
         };
       default:
         return {
-          gradient: "from-neutral-500 to-neutral-600",
-          border: "border-neutral-300",
-          bg: "bg-neutral-50/50",
-          hoverBg: "hover:bg-neutral-50",
+          accentColor: "#7c7c7c",
+          border: "border-neutral-200",
           icon: DocumentCheckIcon,
           iconColor: "text-neutral-600",
           iconBg: "bg-neutral-100",
           badge: "Item",
-          badgeColor: "bg-neutral-600 text-white",
-          accentColor: "#6b7280",
+          badgeColor: "bg-neutral-100 text-neutral-600",
         };
     }
   };
@@ -283,7 +273,7 @@ export default function RelationshipTreeNode({
   };
 
   const STATUS_OPTIONS = [
-    { value: "active", label: "Active", bg: "bg-primary-50 text-primary-700 hover:bg-primary-100" },
+    { value: "active", label: "Active", bg: "bg-neutral-50 text-neutral-700 hover:bg-neutral-100" },
     { value: "new", label: "New", bg: "bg-green-50 text-green-700 hover:bg-green-100" },
     { value: "modified", label: "Modified", bg: "bg-blue-50 text-blue-700 hover:bg-blue-100" },
     { value: "deferred", label: "Deferred", bg: "bg-neutral-100 text-neutral-600 hover:bg-neutral-200" },
@@ -293,9 +283,9 @@ export default function RelationshipTreeNode({
   // Render edit form
   if (isEditing) {
     return (
-      <div className="card p-4 border-2 border-primary-400 shadow-soft-md space-y-3 min-w-[280px] max-w-[380px] mb-4 animate-fade-in">
+      <div className="bg-white border border-neutral-200 p-3 space-y-2.5 min-w-[280px] max-w-[380px] mb-4 animate-fade-in" style={{ borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
         <div>
-          <label className="text-xs font-medium text-neutral-700 mb-1.5 block">
+          <label className="text-[11px] font-medium text-neutral-600 mb-1 block uppercase tracking-wide">
             Node Title
           </label>
           <input
@@ -306,23 +296,24 @@ export default function RelationshipTreeNode({
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-neutral-700 mb-1.5 block">
+          <label className="text-[11px] font-medium text-neutral-600 mb-1 block uppercase tracking-wide">
             Description
           </label>
           <textarea
             value={editAnswer}
             onChange={(e) => setEditAnswer(e.target.value)}
             className="input resize-none"
+            style={{ height: "auto" }}
             rows={3}
           />
         </div>
-        <div className="flex gap-2">
-          <button onClick={handleSaveEdit} className="btn-primary flex-1 py-2">
+        <div className="flex gap-1.5">
+          <button onClick={handleSaveEdit} className="btn-primary flex-1">
             Save
           </button>
           <button
             onClick={() => setIsEditing(false)}
-            className="btn-secondary py-2"
+            className="btn-secondary"
           >
             Cancel
           </button>
@@ -334,9 +325,9 @@ export default function RelationshipTreeNode({
   // Render add child form
   if (isAddingChild) {
     return (
-      <div className="card p-4 border-2 border-success-400 shadow-soft-md space-y-3 min-w-[280px] max-w-[380px] mb-4 animate-fade-in">
+      <div className="bg-white border border-neutral-200 p-3 space-y-2.5 min-w-[280px] max-w-[380px] mb-4 animate-fade-in" style={{ borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
         <div>
-          <label className="text-xs font-medium text-neutral-700 mb-1.5 block">
+          <label className="text-[11px] font-medium text-neutral-600 mb-1 block uppercase tracking-wide">
             New Child Node Title
           </label>
           <input
@@ -349,7 +340,7 @@ export default function RelationshipTreeNode({
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-neutral-700 mb-1.5 block">
+          <label className="text-[11px] font-medium text-neutral-600 mb-1 block uppercase tracking-wide">
             Description (optional)
           </label>
           <textarea
@@ -357,16 +348,17 @@ export default function RelationshipTreeNode({
             onChange={(e) => setNewChildAnswer(e.target.value)}
             placeholder="Enter description..."
             className="input resize-none"
+            style={{ height: "auto" }}
             rows={2}
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <button
             onClick={handleAddChild}
             disabled={!newChildQuestion.trim()}
-            className="btn bg-success-600 hover:bg-success-700 disabled:opacity-50 text-white flex-1 py-2"
+            className="btn-primary disabled:opacity-50 flex-1"
           >
-            <PlusIcon className="w-4 h-4" />
+            <PlusIcon className="w-3.5 h-3.5" />
             Add Child
           </button>
           <button
@@ -375,9 +367,9 @@ export default function RelationshipTreeNode({
               setNewChildQuestion("");
               setNewChildAnswer("");
             }}
-            className="btn-secondary py-2 px-3"
+            className="btn-secondary px-2"
           >
-            <XMarkIcon className="w-4 h-4" />
+            <XMarkIcon className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -386,84 +378,58 @@ export default function RelationshipTreeNode({
 
   return (
     <div className="flex flex-col items-center">
-      {/* Connection line to this node from parent */}
-      {!isRoot && (
-        <div
-          className="relative w-full flex justify-center"
-          style={{ height: "50px", marginBottom: "10px" }}
-        >
-          <div
-            className="w-0.5 bg-neutral-300 absolute left-1/2 -translate-x-1/2"
-            style={{ height: "50px", top: "0px" }}
-          />
-          <div
-            className="absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-neutral-400 border-2 border-white shadow-sm z-10"
-            style={{ top: "0px" }}
-          />
-        </div>
-      )}
-
       {/* Node Card */}
       <div className="relative group z-20">
-        {/* Glow effect on hover */}
-        {!isSelected && (
-          <div
-            className="absolute -inset-1 opacity-0 group-hover:opacity-20 blur-lg transition-opacity duration-500 rounded-2xl"
-            style={{
-              background: `linear-gradient(135deg, ${style.accentColor}40, ${style.accentColor}20)`,
-            }}
-          />
-        )}
-
-        {/* Selected glow effect */}
-        {isSelected && (
-          <div className="absolute -inset-2 bg-gradient-to-r from-primary-400 to-primary-500 opacity-30 blur-xl animate-pulse rounded-2xl" />
-        )}
-
         <div
           className={`
-            relative bg-white border-2 ${
+            relative bg-white border ${
               isSelected
-                ? "border-primary-500 shadow-soft-lg"
-                : style.border + " shadow-soft"
+                ? "border-primary-500 shadow-md"
+                : style.border + " shadow-sm"
             }
-            rounded-2xl ${style.hoverBg} hover:shadow-soft-md
-            transform hover:-translate-y-0.5 transition-all duration-300 ease-smooth
+            hover:shadow-md
+            transition-all duration-150
             ${isRoot ? "min-w-[320px]" : "min-w-[280px]"} max-w-[380px]
             overflow-visible ${hasAnswer ? "cursor-pointer" : ""}
-            ${statusIndicator?.ringClass ?? ""}
             ${statusIndicator?.opacityClass ?? ""}
           `}
+          style={{ borderRadius: "8px" }}
           onClick={handleNodeClick}
           onMouseEnter={() => statusIndicator && setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
         >
-          {/* Top gradient bar */}
+          {/* Top connection handle */}
+          {!isRoot && (
+            <div
+              className="absolute -top-[4px] left-1/2 -translate-x-1/2 w-[8px] h-[8px] rounded-full bg-white border-[1.5px] z-30"
+              style={{ borderColor: style.accentColor }}
+            />
+          )}
+
+          {/* Left accent strip */}
           <div
-            className={`h-1 bg-gradient-to-r ${style.gradient} rounded-t-xl`}
+            className="absolute left-0 top-0 bottom-0 w-[3px]"
+            style={{ backgroundColor: style.accentColor, borderRadius: "8px 0 0 8px" }}
           />
 
           {/* Selected badge */}
           {isSelected && (
-            <div className="absolute -top-2.5 -right-2.5 z-10">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary-500 blur-md animate-pulse" />
-                <div className="relative bg-gradient-to-br from-primary-500 to-primary-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-soft-sm flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                  <span>Active</span>
-                </div>
+            <div className="absolute -top-2 -right-2 z-10">
+              <div className="bg-neutral-900 text-white text-[11px] font-medium px-2 py-0.5 rounded flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-primary-400 rounded-full" />
+                <span>Active</span>
               </div>
             </div>
           )}
 
           {/* Card Content */}
-          <div className="p-4">
-            <div className="flex items-center gap-3">
+          <div className="p-3 pl-4">
+            <div className="flex items-center gap-2.5">
               {/* Icon */}
               <div
-                className={`${style.iconBg} rounded-xl p-2 flex-shrink-0 transform group-hover:scale-105 transition-all duration-300`}
+                className={`${style.iconBg} rounded p-1.5 flex-shrink-0`}
               >
-                <Icon className={`w-5 h-5 ${style.iconColor}`} />
+                <Icon className={`w-4 h-4 ${style.iconColor}`} />
               </div>
 
               {/* Title and badges */}
@@ -473,37 +439,39 @@ export default function RelationshipTreeNode({
                 </h3>
 
                 {/* Inline badges */}
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <div className="flex flex-wrap items-center gap-1 mt-1.5">
                   {node.type === "root" && (
                     <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.badgeColor}`}
+                      className={`text-[11px] font-medium px-1.5 py-0.5 ${style.badgeColor}`}
+                      style={{ borderRadius: "4px" }}
                     >
                       {style.badge}
                     </span>
                   )}
 
                   {hasChildren && (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 border border-neutral-200 flex items-center gap-1">
+                    <span className="text-[11px] font-medium px-1.5 py-0.5 bg-neutral-100 text-neutral-600 flex items-center gap-1" style={{ borderRadius: "4px" }}>
                       <CheckCircleIcon className="w-3 h-3" />
                       {node.children!.length}
                     </span>
                   )}
 
                   {hasAnswer && (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-100 flex items-center gap-1">
+                    <span className="text-[11px] font-medium px-1.5 py-0.5 bg-info-50 text-primary-500 flex items-center gap-1" style={{ borderRadius: "4px" }}>
                       <InformationCircleIcon className="w-3 h-3" />
                       Details
                     </span>
                   )}
 
-                  {/* Source badge — shows which source added this node */}
+                  {/* Source badge */}
                   {node.source_name && (
                     <span
-                      className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200 flex items-center gap-1"
+                      className="text-[11px] font-medium px-1.5 py-0.5 bg-neutral-100 text-neutral-600 flex items-center gap-1"
+                      style={{ borderRadius: "4px" }}
                       title={`Added from: ${node.source_name} (${node.source_type || 'source'})`}
                     >
                       <DocumentDuplicateIcon className="w-3 h-3" />
-                      {node.source_name.length > 18 ? node.source_name.substring(0, 16) + '…' : node.source_name}
+                      {node.source_name.length > 18 ? node.source_name.substring(0, 16) + '...' : node.source_name}
                     </span>
                   )}
 
@@ -545,30 +513,31 @@ export default function RelationshipTreeNode({
 
                       {showStatusDropdown && (
                         <div
-                          className="absolute left-0 top-full mt-1 w-44 bg-white rounded-xl shadow-soft-lg border border-neutral-200 z-50 overflow-hidden animate-fade-in"
+                          className="absolute left-0 top-full mt-1 w-40 bg-white rounded-md border border-neutral-200 z-50 overflow-hidden animate-fade-in"
+                          style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
                           onClick={(e) => e.stopPropagation()}
                         >
                           {pendingStatus === "deferred" ? (
-                            <div className="p-3 space-y-2">
-                              <p className="text-xs font-medium text-neutral-700">Reason for deferring:</p>
+                            <div className="p-2.5 space-y-2">
+                              <p className="text-[11px] font-medium text-neutral-600">Reason for deferring:</p>
                               <input
                                 type="text"
-                                placeholder="Optional reason…"
+                                placeholder="Optional reason..."
                                 value={deferredReason}
                                 onChange={(e) => setDeferredReason(e.target.value)}
-                                className="w-full text-xs px-2 py-1.5 border border-neutral-200 rounded-lg"
+                                className="w-full text-[12px] px-2 py-1 border border-neutral-200 rounded"
                                 autoFocus
                               />
                               <div className="flex gap-1.5">
                                 <button
                                   onClick={() => handleStatusChange("deferred", deferredReason || undefined)}
-                                  className="flex-1 text-xs px-2 py-1 bg-neutral-600 text-white rounded-lg hover:bg-neutral-700"
+                                  className="flex-1 text-[12px] px-2 py-1 bg-neutral-900 text-white rounded hover:bg-neutral-800"
                                 >
                                   Defer
                                 </button>
                                 <button
                                   onClick={() => { setPendingStatus(null); setDeferredReason(""); }}
-                                  className="text-xs px-2 py-1 text-neutral-500 hover:text-neutral-700"
+                                  className="text-[12px] px-2 py-1 text-neutral-500 hover:text-neutral-700"
                                 >
                                   Cancel
                                 </button>
@@ -587,7 +556,7 @@ export default function RelationshipTreeNode({
                                       handleStatusChange(opt.value);
                                     }
                                   }}
-                                  className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${opt.bg}`}
+                                  className={`w-full px-3 py-1.5 text-left text-[12px] font-medium transition-colors ${opt.bg}`}
                                 >
                                   {opt.label}
                                 </button>
@@ -609,30 +578,31 @@ export default function RelationshipTreeNode({
                   {!statusIndicator && showStatusDropdown && sessionId && !isRoot && (
                     <div className="relative">
                       <div
-                        className="absolute left-0 top-0 mt-1 w-44 bg-white rounded-xl shadow-soft-lg border border-neutral-200 z-50 overflow-hidden animate-fade-in"
+                        className="absolute left-0 top-0 mt-1 w-40 bg-white rounded-md border border-neutral-200 z-50 overflow-hidden animate-fade-in"
+                        style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         {pendingStatus === "deferred" ? (
-                          <div className="p-3 space-y-2">
-                            <p className="text-xs font-medium text-neutral-700">Reason for deferring:</p>
+                          <div className="p-2.5 space-y-2">
+                            <p className="text-[11px] font-medium text-neutral-600">Reason for deferring:</p>
                             <input
                               type="text"
-                              placeholder="Optional reason…"
+                              placeholder="Optional reason..."
                               value={deferredReason}
                               onChange={(e) => setDeferredReason(e.target.value)}
-                              className="w-full text-xs px-2 py-1.5 border border-neutral-200 rounded-lg"
+                              className="w-full text-[12px] px-2 py-1 border border-neutral-200 rounded"
                               autoFocus
                             />
                             <div className="flex gap-1.5">
                               <button
                                 onClick={() => handleStatusChange("deferred", deferredReason || undefined)}
-                                className="flex-1 text-xs px-2 py-1 bg-neutral-600 text-white rounded-lg hover:bg-neutral-700"
+                                className="flex-1 text-[12px] px-2 py-1 bg-neutral-900 text-white rounded hover:bg-neutral-800"
                               >
                                 Defer
                               </button>
                               <button
                                 onClick={() => { setPendingStatus(null); setDeferredReason(""); }}
-                                className="text-xs px-2 py-1 text-neutral-500 hover:text-neutral-700"
+                                className="text-[12px] px-2 py-1 text-neutral-500 hover:text-neutral-700"
                               >
                                 Cancel
                               </button>
@@ -651,7 +621,7 @@ export default function RelationshipTreeNode({
                                     handleStatusChange(opt.value);
                                   }
                                 }}
-                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${opt.bg}`}
+                                className={`w-full px-3 py-1.5 text-left text-[12px] font-medium transition-colors ${opt.bg}`}
                               >
                                 {opt.label}
                               </button>
@@ -665,22 +635,23 @@ export default function RelationshipTreeNode({
 
               {/* Assign team member dropdown (DEC-1.3) */}
               {showAssignDropdown && teamMembers.length > 0 && (
-                <div className="mt-2">
+                <div className="mt-1.5">
                   <div
-                    className="bg-white rounded-xl shadow-soft-lg border border-neutral-200 p-2 animate-fade-in"
+                    className="bg-white rounded-md border border-neutral-200 p-1.5 animate-fade-in"
+                    style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <p className="text-xs font-medium text-neutral-500 px-2 mb-1">Assign to:</p>
+                    <p className="text-[11px] font-medium text-neutral-500 px-2 mb-1">Assign to:</p>
                     <div className="max-h-32 overflow-y-auto space-y-0.5">
                       {teamMembers.map((member) => (
                         <button
                           key={member.id}
                           onClick={() => handleAssignNode(member.id)}
-                          className="w-full px-2 py-1.5 text-left text-xs text-neutral-700 hover:bg-neutral-50 rounded-lg flex items-center gap-2 transition-colors"
+                          className="w-full px-2 py-1 text-left text-[12px] text-neutral-700 hover:bg-neutral-50 rounded flex items-center gap-2 transition-colors"
                         >
                           <span
-                            className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
-                            style={{ backgroundColor: member.avatar_color || '#6366f1' }}
+                            className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0"
+                            style={{ backgroundColor: member.avatar_color || '#525252' }}
                           >
                             {member.name.charAt(0).toUpperCase()}
                           </span>
@@ -690,7 +661,7 @@ export default function RelationshipTreeNode({
                     </div>
                     <button
                       onClick={() => setShowAssignDropdown(false)}
-                      className="w-full mt-1 px-2 py-1 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                      className="w-full mt-1 px-2 py-0.5 text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors"
                     >
                       Cancel
                     </button>
@@ -699,7 +670,7 @@ export default function RelationshipTreeNode({
               )}
 
               {/* Action buttons */}
-              <div className="flex flex-col gap-1.5 flex-shrink-0">
+              <div className="flex flex-col gap-1 flex-shrink-0">
                 {/* Node Management Menu */}
                 {sessionId && !isRoot && !readOnly && (
                   <div className="relative z-50">
@@ -708,23 +679,23 @@ export default function RelationshipTreeNode({
                         e.stopPropagation();
                         setShowMenu(!showMenu);
                       }}
-                      className="p-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-500 transition-all duration-200"
+                      className="p-1 rounded bg-neutral-50 hover:bg-neutral-100 text-neutral-500 transition-colors"
                       title="Node actions"
                     >
-                      <EllipsisVerticalIcon className="w-4 h-4" />
+                      <EllipsisVerticalIcon className="w-3.5 h-3.5" />
                     </button>
 
                     {showMenu && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-soft-lg border border-neutral-200 z-50 overflow-hidden animate-fade-in">
+                      <div className="absolute right-0 mt-1 w-44 bg-white rounded-md border border-neutral-200 z-50 overflow-hidden animate-fade-in" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setIsEditing(true);
                             setShowMenu(false);
                           }}
-                          className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                          className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
                         >
-                          <PencilIcon className="w-4 h-4" />
+                          <PencilIcon className="w-3.5 h-3.5" />
                           Edit Node
                         </button>
                         <button
@@ -733,9 +704,9 @@ export default function RelationshipTreeNode({
                             setIsAddingChild(true);
                             setShowMenu(false);
                           }}
-                          className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                          className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
                         >
-                          <PlusIcon className="w-4 h-4" />
+                          <PlusIcon className="w-3.5 h-3.5" />
                           Add Child
                         </button>
                         <button
@@ -744,12 +715,11 @@ export default function RelationshipTreeNode({
                             setShowMenu(false);
                             setShowStatusDropdown(true);
                           }}
-                          className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                          className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
                         >
-                          <ArrowPathIcon className="w-4 h-4" />
+                          <ArrowPathIcon className="w-3.5 h-3.5" />
                           Change Status
                         </button>
-                        {/* Assign / Unassign (DEC-1.3) */}
                         {teamMembers.length > 0 && !node.assignee && (
                           <button
                             onClick={(e) => {
@@ -757,9 +727,9 @@ export default function RelationshipTreeNode({
                               setShowMenu(false);
                               setShowAssignDropdown(true);
                             }}
-                            className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                            className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
                           >
-                            <PlusIcon className="w-4 h-4" />
+                            <PlusIcon className="w-3.5 h-3.5" />
                             Assign Member
                           </button>
                         )}
@@ -769,21 +739,21 @@ export default function RelationshipTreeNode({
                               e.stopPropagation();
                               handleUnassignNode();
                             }}
-                            className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                            className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
                           >
-                            <XMarkIcon className="w-4 h-4" />
+                            <XMarkIcon className="w-3.5 h-3.5" />
                             Unassign {node.assignee.name}
                           </button>
                         )}
-                        <div className="border-t border-neutral-100 my-1" />
+                        <div className="border-t border-neutral-200 my-0.5" />
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteNode(false);
                           }}
-                          className="w-full px-4 py-2.5 text-left text-sm text-warning-600 hover:bg-warning-50 flex items-center gap-2 transition-colors"
+                          className="w-full px-3 py-2 text-left text-[13px] text-warning-600 hover:bg-warning-50 flex items-center gap-2 transition-colors"
                         >
-                          <TrashIcon className="w-4 h-4" />
+                          <TrashIcon className="w-3.5 h-3.5" />
                           Delete (Keep Children)
                         </button>
                         <button
@@ -791,9 +761,9 @@ export default function RelationshipTreeNode({
                             e.stopPropagation();
                             handleDeleteNode(true);
                           }}
-                          className="w-full px-4 py-2.5 text-left text-sm text-danger-600 hover:bg-danger-50 flex items-center gap-2 transition-colors"
+                          className="w-full px-3 py-2 text-left text-[13px] text-danger-600 hover:bg-danger-50 flex items-center gap-2 transition-colors"
                         >
-                          <TrashIcon className="w-4 h-4" />
+                          <TrashIcon className="w-3.5 h-3.5" />
                           Delete (With Children)
                         </button>
                       </div>
@@ -808,10 +778,10 @@ export default function RelationshipTreeNode({
                       e.stopPropagation();
                       if (onExpand) onExpand(node.id);
                     }}
-                    className="p-1.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-all duration-200 shadow-soft-sm hover:shadow-soft"
+                    className="p-1 rounded bg-neutral-900 text-white hover:bg-neutral-800 transition-colors"
                     title="Explore this node further"
                   >
-                    <PlusIcon className="w-4 h-4" />
+                    <PlusIcon className="w-3.5 h-3.5" />
                   </button>
                 )}
 
@@ -823,29 +793,36 @@ export default function RelationshipTreeNode({
                       onToggle(node.id);
                     }}
                     className={`
-                      p-2 rounded-lg transition-all duration-200 shadow-soft-sm hover:shadow-soft
+                      p-1.5 rounded transition-colors
                       ${
                         node.isExpanded
-                          ? "bg-primary-600 hover:bg-primary-700 text-white"
-                          : "bg-neutral-700 hover:bg-neutral-800 text-white"
+                          ? "bg-neutral-900 hover:bg-neutral-800 text-white"
+                          : "bg-neutral-200 hover:bg-neutral-300 text-neutral-700"
                       }
                     `}
                     title={node.isExpanded ? "Collapse" : "Expand"}
                   >
                     {node.isExpanded ? (
-                      <ChevronDownIcon className="w-4 h-4" />
+                      <ChevronDownIcon className="w-3.5 h-3.5" />
                     ) : (
-                      <ChevronRightIcon className="w-4 h-4" />
+                      <ChevronRightIcon className="w-3.5 h-3.5" />
                     )}
                   </button>
                 )}
               </div>
             </div>
 
+            {/* Answer preview */}
+            {hasAnswer && (
+              <p className="text-[11px] text-neutral-500 mt-2 line-clamp-1 leading-relaxed">
+                {node.answer}
+              </p>
+            )}
+
             {/* Expandable hint */}
             {node.canExpand && !hasChildren && (
-              <div className="mt-3 flex items-center gap-2 text-xs font-medium text-warning-700 bg-warning-50 px-2.5 py-1.5 rounded-lg border border-warning-100">
-                <SparklesIcon className="w-3.5 h-3.5" />
+              <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-warning-700 bg-warning-50 px-2 py-1 rounded" style={{ borderRadius: "4px" }}>
+                <SparklesIcon className="w-3 h-3" />
                 <span>Click + to explore this node</span>
               </div>
             )}
@@ -854,18 +831,18 @@ export default function RelationshipTreeNode({
           {/* Status hover tooltip */}
           {showTooltip && statusIndicator && (
             <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 translate-y-full z-50 animate-fade-in">
-              <div className="bg-neutral-900 text-white text-xs rounded-xl px-3 py-2 shadow-lg min-w-[160px] max-w-[240px]">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className={`w-2 h-2 rounded-full ${statusIndicator.dotColor}`} />
-                  <span className="font-semibold">{statusIndicator.badgeLabel}</span>
+              <div className="bg-neutral-900 text-white text-[11px] rounded-md px-2.5 py-1.5 min-w-[140px] max-w-[220px]" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${statusIndicator.dotColor}`} />
+                  <span className="font-medium">{statusIndicator.badgeLabel}</span>
                 </div>
                 {node.deferred_reason && (
-                  <p className="text-neutral-300 leading-snug">
+                  <p className="text-neutral-300 text-[10px] leading-snug">
                     Reason: {node.deferred_reason}
                   </p>
                 )}
                 {node.completed_at && (
-                  <p className="text-neutral-400 mt-0.5">
+                  <p className="text-neutral-400 text-[10px] mt-0.5">
                     Completed: {new Date(node.completed_at).toLocaleDateString()}
                   </p>
                 )}
@@ -873,88 +850,122 @@ export default function RelationshipTreeNode({
               </div>
             </div>
           )}
+
+          {/* Bottom connection handle */}
+          {hasChildren && (
+            <div
+              className="absolute -bottom-[4px] left-1/2 -translate-x-1/2 w-[8px] h-[8px] rounded-full bg-white border-[1.5px] z-30"
+              style={{ borderColor: style.accentColor }}
+            />
+          )}
         </div>
       </div>
 
+      {/* Collapsed children count */}
+      {hasChildren && !node.isExpanded && (
+        <div className="mt-1.5 flex justify-center animate-fade-in">
+          <span className="text-[10px] text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded" style={{ borderRadius: "4px" }}>
+            {node.children!.length} {node.children!.length === 1 ? 'child' : 'children'}
+          </span>
+        </div>
+      )}
+
       {/* Children */}
       {node.isExpanded && hasChildren && (
-        <div className="relative mt-8 animate-fade-in">
-          {/* Vertical trunk */}
-          <div
-            className="absolute left-1/2 -translate-x-1/2 w-0.5 bg-neutral-300 z-0"
-            style={{ top: "0px", height: "40px" }}
-          />
+        <div className="relative mt-6 animate-fade-in-up">
+          {/* SVG Orthogonal Connectors */}
+          {(() => {
+            const childCount = node.children!.length;
+            const lineColor = "#e2e2e2";
+            const svgHeight = 56;
+            const midY = 22;
+            const r = 8;
 
-          {/* Connection point */}
-          <div
-            className="absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-neutral-400 border-2 border-white shadow-sm z-10"
-            style={{ top: "-2px" }}
-          />
-
-          {/* Horizontal distribution line */}
-          {node.children!.length > 1 ? (
-            <div
-              className="absolute left-1/2 -translate-x-1/2 h-0.5 bg-neutral-300 z-0"
-              style={{
-                top: "40px",
-                width: `${(node.children!.length - 1) * 320 + 80}px`,
-              }}
-            />
-          ) : (
-            <div
-              className="absolute left-1/2 -translate-x-1/2 w-0.5 bg-neutral-300 z-0"
-              style={{
-                top: "40px",
-                height: "60px",
-              }}
-            />
-          )}
-
-          {/* Junction dots */}
-          {node.children!.length > 1 ? (
-            <>
-              {node.children!.map((child, index) => {
-                const totalWidth = (node.children!.length - 1) * 320 + 80;
-                const spacing =
-                  node.children!.length > 1
-                    ? totalWidth / (node.children!.length - 1)
-                    : 0;
-                const leftPosition =
-                  index === 0
-                    ? 0
-                    : index === node.children!.length - 1
-                    ? totalWidth
-                    : spacing * index;
-
-                return (
-                  <div
-                    key={`junction-${child.id}`}
-                    className="absolute w-2.5 h-2.5 rounded-full bg-neutral-400 border-2 border-white shadow-sm z-10"
-                    style={{
-                      top: "38.5px",
-                      left: `calc(50% - ${totalWidth / 2}px + ${leftPosition}px - 5px)`,
-                    }}
+            if (childCount === 1) {
+              return (
+                <svg
+                  className="absolute left-1/2 z-0 pointer-events-none"
+                  style={{ top: 0, width: 2, height: svgHeight, marginLeft: -1 }}
+                  overflow="visible"
+                >
+                  <line
+                    x1={1} y1={0} x2={1} y2={svgHeight}
+                    stroke={lineColor}
+                    strokeWidth="1.5"
                   />
-                );
-              })}
-            </>
-          ) : (
-            <div
-              className="absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-neutral-400 border-2 border-white shadow-sm z-10"
-              style={{ top: "98.5px" }}
-            />
-          )}
+                </svg>
+              );
+            }
+
+            const svgWidth = childCount * CHILD_SLOT_WIDTH;
+            const centerX = svgWidth / 2;
+
+            return (
+              <svg
+                className="absolute left-1/2 z-0 pointer-events-none"
+                style={{
+                  top: 0,
+                  width: svgWidth,
+                  height: svgHeight,
+                  marginLeft: -svgWidth / 2,
+                }}
+                overflow="visible"
+              >
+                {/* Parent stem */}
+                <line
+                  x1={centerX} y1={0} x2={centerX} y2={midY}
+                  stroke={lineColor}
+                  strokeWidth="1.5"
+                />
+
+                {/* Child branches */}
+                {node.children!.map((child, index) => {
+                  const childX = (index + 0.5) * CHILD_SLOT_WIDTH;
+                  const dx = childX - centerX;
+
+                  if (Math.abs(dx) < 1) {
+                    return (
+                      <line
+                        key={`branch-${child.id}`}
+                        x1={childX} y1={midY} x2={childX} y2={svgHeight}
+                        stroke={lineColor}
+                        strokeWidth="1.5"
+                      />
+                    );
+                  }
+
+                  const dir = dx > 0 ? 1 : -1;
+                  const clampedR = Math.min(r, Math.abs(dx), svgHeight - midY);
+
+                  return (
+                    <path
+                      key={`branch-${child.id}`}
+                      d={[
+                        `M ${centerX} ${midY}`,
+                        `L ${childX - dir * clampedR} ${midY}`,
+                        `Q ${childX} ${midY} ${childX} ${midY + clampedR}`,
+                        `L ${childX} ${svgHeight}`,
+                      ].join(" ")}
+                      stroke={lineColor}
+                      strokeWidth="1.5"
+                      fill="none"
+                    />
+                  );
+                })}
+              </svg>
+            );
+          })()}
 
           {/* Children Nodes */}
           <div
-            className="flex items-start justify-center gap-10"
-            style={{ marginTop: "100px" }}
+            className="flex items-start"
+            style={{ width: `${node.children!.length * CHILD_SLOT_WIDTH}px`, marginTop: `${56}px` }}
           >
             {node.children!.map((child, index) => (
               <div
                 key={child.id}
-                className="relative animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms` }}
+                className="relative animate-fade-in-up flex justify-center"
+                style={{ width: `${CHILD_SLOT_WIDTH}px`, animationDelay: `${index * 80}ms` }}
               >
                 <RelationshipTreeNode
                   node={child}

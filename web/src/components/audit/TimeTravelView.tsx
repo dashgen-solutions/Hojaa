@@ -106,7 +106,7 @@ function SnapshotView({ sessionId }: { sessionId: string }) {
   return (
     <div className="space-y-6">
       {/* Date picker and action */}
-      <div className="flex items-end gap-4 p-4 bg-white rounded-xl border border-neutral-200">
+      <div className="flex items-end gap-4 p-4 bg-white rounded-md border border-neutral-200">
         <div className="flex-1">
           <label className="block text-xs font-medium text-neutral-600 mb-1">
             View graph as of date
@@ -115,15 +115,15 @@ function SnapshotView({ sessionId }: { sessionId: string }) {
             type="date"
             value={selectedDate}
             onChange={(event) => setSelectedDate(event.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-neutral-300 text-sm
-                       focus:border-primary-500 focus:ring-1 focus:ring-primary-200 outline-none"
+            className="w-full px-3 py-2 rounded-md border border-neutral-300 text-sm
+                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none"
           />
         </div>
         <button
           onClick={handleLoadSnapshot}
           disabled={!selectedDate || isLoadingTimeTravel}
-          className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg
-                     hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed
+          className="px-4 py-2 bg-neutral-900 text-white text-sm font-medium rounded-md
+                     hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed
                      transition-colors"
         >
           {isLoadingTimeTravel ? 'Loading...' : 'Load Snapshot'}
@@ -132,12 +132,12 @@ function SnapshotView({ sessionId }: { sessionId: string }) {
 
       {/* Snapshot Results */}
       {graphSnapshot && (
-        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <div className="bg-white rounded-md border border-neutral-200 overflow-hidden">
           {/* Summary bar */}
           <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ClockIcon className="w-4 h-4 text-primary-600" />
+                <ClockIcon className="w-4 h-4 text-neutral-900" />
                 <span className="text-sm font-semibold text-neutral-900">
                   Graph Snapshot
                 </span>
@@ -217,7 +217,7 @@ function ComparisonView({ sessionId }: { sessionId: string }) {
     const CategoryIcon = config.icon;
 
     return (
-      <div key={categoryKey} className={`rounded-xl border ${config.borderColor} overflow-hidden`}>
+      <div key={categoryKey} className={`rounded-md border ${config.borderColor} overflow-hidden`}>
         {/* Category header */}
         <div className={`flex items-center gap-2 px-4 py-2.5 ${config.bgColor}`}>
           <CategoryIcon className={`w-4 h-4 ${config.color}`} />
@@ -281,15 +281,15 @@ function ComparisonView({ sessionId }: { sessionId: string }) {
   return (
     <div className="space-y-6">
       {/* Date range picker */}
-      <div className="flex items-end gap-4 p-4 bg-white rounded-xl border border-neutral-200">
+      <div className="flex items-end gap-4 p-4 bg-white rounded-md border border-neutral-200">
         <div className="flex-1">
           <label className="block text-xs font-medium text-neutral-600 mb-1">From</label>
           <input
             type="date"
             value={dateFrom}
             onChange={(event) => setDateFrom(event.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-neutral-300 text-sm
-                       focus:border-primary-500 focus:ring-1 focus:ring-primary-200 outline-none"
+            className="w-full px-3 py-2 rounded-md border border-neutral-300 text-sm
+                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none"
           />
         </div>
         <div className="flex-1">
@@ -298,15 +298,15 @@ function ComparisonView({ sessionId }: { sessionId: string }) {
             type="date"
             value={dateTo}
             onChange={(event) => setDateTo(event.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-neutral-300 text-sm
-                       focus:border-primary-500 focus:ring-1 focus:ring-primary-200 outline-none"
+            className="w-full px-3 py-2 rounded-md border border-neutral-300 text-sm
+                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none"
           />
         </div>
         <button
           onClick={handleCompare}
           disabled={!dateFrom || !dateTo || isLoadingTimeTravel}
-          className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg
-                     hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed
+          className="px-4 py-2 bg-neutral-900 text-white text-sm font-medium rounded-md
+                     hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed
                      transition-colors whitespace-nowrap"
         >
           {isLoadingTimeTravel ? 'Comparing...' : 'Compare'}
@@ -325,7 +325,7 @@ function ComparisonView({ sessionId }: { sessionId: string }) {
               { label: 'Deferred', count: graphComparison.summary.deferred_count, color: 'text-amber-700', bg: 'bg-amber-50' },
               { label: 'Status', count: graphComparison.summary.status_changes_count, color: 'text-purple-700', bg: 'bg-purple-50' },
             ].map((item) => (
-              <div key={item.label} className={`${item.bg} rounded-lg p-3 text-center`}>
+              <div key={item.label} className={`${item.bg} rounded-md p-3 text-center`}>
                 <div className={`text-xl font-bold ${item.color}`}>{item.count}</div>
                 <div className={`text-[10px] font-medium ${item.color} mt-0.5`}>{item.label}</div>
               </div>
@@ -374,7 +374,7 @@ export default function TimeTravelView({ sessionId }: TimeTravelViewProps) {
       </div>
 
       {/* Sub-tabs: Snapshot vs Compare */}
-      <div className="flex gap-1 bg-neutral-200/60 rounded-lg p-0.5 w-fit mb-6">
+      <div className="flex gap-1 bg-neutral-200/60 rounded-md p-0.5 w-fit mb-6">
         <button
           onClick={() => handleTabChange('snapshot')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${

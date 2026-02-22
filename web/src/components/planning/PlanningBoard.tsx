@@ -94,7 +94,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
   if (isLoadingBoard) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-3 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" />
       </div>
     );
   }
@@ -129,7 +129,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
             <select
               value={assigneeFilter}
               onChange={(e) => setAssigneeFilter(e.target.value)}
-              className="text-sm border border-neutral-200 rounded-lg px-2 py-1.5 bg-white"
+              className="text-sm border border-neutral-200 rounded-md px-2 py-1.5 bg-white"
             >
               <option value="">All Members</option>
               {teamMembers.map((m) => (
@@ -141,7 +141,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
           {/* Hide Deferred Toggle */}
           <button
             onClick={() => setHideDeferred(!hideDeferred)}
-            className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+            className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
               hideDeferred
                 ? 'bg-neutral-700 text-white border-neutral-700'
                 : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
@@ -152,7 +152,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
           </button>
 
           {/* View Toggles */}
-          <div className="flex bg-neutral-100 rounded-lg p-0.5">
+          <div className="flex bg-neutral-100 rounded-md p-0.5">
             <button
               onClick={() => setActiveView('board')}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
@@ -182,7 +182,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
 
           <button
             onClick={() => setShowTeamManager(!showTeamManager)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium
                        bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors"
           >
             <UsersIcon className="w-4 h-4" />
@@ -193,7 +193,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
             <>
               <button
                 onClick={() => setShowNewCard(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium
                            bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors"
               >
                 <PlusIcon className="w-4 h-4" />
@@ -202,8 +202,8 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
 
               <button
                 onClick={handleBulkCreate}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium
-                           bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium
+                           bg-neutral-900 text-white hover:bg-neutral-800 transition-colors shadow-sm"
               >
                 <SparklesIcon className="w-4 h-4" />
                 Generate Cards from Graph
@@ -223,14 +223,14 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
                 placeholder="Card title..."
                 value={newCardTitle}
                 onChange={(e) => setNewCardTitle(e.target.value)}
-                className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-md focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
               />
               <textarea
                 placeholder="Description (optional)..."
                 value={newCardDesc}
                 onChange={(e) => setNewCardDesc(e.target.value)}
                 rows={2}
-                className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-md focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
               />
               <label className="flex items-center gap-2 text-sm text-neutral-600">
                 <input
@@ -250,7 +250,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
                   placeholder="0"
                   value={newCardEstHours}
                   onChange={(e) => setNewCardEstHours(e.target.value)}
-                  className="w-20 px-2 py-1 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-20 px-2 py-1 text-sm border border-neutral-300 rounded-md focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
                 />
               </div>
               {!newCardIsOOS && (
@@ -261,7 +261,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
               <button
                 onClick={handleCreateManualCard}
                 disabled={!newCardTitle.trim() || creatingCard}
-                className="px-3 py-1.5 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                className="px-3 py-1.5 text-sm font-medium bg-neutral-900 text-white rounded-md hover:bg-neutral-800 disabled:opacity-50"
               >
                 {creatingCard ? 'Placing…' : 'Create'}
               </button>
@@ -298,9 +298,9 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
               {workload.map((w: WorkloadEntry) => {
                 const pct = w.progress_percentage ?? (w.total_cards > 0 ? Math.round((w.completed_cards / w.total_cards) * 100) : 0);
                 return (
-                  <div key={w.team_member_id} className="rounded-xl border border-neutral-200 bg-white p-4">
+                  <div key={w.team_member_id} className="rounded-md border border-neutral-200 bg-white p-4">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-bold text-primary-700">
+                      <div className="w-8 h-8 rounded-full bg-neutral-50 flex items-center justify-center text-sm font-bold text-neutral-900">
                         {w.team_member_name.charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -359,12 +359,12 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
               return (
                 <div
                   key={column.key}
-                  className="w-72 flex flex-col rounded-xl bg-neutral-50/80 border border-neutral-200"
+                  className="w-72 flex flex-col rounded-md bg-neutral-50 border border-neutral-200"
                   onDragOver={readOnly ? undefined : handleDragOver}
                   onDrop={readOnly ? undefined : () => handleDrop(column.key)}
                 >
                   {/* Column Header */}
-                  <div className={`px-4 py-3 border-b-2 ${column.color} rounded-t-xl ${column.bgColor}`}>
+                  <div className={`px-4 py-3 border-b-2 ${column.color} rounded-t-md ${column.bgColor}`}>
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-neutral-800">{column.label}</h3>
                       <span className="text-xs font-medium text-neutral-500 bg-white px-2 py-0.5 rounded-full">

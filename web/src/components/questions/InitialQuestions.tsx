@@ -211,8 +211,8 @@ export default function InitialQuestions({
         <div className="card p-12 text-center">
           <div className="relative w-20 h-20 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
-            <SparklesIcon className="w-8 h-8 text-primary-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-900 border-t-transparent animate-spin"></div>
+            <SparklesIcon className="w-8 h-8 text-neutral-900 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
           </div>
           <h2 className="text-xl font-bold text-neutral-900 mb-2">
             Analyzing your document...
@@ -228,7 +228,7 @@ export default function InitialQuestions({
   if (error && questions.length === 0) {
     return (
       <div className="max-w-2xl w-full animate-fade-in-up">
-        <div className="bg-danger-50 border border-danger-200 rounded-2xl p-12 text-center">
+        <div className="bg-danger-50 border border-danger-200 rounded-md p-12 text-center">
           <h2 className="text-xl font-bold text-danger-900 mb-2">
             Error Loading Questions
           </h2>
@@ -242,7 +242,7 @@ export default function InitialQuestions({
     <div className="max-w-2xl w-full animate-fade-in-up">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-100 text-primary-700 rounded-full text-sm font-medium mb-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 text-neutral-900 rounded-full text-sm font-medium mb-4">
           <SparklesIcon className="w-4 h-4" />
           Step 2 of 3
         </div>
@@ -258,13 +258,13 @@ export default function InitialQuestions({
       <div className="card p-4 mb-6">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-neutral-700">Progress</span>
-          <span className="text-sm font-semibold text-primary-600">
+          <span className="text-sm font-semibold text-neutral-900">
             {answeredCount} of {questions.length} answered
           </span>
         </div>
         <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-primary-500 to-primary-600 transition-all duration-500 ease-smooth rounded-full"
+            className="h-full bg-neutral-900 transition-all duration-500 ease-smooth rounded-full"
             style={{ width: `${progress}%` }}
           ></div>
         </div>
@@ -272,7 +272,7 @@ export default function InitialQuestions({
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 p-4 bg-danger-50 border border-danger-200 rounded-xl text-danger-700 text-sm animate-fade-in">
+        <div className="mb-6 p-4 bg-danger-50 border border-danger-200 rounded text-danger-700 text-sm animate-fade-in">
           {error}
         </div>
       )}
@@ -281,7 +281,7 @@ export default function InitialQuestions({
       {!isAddingQuestion && (
         <button
           onClick={() => setIsAddingQuestion(true)}
-          className="w-full mb-4 py-3 px-4 border-2 border-dashed border-primary-200 rounded-xl text-primary-600 hover:bg-primary-50/50 hover:border-primary-300 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium"
+          className="w-full mb-4 py-3 px-4 border-2 border-dashed border-neutral-200 rounded text-neutral-900 hover:bg-neutral-100 hover:border-neutral-300 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium"
         >
           <PlusIcon className="w-5 h-5" />
           Add Custom Question
@@ -290,7 +290,7 @@ export default function InitialQuestions({
 
       {/* Add Question Form */}
       {isAddingQuestion && (
-        <div className="card p-4 mb-4 border-2 border-primary-200 animate-fade-in">
+        <div className="card p-4 mb-4 border-2 border-neutral-200 animate-fade-in">
           <input
             type="text"
             value={newQuestionText}
@@ -322,13 +322,13 @@ export default function InitialQuestions({
       )}
 
       {/* Questions List */}
-      <div className="space-y-3 mb-6 max-h-[calc(100vh-420px)] overflow-y-auto pr-1">
+      <div className="space-y-3 mb-6">
         {questions.map((q, idx) => (
           <div
             key={q.id}
             className={`card p-4 transition-all duration-300 ${
               idx === currentIndex && !q.is_answered
-                ? "border-2 border-primary-400 shadow-soft-md bg-white"
+                ? "border-2 border-neutral-200 shadow-sm bg-white"
                 : q.is_answered
                 ? "border border-success-200 bg-success-50/30"
                 : "border border-neutral-200 bg-white hover:border-neutral-300"
@@ -342,8 +342,8 @@ export default function InitialQuestions({
                     <CheckCircleIcon className="w-5 h-5 text-success-600" />
                   </div>
                 ) : idx === currentIndex ? (
-                  <div className="w-7 h-7 rounded-full bg-primary-100 border-2 border-primary-500 flex items-center justify-center">
-                    <div className="w-2.5 h-2.5 bg-primary-500 rounded-full animate-pulse"></div>
+                  <div className="w-7 h-7 rounded-full bg-neutral-50 border-2 border-neutral-900 flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 bg-neutral-900 rounded-full animate-pulse"></div>
                   </div>
                 ) : (
                   <div className="w-7 h-7 rounded-full border-2 border-neutral-200 bg-neutral-50"></div>
@@ -388,14 +388,14 @@ export default function InitialQuestions({
                         <div className="flex gap-1 flex-shrink-0">
                           <button
                             onClick={() => handleEditQuestion(q)}
-                            className="p-1.5 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
+                            className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-all"
                             title="Edit question"
                           >
                             <PencilIcon className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteQuestion(q.id)}
-                            className="p-1.5 text-neutral-400 hover:text-danger-600 hover:bg-danger-50 rounded-lg transition-all"
+                            className="p-1.5 text-neutral-400 hover:text-danger-600 hover:bg-danger-50 rounded-md transition-all"
                             title="Delete question"
                           >
                             <TrashIcon className="w-4 h-4" />
@@ -435,10 +435,10 @@ export default function InitialQuestions({
                       <button
                         onClick={handleAudioRecord}
                         disabled={isProcessing || isTranscribing}
-                        className={`flex-shrink-0 w-12 h-12 rounded-xl border-2 transition-all duration-200 flex items-center justify-center ${
+                        className={`flex-shrink-0 w-12 h-12 rounded-md border-2 transition-all duration-200 flex items-center justify-center ${
                           isRecording
-                            ? "bg-danger-500 border-danger-600 text-white shadow-soft animate-pulse"
-                            : "bg-white border-neutral-200 text-neutral-500 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50"
+                            ? "bg-danger-500 border-danger-600 text-white shadow-sm animate-pulse"
+                            : "bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300 hover:text-neutral-900 hover:bg-neutral-100"
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                         title={
                           isRecording ? "Stop recording" : "Start voice recording"
@@ -456,20 +456,20 @@ export default function InitialQuestions({
                     {(isRecording || isProcessing || isTranscribing) && (
                       <div className="flex items-center gap-2 mb-2">
                         {isRecording && (
-                          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-danger-50 border border-danger-200 rounded-lg text-danger-700 text-xs font-medium">
+                          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-danger-50 border border-danger-200 rounded-md text-danger-700 text-xs font-medium">
                             <span className="w-2 h-2 bg-danger-500 rounded-full animate-pulse"></span>
                             Recording... Speak now
                           </span>
                         )}
                         {isProcessing && (
-                          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-lg text-primary-700 text-xs font-medium">
-                            <div className="w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-md text-neutral-900 text-xs font-medium">
+                            <div className="w-3 h-3 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></div>
                             Processing audio...
                           </span>
                         )}
                         {isTranscribing && (
-                          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-lg text-primary-700 text-xs font-medium">
-                            <div className="w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-md text-neutral-900 text-xs font-medium">
+                            <div className="w-3 h-3 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></div>
                             Transcribing...
                           </span>
                         )}
@@ -478,7 +478,7 @@ export default function InitialQuestions({
 
                     {/* Audio Error */}
                     {audioError && (
-                      <div className="mb-2 p-3 bg-danger-50 border border-danger-200 rounded-xl">
+                      <div className="mb-2 p-3 bg-danger-50 border border-danger-200 rounded-md">
                         <p className="text-xs text-danger-700 font-medium mb-1">
                           Recording Error
                         </p>
@@ -506,7 +506,7 @@ export default function InitialQuestions({
 
                 {/* Answered State */}
                 {q.is_answered && (
-                  <div className="mt-3 p-3 bg-white rounded-xl border border-neutral-100">
+                  <div className="mt-3 p-3 bg-white rounded-md border border-neutral-100">
                     <p className="text-sm text-neutral-700">{q.answer_text}</p>
                   </div>
                 )}
@@ -518,11 +518,11 @@ export default function InitialQuestions({
 
       {/* Complete Button */}
       {answeredCount === questions.length && questions.length > 0 && (
-        <div className="sticky bottom-0 pt-4 pb-2 bg-gradient-to-t from-neutral-50 via-neutral-50 to-transparent animate-fade-in">
+        <div className="sticky bottom-0 pt-4 pb-2 bg-neutral-50 animate-fade-in">
           <button
             onClick={handleComplete}
             disabled={isSubmitting}
-            className="w-full btn bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-700 text-white py-4 text-base font-semibold shadow-soft-md hover:shadow-soft-lg transition-all duration-300"
+            className="w-full btn bg-neutral-900 hover:bg-neutral-800 text-white py-4 text-base font-semibold shadow-sm hover:shadow transition-all duration-300"
           >
             {isSubmitting ? (
               <>

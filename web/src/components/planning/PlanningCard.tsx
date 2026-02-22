@@ -40,8 +40,8 @@ const PRIORITY_OPTIONS = [
 ];
 
 const NODE_TYPE_STYLES: Record<string, string> = {
-  feature: 'bg-primary-100 text-primary-700',
-  detail: 'bg-accent-100 text-accent-700',
+  feature: 'bg-neutral-50 text-neutral-900',
+  detail: 'bg-neutral-100 text-neutral-700',
   root: 'bg-neutral-100 text-neutral-700',
 };
 
@@ -97,7 +97,7 @@ export default function PlanningCardComponent({
     <div
       draggable={!readOnly}
       onDragStart={onDragStart}
-      className={`bg-white rounded-lg border p-3 shadow-sm hover:shadow-md transition-shadow ${readOnly ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${
+      className={`bg-white rounded-md border p-3 shadow-sm hover:shadow-md transition-shadow ${readOnly ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${
         card.node_status === 'deferred'
           ? 'border-neutral-300 bg-neutral-50/60 opacity-75'
           : card.is_out_of_scope
@@ -118,7 +118,7 @@ export default function PlanningCardComponent({
             {card.priority}
           </button>
           {showPriorityDropdown && !readOnly && (
-            <div className="absolute top-full left-0 mt-1 w-28 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-20">
+            <div className="absolute top-full left-0 mt-1 w-28 bg-white rounded-md shadow border border-neutral-200 py-1 z-20">
               {PRIORITY_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -135,7 +135,7 @@ export default function PlanningCardComponent({
                 >
                   <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
                   {opt.label}
-                  {opt.value === card.priority && <CheckCircleIcon className="w-3 h-3 ml-auto text-primary-500" />}
+                  {opt.value === card.priority && <CheckCircleIcon className="w-3 h-3 ml-auto text-neutral-900" />}
                 </button>
               ))}
             </div>
@@ -206,7 +206,7 @@ export default function PlanningCardComponent({
             className="inline-flex items-center gap-1 text-[10px] bg-neutral-100 text-neutral-700 
                        px-1.5 py-0.5 rounded-full group"
           >
-            <span className="w-3 h-3 rounded-full bg-primary-400 text-white flex items-center justify-center text-[8px] font-bold">
+            <span className="w-3 h-3 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[8px] font-bold">
               {assignment.team_member_name[0]}
             </span>
             {assignment.team_member_name}
@@ -227,13 +227,13 @@ export default function PlanningCardComponent({
             <button
               onClick={() => setShowAssignDropdown(!showAssignDropdown)}
               className="w-5 h-5 rounded-full border border-dashed border-neutral-300 
-                         flex items-center justify-center hover:border-primary-400 hover:bg-primary-50 transition-colors"
+                         flex items-center justify-center hover:border-neutral-400 hover:bg-neutral-100 transition-colors"
             >
               <UserPlusIcon className="w-3 h-3 text-neutral-400" />
             </button>
 
             {showAssignDropdown && unassignedMembers.length > 0 && (
-              <div className="absolute bottom-full left-0 mb-1 w-40 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-10">
+              <div className="absolute bottom-full left-0 mb-1 w-40 bg-white rounded-md shadow border border-neutral-200 py-1 z-10">
                 {unassignedMembers.map((member) => (
                   <button
                     key={member.id}
@@ -294,7 +294,7 @@ export default function PlanningCardComponent({
                   </span>
                   {ac.node_id && (
                     <span title={`Linked to node ${ac.node_id}`} className="flex-shrink-0">
-                      <LinkIcon className="w-3 h-3 text-primary-400" />
+                      <LinkIcon className="w-3 h-3 text-primary-500" />
                     </span>
                   )}
                   {!readOnly && (
@@ -318,7 +318,7 @@ export default function PlanningCardComponent({
                   onKeyDown={(e) => e.key === 'Enter' && handleAddAC()}
                   className="flex-1 text-xs px-2 py-1 border border-neutral-200 rounded"
                 />
-                <button onClick={handleAddAC} className="p-1 text-primary-600 hover:text-primary-800">
+                <button onClick={handleAddAC} className="p-1 text-primary-500 hover:text-primary-700">
                   <PlusIcon className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -340,12 +340,12 @@ export default function PlanningCardComponent({
                     onChange={(e) => setEstHours(parseFloat(e.target.value) || 0)}
                     className="w-16 text-xs px-1.5 py-0.5 border border-neutral-200 rounded"
                   />
-                  <button onClick={handleSaveEstHours} className="text-primary-600 text-[10px] font-medium">Save</button>
+                  <button onClick={handleSaveEstHours} className="text-primary-500 text-[10px] font-medium">Save</button>
                 </div>
               ) : (
                 <span
                   onClick={readOnly ? undefined : () => { setEstHours(card.estimated_hours ?? 0); setEditingEstHours(true); }}
-                  className={`text-neutral-500 ${readOnly ? '' : 'hover:text-primary-600 cursor-pointer'}`}
+                  className={`text-neutral-500 ${readOnly ? '' : 'hover:text-primary-500 cursor-pointer'}`}
                 >
                   Est: {card.estimated_hours ?? '-'}h
                 </span>
@@ -360,12 +360,12 @@ export default function PlanningCardComponent({
                     onChange={(e) => setActualHours(parseFloat(e.target.value) || 0)}
                     className="w-16 text-xs px-1.5 py-0.5 border border-neutral-200 rounded"
                   />
-                  <button onClick={handleSaveHours} className="text-primary-600 text-[10px] font-medium">Save</button>
+                  <button onClick={handleSaveHours} className="text-primary-500 text-[10px] font-medium">Save</button>
                 </div>
               ) : (
                 <span
                   onClick={readOnly ? undefined : () => { setActualHours(card.actual_hours ?? 0); setEditingHours(true); }}
-                  className={`text-neutral-500 ${readOnly ? '' : 'hover:text-primary-600 cursor-pointer'}`}
+                  className={`text-neutral-500 ${readOnly ? '' : 'hover:text-primary-500 cursor-pointer'}`}
                 >
                   Actual: {card.actual_hours ?? 0}h
                 </span>
@@ -397,7 +397,7 @@ export default function PlanningCardComponent({
                   onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
                   className="flex-1 text-xs px-2 py-1 border border-neutral-200 rounded"
                 />
-                <button onClick={handleAddComment} className="p-1 text-primary-600 hover:text-primary-800">
+                <button onClick={handleAddComment} className="p-1 text-primary-500 hover:text-primary-700">
                   <ChatBubbleLeftIcon className="w-3.5 h-3.5" />
                 </button>
               </div>

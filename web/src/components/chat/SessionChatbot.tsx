@@ -156,8 +156,8 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600
-                     text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-neutral-900
+                     text-white shadow-lg hover:shadow-xl hover:bg-neutral-800 transition-all duration-200
                      flex items-center justify-center z-50 group"
           title="Session AI Assistant"
         >
@@ -168,11 +168,11 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
 
       {/* Chat panel */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-[420px] h-[600px] bg-white rounded-2xl shadow-2xl
+        <div className="fixed bottom-6 right-6 w-[420px] h-[600px] bg-white rounded-md shadow-lg
                         border border-neutral-200 flex flex-col z-50 overflow-hidden
                         animate-in slide-in-from-bottom-4 duration-200">
           {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-3 flex items-center gap-3">
+          <div className="bg-neutral-900 px-4 py-3 flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <SparklesIcon className="w-5 h-5 text-white" />
             </div>
@@ -183,14 +183,14 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
             <div className="flex items-center gap-1">
               <button
                 onClick={handleClearHistory}
-                className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+                className="p-1.5 rounded-md hover:bg-white/20 transition-colors"
                 title="Clear chat history"
               >
                 <TrashIcon className="w-4 h-4 text-white/70" />
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+                className="p-1.5 rounded-md hover:bg-white/20 transition-colors"
                 title="Close"
               >
                 <XMarkIcon className="w-4 h-4 text-white" />
@@ -224,7 +224,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
                   <button
                     key={action.label}
                     onClick={() => sendMessage(action.prompt)}
-                    className="w-full text-left px-3 py-2 rounded-lg border border-neutral-200
+                    className="w-full text-left px-3 py-2 rounded-md border border-neutral-200
                                hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors
                                text-xs text-neutral-700"
                   >
@@ -241,10 +241,10 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed
+                  className={`max-w-[85%] rounded-md px-3.5 py-2.5 text-sm leading-relaxed
                     ${msg.role === 'user'
-                      ? 'bg-indigo-500 text-white rounded-br-md'
-                      : 'bg-neutral-100 text-neutral-800 rounded-bl-md'
+                      ? 'bg-neutral-900 text-white rounded-br-sm'
+                      : 'bg-neutral-100 text-neutral-800 rounded-bl-sm'
                     }`}
                 >
                   {msg.role === 'assistant' ? (
@@ -287,7 +287,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
             {/* Loading indicator */}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-neutral-100 rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="bg-neutral-100 rounded-md rounded-bl-sm px-4 py-3">
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -302,7 +302,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
 
             {/* Error */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-600">
+              <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2 text-xs text-red-600">
                 {error}
               </div>
             )}
@@ -320,8 +320,8 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about scope, team, progress..."
                 rows={1}
-                className="flex-1 resize-none rounded-xl border border-neutral-300 px-3 py-2 text-sm
-                           focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 outline-none
+                className="flex-1 resize-none rounded-md border border-neutral-200 px-3 py-2 text-sm
+                           focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none
                            placeholder:text-neutral-400 max-h-24 overflow-y-auto"
                 style={{ minHeight: '38px' }}
                 onInput={(e) => {
@@ -333,7 +333,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
               <button
                 onClick={() => sendMessage()}
                 disabled={!input.trim() || isLoading}
-                className="p-2 rounded-xl bg-indigo-500 text-white hover:bg-indigo-600
+                className="p-2 rounded-md bg-neutral-900 text-white hover:bg-neutral-800
                            disabled:opacity-40 disabled:cursor-not-allowed transition-colors
                            flex-shrink-0"
               >
@@ -401,7 +401,7 @@ function MarkdownRenderer({ content }: { content: string }) {
     if (line.trim().startsWith('```')) {
       if (inCodeBlock) {
         elements.push(
-          <pre key={`code-${i}`} className="bg-neutral-800 text-neutral-100 rounded-lg p-2.5 text-[11px] overflow-x-auto my-1.5">
+          <pre key={`code-${i}`} className="bg-neutral-800 text-neutral-100 rounded-md p-2.5 text-[11px] overflow-x-auto my-1.5">
             <code>{codeLines.join('\n')}</code>
           </pre>
         );

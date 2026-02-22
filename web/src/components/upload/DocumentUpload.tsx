@@ -111,7 +111,7 @@ export default function DocumentUpload({ sessionId, onUpload }: DocumentUploadPr
     <div className="max-w-2xl w-full animate-fade-in-up">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-100 text-primary-700 rounded-full text-sm font-medium mb-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 text-neutral-900 rounded-full text-sm font-medium mb-4">
           <SparklesIcon className="w-4 h-4" />
           Step 1 of 3
         </div>
@@ -125,7 +125,7 @@ export default function DocumentUpload({ sessionId, onUpload }: DocumentUploadPr
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 p-4 bg-danger-50 border border-danger-200 rounded-xl text-danger-700 text-sm animate-fade-in">
+        <div className="mb-6 p-4 bg-danger-50 border border-danger-200 rounded-md text-danger-700 text-sm animate-fade-in">
           {error}
         </div>
       )}
@@ -135,22 +135,22 @@ export default function DocumentUpload({ sessionId, onUpload }: DocumentUploadPr
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-300 ${
+        className={`relative border-2 border-dashed rounded-md p-10 text-center transition-all duration-300 ${
           isDragging
-            ? "border-primary-500 bg-primary-50/50 scale-[1.02]"
-            : "border-neutral-200 bg-white hover:border-primary-300 hover:bg-neutral-50/50"
+            ? "border-neutral-200 bg-neutral-50 scale-[1.02]"
+            : "border-neutral-200 bg-white hover:border-neutral-200 hover:bg-neutral-50"
         }`}
       >
         <div
-          className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4 transition-all duration-300 ${
+          className={`w-16 h-16 mx-auto rounded-md flex items-center justify-center mb-4 transition-all duration-300 ${
             isDragging
-              ? "bg-primary-100 scale-110"
+              ? "bg-neutral-50 scale-110"
               : "bg-neutral-100"
           }`}
         >
           <CloudArrowUpIcon
             className={`w-8 h-8 transition-colors ${
-              isDragging ? "text-primary-600" : "text-neutral-400"
+              isDragging ? "text-neutral-900" : "text-neutral-400"
             }`}
           />
         </div>
@@ -226,7 +226,7 @@ export default function DocumentUpload({ sessionId, onUpload }: DocumentUploadPr
             <button
               key={idx}
               onClick={() => setTextInput(example)}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:border-primary-300 hover:bg-primary-50/50 hover:text-primary-700 transition-all duration-200"
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm text-neutral-600 bg-white border border-neutral-200 rounded-md hover:border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900 transition-all duration-200"
             >
               <DocumentTextIcon className="w-4 h-4 text-neutral-400" />
               <span className="truncate max-w-[200px]">{example}</span>

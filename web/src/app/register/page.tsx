@@ -92,7 +92,7 @@ export default function RegisterPage() {
         <div className="text-center animate-fade-in">
           <div className="relative w-16 h-16 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-900 border-t-transparent animate-spin"></div>
           </div>
           <p className="text-neutral-500 font-medium">Loading...</p>
         </div>
@@ -129,7 +129,7 @@ export default function RegisterPage() {
       {/* Header */}
       <header className="shrink-0 p-4">
         <Link href="/" className="inline-flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-soft-sm">
+          <div className="w-8 h-8 bg-neutral-900 rounded-md flex items-center justify-center shadow-sm">
             <span className="text-white font-bold text-sm">M</span>
           </div>
           <span className="text-lg font-semibold text-neutral-900">
@@ -144,7 +144,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-lg animate-fade-in-up">
           {/* Logo and Title */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mb-4 shadow-glow">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-neutral-900 rounded-md mb-4 shadow-sm">
               <SparklesIcon className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-neutral-900 mb-2">
@@ -160,16 +160,16 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setRegistrationType("organization")}
-              className={`flex-1 flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+              className={`flex-1 flex items-center gap-3 p-4 rounded-md border-2 transition-all ${
                 registrationType === "organization"
-                  ? "border-primary-500 bg-primary-50 shadow-soft-sm"
+                  ? "border-neutral-200 bg-neutral-50 shadow-sm"
                   : "border-neutral-200 bg-white hover:border-neutral-300"
               }`}
             >
               <BuildingOffice2Icon
                 className={`w-6 h-6 ${
                   registrationType === "organization"
-                    ? "text-primary-600"
+                    ? "text-neutral-900"
                     : "text-neutral-400"
                 }`}
               />
@@ -177,7 +177,7 @@ export default function RegisterPage() {
                 <div
                   className={`text-sm font-semibold ${
                     registrationType === "organization"
-                      ? "text-primary-700"
+                      ? "text-neutral-900"
                       : "text-neutral-700"
                   }`}
                 >
@@ -191,16 +191,16 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setRegistrationType("individual")}
-              className={`flex-1 flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+              className={`flex-1 flex items-center gap-3 p-4 rounded-md border-2 transition-all ${
                 registrationType === "individual"
-                  ? "border-primary-500 bg-primary-50 shadow-soft-sm"
+                  ? "border-neutral-200 bg-neutral-50 shadow-sm"
                   : "border-neutral-200 bg-white hover:border-neutral-300"
               }`}
             >
               <UserIcon
                 className={`w-6 h-6 ${
                   registrationType === "individual"
-                    ? "text-primary-600"
+                    ? "text-neutral-900"
                     : "text-neutral-400"
                 }`}
               />
@@ -208,7 +208,7 @@ export default function RegisterPage() {
                 <div
                   className={`text-sm font-semibold ${
                     registrationType === "individual"
-                      ? "text-primary-700"
+                      ? "text-neutral-900"
                       : "text-neutral-700"
                   }`}
                 >
@@ -224,7 +224,7 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Error */}
               {error && (
-                <div className="p-3 bg-danger-50 border border-danger-200 text-danger-700 rounded-xl text-sm animate-fade-in">
+                <div className="p-3 bg-danger-50 border border-danger-200 text-danger-700 rounded-md text-sm animate-fade-in">
                   {error}
                 </div>
               )}
@@ -233,8 +233,8 @@ export default function RegisterPage() {
               {registrationType === "organization" && (
                 <div className="space-y-4 pb-4 border-b border-neutral-100">
                   <div className="flex items-center gap-2 mb-1">
-                    <BuildingOffice2Icon className="w-4 h-4 text-primary-500" />
-                    <span className="text-xs font-semibold text-primary-600 uppercase tracking-wider">
+                    <BuildingOffice2Icon className="w-4 h-4 text-neutral-900" />
+                    <span className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
                       Organization Details
                     </span>
                   </div>
@@ -329,8 +329,8 @@ export default function RegisterPage() {
               <div className="space-y-4">
                 {registrationType === "organization" && (
                   <div className="flex items-center gap-2 mb-1">
-                    <UserIcon className="w-4 h-4 text-primary-500" />
-                    <span className="text-xs font-semibold text-primary-600 uppercase tracking-wider">
+                    <UserIcon className="w-4 h-4 text-neutral-900" />
+                    <span className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
                       Admin Account
                     </span>
                   </div>
@@ -457,7 +457,7 @@ export default function RegisterPage() {
                 Already have an account?{" "}
                 <Link
                   href="/login"
-                  className="text-primary-600 font-medium hover:text-primary-700 transition-colors"
+                  className="text-primary-500 font-medium hover:text-primary-600 transition-colors"
                 >
                   Sign in
                 </Link>

@@ -81,7 +81,7 @@ export default function DeferredItemsList({ sessionId, onReactivated }: Deferred
     return (
       <div className="flex items-center justify-center py-12 text-neutral-500 text-sm gap-2">
         <ArrowPathIcon className="w-4 h-4 animate-spin" />
-        Loading deferred items…
+        Loading deferred items...
       </div>
     );
   }
@@ -101,10 +101,10 @@ export default function DeferredItemsList({ sessionId, onReactivated }: Deferred
             <MagnifyingGlassIcon className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               type="text"
-              placeholder="Filter…"
+              placeholder="Filter..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-7 pr-2 py-1 text-xs border border-neutral-200 rounded-lg w-40 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="pl-7 pr-2 py-1 text-xs border border-neutral-200 rounded-md w-40 focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
             />
           </div>
         )}
@@ -125,7 +125,7 @@ export default function DeferredItemsList({ sessionId, onReactivated }: Deferred
             <div
               key={node.id}
               className={`
-                rounded-lg border p-3 transition-all duration-300
+                rounded-md border p-3 transition-all duration-300
                 ${successId === node.id
                   ? 'border-emerald-300 bg-emerald-50 scale-[0.98] opacity-60'
                   : 'border-neutral-200 bg-white hover:border-neutral-300'
@@ -152,8 +152,8 @@ export default function DeferredItemsList({ sessionId, onReactivated }: Deferred
                 <button
                   onClick={() => handleReactivate(node.id)}
                   disabled={reactivating === node.id}
-                  className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg
-                             bg-primary-50 text-primary-700 hover:bg-primary-100 transition-colors
+                  className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md
+                             bg-neutral-50 text-neutral-900 hover:bg-neutral-100 transition-colors
                              disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Reactivate this requirement"
                 >

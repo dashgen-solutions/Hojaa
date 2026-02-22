@@ -132,7 +132,7 @@ export default function ExportHistory({ sessionId }: ExportHistoryProps) {
           return (
             <div
               key={record.id}
-              className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-neutral-150 bg-neutral-50 hover:bg-white transition-colors"
+              className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-neutral-200 bg-neutral-50 hover:bg-white transition-colors"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${meta.color}`}>
@@ -148,7 +148,7 @@ export default function ExportHistory({ sessionId }: ExportHistoryProps) {
                 <button
                   onClick={() => handleReExport(record)}
                   disabled={reExporting === record.id}
-                  className="p-1 rounded hover:bg-primary-50 text-primary-600 disabled:opacity-50"
+                  className="p-1 rounded hover:bg-neutral-100 text-neutral-900 disabled:opacity-50"
                   title="Re-download"
                 >
                   <ArrowPathIcon className={`w-3.5 h-3.5 ${reExporting === record.id ? 'animate-spin' : ''}`} />

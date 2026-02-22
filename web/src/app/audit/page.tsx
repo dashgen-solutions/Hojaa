@@ -32,7 +32,7 @@ function AuditContent() {
       <div className="flex items-center justify-center h-screen bg-neutral-50">
         <div className="text-center">
           <p className="text-neutral-500">No session selected.</p>
-          <a href="/sessions" className="text-primary-600 hover:underline text-sm mt-2 inline-block">
+          <a href="/sessions" className="text-primary-500 hover:underline text-sm mt-2 inline-block">
             Go to Sessions
           </a>
         </div>
@@ -46,7 +46,7 @@ function AuditContent() {
 
       {/* Tab bar */}
       <div className="px-6 pt-4">
-        <div className="flex gap-1 bg-neutral-200/60 rounded-lg p-0.5 w-fit">
+        <div className="flex gap-1 bg-neutral-200/60 rounded-md p-0.5 w-fit">
           <button
             onClick={() => setActiveTab('timeline')}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -104,7 +104,7 @@ export default function AuditPage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center h-screen bg-neutral-50">
-        <div className="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-3 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" />
       </div>
     }>
       <AuditContent />

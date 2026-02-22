@@ -40,7 +40,7 @@ function SuggestionReadOnlyCard({ suggestion, status }: { suggestion: Suggestion
   const borderBg = status === 'approved' ? 'border-green-200 bg-green-50/50' : 'border-red-200 bg-red-50/30';
 
   return (
-    <div className={`rounded-lg border ${borderBg} p-3`}>
+    <div className={`rounded-md border ${borderBg} p-3`}>
       <div className="flex items-start gap-2">
         <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${config.color}`}>
           <ChangeIcon className="w-3 h-3" />
@@ -226,7 +226,7 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
             <p className="text-sm text-neutral-600">
               <span className="font-medium">{pendingSuggestions.length}</span> to review
               {decidedCount > 0 && (
-                <span className="ml-2 text-primary-600">({decidedCount} decided)</span>
+                <span className="ml-2 text-neutral-500">({decidedCount} decided)</span>
               )}
             </p>
             <div className="flex items-center gap-2">
@@ -260,7 +260,7 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
           return (
             <div
               key={suggestion.id}
-              className={`rounded-xl border-2 transition-all ${
+              className={`rounded-md border transition-all ${
                 decision?.approved === true
                   ? 'border-green-300 bg-green-50/50'
                   : decision?.approved === false
@@ -314,7 +314,7 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
                     {/* Side-by-side comparison for modify/defer/remove */}
                     {showComparison && (
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
+                        <div className="rounded-md border border-neutral-200 bg-neutral-50 p-2.5">
                           <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">Current</p>
                           <p className="text-xs font-medium text-neutral-800">{targetNode.question}</p>
                           {targetNode.answer && (
@@ -326,13 +326,13 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
                             </span>
                           )}
                         </div>
-                        <div className="rounded-lg border border-primary-200 bg-primary-50 p-2.5">
-                          <p className="text-[10px] font-semibold text-primary-600 uppercase tracking-wider mb-1">Proposed</p>
-                          <p className="text-xs font-medium text-primary-900">{suggestion.title}</p>
+                        <div className="rounded-md border border-blue-200 bg-blue-50 p-2.5">
+                          <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider mb-1">Proposed</p>
+                          <p className="text-xs font-medium text-neutral-900">{suggestion.title}</p>
                           {suggestion.description && (
-                            <p className="text-xs text-primary-700 mt-1 line-clamp-3">{suggestion.description}</p>
+                            <p className="text-xs text-neutral-700 mt-1 line-clamp-3">{suggestion.description}</p>
                           )}
-                          <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 rounded bg-primary-200 text-primary-700">
+                          <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
                             {suggestion.change_type}
                           </span>
                         </div>
@@ -341,7 +341,7 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
                     {suggestion.source_quote && (
                       <div>
                         <p className="text-xs font-medium text-neutral-500 mb-1">Source Quote</p>
-                        <blockquote className="text-xs text-neutral-700 italic border-l-2 border-primary-300 pl-3">
+                        <blockquote className="text-xs text-neutral-700 italic border-l-2 border-neutral-300 pl-3">
                           &ldquo;{suggestion.source_quote}&rdquo;
                         </blockquote>
                       </div>
@@ -372,7 +372,7 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
                 <div className="flex items-center gap-2 mt-3">
                   <button
                     onClick={() => handleApprove(suggestion.id)}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                       decision?.approved === true
                         ? 'bg-green-600 text-white'
                         : 'bg-green-50 text-green-700 hover:bg-green-100'
@@ -383,7 +383,7 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
                   </button>
                   <button
                     onClick={() => handleReject(suggestion.id)}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                       decision?.approved === false
                         ? 'bg-red-600 text-white'
                         : 'bg-red-50 text-red-700 hover:bg-red-100'
@@ -394,7 +394,7 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
                   </button>
                   <button
                     onClick={() => setEditingSuggestion(isEditing ? null : suggestion.id)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-50 text-neutral-600 hover:bg-neutral-100 transition-all"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-neutral-50 text-neutral-600 hover:bg-neutral-100 transition-all"
                   >
                     <PencilIcon className="w-3.5 h-3.5" />
                     Edit
@@ -413,7 +413,7 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
                           [suggestion.id]: { ...previous[suggestion.id], approved: true, editedTitle: e.target.value },
                         }))
                       }
-                      className="w-full px-3 py-1.5 rounded-lg border border-neutral-300 text-sm"
+                      className="w-full px-3 py-1.5 rounded-md border border-neutral-300 text-sm"
                       placeholder="Edit title..."
                     />
                     <textarea
@@ -425,7 +425,7 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
                         }))
                       }
                       rows={2}
-                      className="w-full px-3 py-1.5 rounded-lg border border-neutral-300 text-sm"
+                      className="w-full px-3 py-1.5 rounded-md border border-neutral-300 text-sm"
                       placeholder="Edit description..."
                     />
                   </div>
@@ -446,8 +446,8 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
                         }))
                       }
                       rows={2}
-                      className="w-full px-3 py-1.5 rounded-lg border border-neutral-200 text-xs bg-neutral-50
-                                 focus:border-primary-300 focus:ring-1 focus:ring-primary-200 focus:bg-white transition-colors"
+                      className="w-full px-3 py-1.5 rounded-md border border-neutral-200 text-xs bg-neutral-50
+                                 focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 focus:bg-white transition-colors"
                       placeholder="Why you approved/rejected this, additional context..."
                     />
                   </div>
@@ -464,8 +464,8 @@ export default function SuggestionReview({ suggestions, sourceId, onComplete, se
               <button
                 onClick={handleApplyAll}
                 disabled={isApplying}
-                className="px-6 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium 
-                           hover:bg-primary-700 transition-colors shadow-sm disabled:opacity-50 
+                className="px-6 py-2.5 rounded-md bg-neutral-900 text-white text-sm font-medium
+                           hover:bg-neutral-800 transition-colors shadow-sm disabled:opacity-50
                            flex items-center gap-2"
               >
                 {isApplying ? (

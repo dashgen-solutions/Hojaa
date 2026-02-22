@@ -37,11 +37,11 @@ export default function LoginPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f8f8]">
         <div className="text-center animate-fade-in">
           <div className="relative w-16 h-16 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-900 border-t-transparent animate-spin"></div>
           </div>
           <p className="text-neutral-500 font-medium">Loading...</p>
         </div>
@@ -50,11 +50,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-screen bg-neutral-50 flex flex-col overflow-hidden">
+    <div className="h-screen bg-[#f8f8f8] flex flex-col overflow-hidden">
       {/* Header */}
       <header className="shrink-0 p-4">
         <Link href="/" className="inline-flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-soft-sm">
+          <div className="w-8 h-8 bg-neutral-900 rounded-md flex items-center justify-center shadow-sm">
             <span className="text-white font-bold text-sm">M</span>
           </div>
           <span className="text-lg font-semibold text-neutral-900">
@@ -69,7 +69,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md animate-fade-in-up">
           {/* Logo and Title */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mb-4 shadow-glow">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-neutral-900 rounded-md mb-4 shadow-sm">
               <SparklesIcon className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-neutral-900 mb-2">
@@ -81,11 +81,11 @@ export default function LoginPage() {
           </div>
 
           {/* Login Form */}
-          <div className="card p-6">
+          <div className="bg-white border border-neutral-200 rounded-md p-6 shadow-sm">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Error Message */}
               {error && (
-                <div className="p-3 bg-danger-50 border border-danger-200 text-danger-700 rounded-xl text-sm animate-fade-in">
+                <div className="p-3 bg-danger-50 border border-danger-200 text-danger-700 rounded-md text-sm animate-fade-in">
                   {error}
                 </div>
               )}
@@ -163,7 +163,7 @@ export default function LoginPage() {
                 Don't have an account?{" "}
                 <Link
                   href="/register"
-                  className="text-primary-600 font-medium hover:text-primary-700 transition-colors"
+                  className="text-primary-500 font-medium hover:text-primary-600 transition-colors"
                 >
                   Create one
                 </Link>

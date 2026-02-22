@@ -16,8 +16,8 @@ export default function AddSourceButton({ sessionId, onSourceAdded }: AddSourceB
     <>
       <button
         onClick={() => setIsModalOpen(true)}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg 
-                   bg-primary-600 text-white hover:bg-primary-700 
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-md
+                   bg-neutral-900 text-white hover:bg-neutral-800
                    transition-colors shadow-sm text-sm font-medium"
       >
         <PlusIcon className="w-4 h-4" />

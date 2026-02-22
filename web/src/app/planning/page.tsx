@@ -15,7 +15,7 @@ function PlanningContent() {
       <div className="flex items-center justify-center h-screen bg-neutral-50">
         <div className="text-center">
           <p className="text-neutral-500">No session selected.</p>
-          <a href="/sessions" className="text-primary-600 hover:underline text-sm mt-2 inline-block">
+          <a href="/sessions" className="text-primary-500 hover:underline text-sm mt-2 inline-block">
             Go to Sessions
           </a>
         </div>
@@ -39,7 +39,7 @@ export default function PlanningPage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center h-screen bg-neutral-50">
-        <div className="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-3 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" />
       </div>
     }>
       <PlanningContent />

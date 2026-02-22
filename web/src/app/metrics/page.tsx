@@ -353,7 +353,7 @@ export default function MetricsPage() {
         <div className="text-center animate-fade-in">
           <div className="relative w-16 h-16 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full border-4 border-neutral-200" />
-            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin" />
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-500 border-t-transparent animate-spin" />
           </div>
           <p className="text-neutral-500 font-medium">Checking access…</p>
         </div>
@@ -367,7 +367,7 @@ export default function MetricsPage() {
         {/* Mini header */}
         <header className="shrink-0 p-4">
           <Link href="/" className="inline-flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-soft-sm">
+            <div className="w-8 h-8 bg-neutral-900 rounded-md flex items-center justify-center shadow-sm">
               <span className="text-white font-bold text-sm">M</span>
             </div>
             <span className="text-lg font-semibold text-neutral-900">MoMetric</span>
@@ -378,7 +378,7 @@ export default function MetricsPage() {
         <div className="flex-1 flex items-center justify-center px-4 -mt-14">
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
-              <div className="w-14 h-14 mx-auto mb-4 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center shadow-soft">
+              <div className="w-14 h-14 mx-auto mb-4 bg-neutral-900 rounded-md flex items-center justify-center shadow-sm">
                 <ChartBarIcon className="w-7 h-7 text-white" />
               </div>
               <h1 className="text-2xl font-bold text-neutral-900">Platform Metrics</h1>
@@ -389,7 +389,7 @@ export default function MetricsPage() {
 
             <form onSubmit={handleLogin} className="card p-8 space-y-5">
               {loginError && (
-                <div className="p-3 bg-danger-50 border border-danger-200 rounded-xl text-sm text-danger-700">
+                <div className="p-3 bg-danger-50 border border-danger-200 rounded-md text-sm text-danger-700">
                   {loginError}
                 </div>
               )}
@@ -470,7 +470,7 @@ export default function MetricsPage() {
           <h3 className="section-title mb-4">Activity Trends ({days}d)</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {([
-              { key: "sessions" as const, label: "Sessions", color: "bg-primary-400" },
+              { key: "sessions" as const, label: "Sessions", color: "bg-neutral-400" },
               { key: "nodes" as const, label: "Scope Nodes", color: "bg-success-400" },
               { key: "changes" as const, label: "Scope Changes", color: "bg-warning-400" },
               { key: "cards" as const, label: "Planning Cards", color: "bg-accent-400" },
@@ -563,7 +563,7 @@ export default function MetricsPage() {
           )}
           <div className="divider" />
           {[s?.scope_disputes, s?.team_alignment].filter(Boolean).map((item, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-xl">
+            <div key={i} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-md">
               <ExclamationTriangleIcon className="w-5 h-5 text-neutral-400 shrink-0" />
               <div>
                 <p className="text-sm text-neutral-600">{item!.label}</p>
@@ -642,8 +642,8 @@ export default function MetricsPage() {
             <div className="flex flex-wrap gap-3">
               {Object.entries(t.status_code_distribution).sort(([a], [b]) => a.localeCompare(b)).map(([code, count]) => {
                 const codeNum = parseInt(code);
-                const color = codeNum < 300 ? "bg-success-50 text-success-700 border-success-200" : codeNum < 400 ? "bg-primary-50 text-primary-700 border-primary-200" : codeNum < 500 ? "bg-warning-50 text-warning-700 border-warning-200" : "bg-danger-50 text-danger-700 border-danger-200";
-                return <div key={code} className={`px-3 py-1.5 rounded-lg border text-sm font-medium ${color}`}>{code}: {count}</div>;
+                const color = codeNum < 300 ? "bg-success-50 text-success-700 border-success-200" : codeNum < 400 ? "bg-neutral-50 text-neutral-700 border-neutral-200" : codeNum < 500 ? "bg-warning-50 text-warning-700 border-warning-200" : "bg-danger-50 text-danger-700 border-danger-200";
+                return <div key={code} className={`px-3 py-1.5 rounded-md border text-sm font-medium ${color}`}>{code}: {count}</div>;
               })}
             </div>
           </div>
@@ -684,7 +684,7 @@ export default function MetricsPage() {
   /* ── Trends Tab ── */
   const renderTrends = () => {
     const trendSeries = [
-      { key: "sessions" as const, label: "Sessions Created", color: "bg-primary-400" },
+      { key: "sessions" as const, label: "Sessions Created", color: "bg-neutral-400" },
       { key: "nodes" as const, label: "Scope Nodes Created", color: "bg-success-400" },
       { key: "changes" as const, label: "Scope Changes", color: "bg-warning-400" },
       { key: "cards" as const, label: "Planning Cards", color: "bg-accent-400" },
@@ -753,7 +753,7 @@ export default function MetricsPage() {
           <div className="text-center">
             <div className="relative w-10 h-10 mx-auto mb-3">
               <div className="absolute inset-0 rounded-full border-4 border-neutral-200" />
-              <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin" />
+              <div className="absolute inset-0 rounded-full border-4 border-neutral-500 border-t-transparent animate-spin" />
             </div>
             <p className="text-neutral-400 text-xs">Loading AI usage data…</p>
           </div>
@@ -850,7 +850,7 @@ export default function MetricsPage() {
                 {dailyCosts.map((d, i) => (
                   <div
                     key={i}
-                    className="flex-1 rounded-t bg-primary-400 transition-all duration-300"
+                    className="flex-1 rounded-t bg-neutral-400 transition-all duration-300"
                     style={{ height: `${(d.cost_usd / maxDailyCost) * 100}%`, minHeight: d.cost_usd > 0 ? 2 : 0 }}
                     title={`${d.date}: $${d.cost_usd.toFixed(4)} (${d.calls} calls, ${d.tokens} tokens)`}
                   />
@@ -871,11 +871,11 @@ export default function MetricsPage() {
   return (
     <div className="h-screen flex flex-col bg-neutral-50 overflow-hidden">
       {/* Standalone metrics header (not the main app Header) */}
-      <header className="bg-white/80 backdrop-blur-xl border-b border-neutral-200/60 h-14 w-full flex-shrink-0 relative z-50">
+      <header className="bg-white border-b border-neutral-200 h-14 w-full flex-shrink-0 relative z-50">
         <div className="flex items-center justify-between px-4 h-full max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-soft-sm group-hover:shadow-glow transition-shadow duration-300">
+              <div className="w-8 h-8 bg-neutral-900 rounded-md flex items-center justify-center shadow-sm transition-shadow duration-300">
                 <span className="text-white font-bold text-base">M</span>
               </div>
               <span className="text-lg font-semibold text-neutral-900">MoMetric</span>
@@ -888,7 +888,7 @@ export default function MetricsPage() {
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 px-3 py-2 rounded-lg transition-all"
+            className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 px-3 py-2 rounded-md transition-all"
           >
             <ArrowRightOnRectangleIcon className="w-4 h-4" />
             Sign out
@@ -901,7 +901,7 @@ export default function MetricsPage() {
           {/* Page header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-soft-sm">
+              <div className="w-10 h-10 rounded-md bg-neutral-900 flex items-center justify-center shadow-sm">
                 <ChartBarIcon className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -917,11 +917,11 @@ export default function MetricsPage() {
                   <ChevronDownIcon className="w-4 h-4" />
                 </button>
                 {showPeriodDropdown && (
-                  <div className="absolute right-0 mt-1 w-36 bg-white border border-neutral-200 rounded-xl shadow-soft-md z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-1 w-36 bg-white border border-neutral-200 rounded-md shadow z-50 overflow-hidden">
                     {PERIOD_OPTIONS.map((opt) => (
                       <button
                         key={opt.value}
-                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 transition-colors ${opt.value === days ? "bg-primary-50 text-primary-700 font-medium" : "text-neutral-700"}`}
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 transition-colors ${opt.value === days ? "bg-neutral-50 text-neutral-900 font-medium" : "text-neutral-700"}`}
                         onClick={() => { setDays(opt.value); setShowPeriodDropdown(false); }}
                       >
                         Last {opt.label}
@@ -942,7 +942,7 @@ export default function MetricsPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${activeTab === tab ? "border-primary-500 text-primary-700" : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"}`}
+                className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${activeTab === tab ? "border-neutral-900 text-neutral-900" : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"}`}
               >
                 {tab}
               </button>
@@ -950,7 +950,7 @@ export default function MetricsPage() {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-danger-50 border border-danger-200 rounded-xl text-sm text-danger-700">{error}</div>
+            <div className="mb-6 p-4 bg-danger-50 border border-danger-200 rounded-md text-sm text-danger-700">{error}</div>
           )}
 
           {loading && !metrics ? (
@@ -958,7 +958,7 @@ export default function MetricsPage() {
               <div className="text-center">
                 <div className="relative w-12 h-12 mx-auto mb-4">
                   <div className="absolute inset-0 rounded-full border-4 border-neutral-200" />
-                  <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin" />
+                  <div className="absolute inset-0 rounded-full border-4 border-neutral-500 border-t-transparent animate-spin" />
                 </div>
                 <p className="text-neutral-400 text-sm">Loading metrics…</p>
               </div>
