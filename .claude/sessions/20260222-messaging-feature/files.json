@@ -1,0 +1,27 @@
+{
+  "created": [
+    "backend/app/api/routes/messaging.py",
+    "backend/app/services/messaging_ws_manager.py",
+    "web/src/app/(app)/messages/page.tsx",
+    "web/src/components/messaging/ChannelList.tsx",
+    "web/src/components/messaging/MessageThread.tsx",
+    "web/src/components/messaging/MessageComposer.tsx",
+    "web/src/components/messaging/NewChannelModal.tsx",
+    "web/src/components/messaging/ProjectReference.tsx",
+    "web/src/hooks/useMessagingWebSocket.ts"
+  ],
+  "modified": [
+    "backend/app/models/database.py",
+    "backend/app/main.py",
+    "web/src/lib/api.ts",
+    "web/src/components/layout/AppSidebar.tsx",
+    "web/src/components/layout/AppHeader.tsx",
+    "backend/README.md",
+    "web/README.md"
+  ],
+  "review_on_resume": [
+    "backend/app/api/routes/messaging.py",
+    "web/src/app/(app)/messages/page.tsx",
+    "web/src/components/layout/AppSidebar.tsx"
+  ]
+}

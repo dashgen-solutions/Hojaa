@@ -1,0 +1,7 @@
+{
+  "name": "messaging-feature",
+  "created": "2026-02-22T00:00:00Z",
+  "branch": "restructure/v1.0-github-showcase",
+  "commit": "d322aae",
+  "task": "Implement global team messaging feature (mini Slack) with real-time WebSocket delivery, DMs, group channels, project references, and sidebar integration"
+}
