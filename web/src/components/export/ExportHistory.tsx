@@ -113,7 +113,7 @@ export default function ExportHistory({ sessionId }: ExportHistoryProps) {
     return (
       <div className="text-center py-6 text-sm text-neutral-400">
         <ClockIcon className="w-6 h-6 mx-auto mb-2 text-neutral-300" />
-        No exports yet for this session.
+        No exports yet for this project.
       </div>
     );
   }

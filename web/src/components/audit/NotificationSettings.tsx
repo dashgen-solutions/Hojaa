@@ -18,7 +18,7 @@ const PREF_OPTIONS: { key: keyof NotificationPreferences; label: string; descrip
   { key: 'notify_node_moved', label: 'Requirement moves', description: 'When a requirement is moved to a different parent' },
   { key: 'notify_status_changed', label: 'Status changes', description: 'When a requirement is deferred, completed, or reactivated' },
   { key: 'notify_source_ingested', label: 'New sources', description: 'When meeting notes or documents are ingested' },
-  { key: 'notify_team_member_added', label: 'Team member added', description: 'When a new team member joins the session' },
+  { key: 'notify_team_member_added', label: 'Team member added', description: 'When a new team member joins the project' },
 ];
 
 export default function NotificationSettings({ sessionId }: NotificationSettingsProps) {
@@ -122,7 +122,7 @@ export default function NotificationSettings({ sessionId }: NotificationSettings
               <p className="text-xs text-gray-500">
                 {notificationPreferences.is_subscribed
                   ? 'You will receive emails for selected events'
-                  : 'All email notifications are paused for this session'}
+                  : 'All email notifications are paused for this project'}
               </p>
             </div>
             <button

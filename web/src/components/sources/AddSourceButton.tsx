@@ -21,7 +21,7 @@ export default function AddSourceButton({ sessionId, onSourceAdded }: AddSourceB
                    transition-colors shadow-sm text-sm font-medium"
       >
         <PlusIcon className="w-4 h-4" />
-        Add Source
+        New Input
       </button>
 
       {isModalOpen && (

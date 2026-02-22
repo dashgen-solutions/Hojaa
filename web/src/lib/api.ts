@@ -714,6 +714,26 @@ export const listSessions = async () => {
   return response.data;
 };
 
+export const deleteSession = async (sessionId: string) => {
+  const response = await api.delete(`/api/sessions/${sessionId}`);
+  return response.data;
+};
+
+export const shareSession = async (sessionId: string, email: string, role: string = 'viewer') => {
+  const response = await api.post(`/api/sessions/${sessionId}/share`, { email, role });
+  return response.data;
+};
+
+export const getSessionMembers = async (sessionId: string) => {
+  const response = await api.get(`/api/sessions/${sessionId}/members`);
+  return response.data;
+};
+
+export const revokeSessionShare = async (sessionId: string, userId: string) => {
+  const response = await api.delete(`/api/sessions/${sessionId}/share/${userId}`);
+  return response.data;
+};
+
 // ── Success Metrics — Platform Admin (Section 19) ────────────────────────────
 // These use a SEPARATE token stored under "platform_admin_token", completely
 // independent of the regular user auth flow.

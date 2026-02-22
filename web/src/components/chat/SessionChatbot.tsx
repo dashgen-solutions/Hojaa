@@ -118,7 +118,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 403) {
-        setError('Access denied. This feature is available to session owners and admins only.');
+        setError('Access denied. This feature is available to project owners and admins only.');
       } else if (status === 401) {
         setError('Please log in to use the chatbot.');
       } else {
@@ -159,7 +159,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
           className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-neutral-900
                      text-white shadow-lg hover:shadow-xl hover:bg-neutral-800 transition-all duration-200
                      flex items-center justify-center z-50 group"
-          title="Session AI Assistant"
+          title="Project AI Assistant"
         >
           <SparklesIcon className="w-6 h-6 group-hover:animate-pulse" />
           <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
@@ -177,7 +177,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
               <SparklesIcon className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-white font-semibold text-sm">Session Assistant</h3>
+              <h3 className="text-white font-semibold text-sm">Project Assistant</h3>
               <p className="text-white/70 text-[10px]">AI-powered project intelligence</p>
             </div>
             <div className="flex items-center gap-1">
@@ -209,7 +209,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
                 <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-3">
                   <CommandLineIcon className="w-6 h-6 text-indigo-500" />
                 </div>
-                <h4 className="text-sm font-semibold text-neutral-800 mb-1">Session Intelligence</h4>
+                <h4 className="text-sm font-semibold text-neutral-800 mb-1">Project Intelligence</h4>
                 <p className="text-xs text-neutral-500 mb-4 max-w-[280px] mx-auto">
                   Ask me anything about this project — scope, team, progress, or tell me to make changes.
                 </p>
@@ -341,7 +341,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
               </button>
             </div>
             <p className="text-[9px] text-neutral-400 mt-1 text-center">
-              AI assistant scoped to this session · Admin access only
+              AI assistant scoped to this project · Admin access only
             </p>
           </div>
         </div>

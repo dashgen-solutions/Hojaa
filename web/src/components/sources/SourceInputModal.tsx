@@ -211,7 +211,7 @@ export default function SourceInputModal({ sessionId, onClose, onSourceAdded }: 
 
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-neutral-200">
-          <h2 className="text-lg font-semibold text-neutral-900">Add Source</h2>
+          <h2 className="text-lg font-semibold text-neutral-900">New Input</h2>
           <button onClick={onClose} className="p-1 rounded-md hover:bg-neutral-100 transition-colors">
             <XMarkIcon className="w-5 h-5 text-neutral-500" />
           </button>

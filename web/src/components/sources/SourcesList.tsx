@@ -78,7 +78,7 @@ export default function SourcesList({ sessionId, onSelectSource }: SourcesListPr
                    transition-colors px-2 py-1 rounded-md hover:bg-neutral-100"
       >
         <DocumentTextIcon className="w-3.5 h-3.5" />
-        {sources.length} source{sources.length !== 1 ? 's' : ''}
+        {sources.length} input{sources.length !== 1 ? 's' : ''}
       </button>
 
       {/* Full-screen overlay modal */}
@@ -88,9 +88,9 @@ export default function SourcesList({ sessionId, onSelectSource }: SourcesListPr
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200">
               <div>
-                <h3 className="text-sm font-semibold text-neutral-900">Ingested Sources</h3>
+                <h3 className="text-sm font-semibold text-neutral-900">Project Inputs</h3>
                 <p className="text-xs text-neutral-500 mt-0.5">
-                  {sources.length} source{sources.length !== 1 ? 's' : ''} for this session
+                  {sources.length} input{sources.length !== 1 ? 's' : ''} for this project
                 </p>
               </div>
               <button
@@ -189,7 +189,7 @@ export default function SourcesList({ sessionId, onSelectSource }: SourcesListPr
             {/* Footer */}
             <div className="px-5 py-3 border-t border-neutral-200 bg-neutral-50">
               <p className="text-[10px] text-neutral-400">
-                Click a source to review its suggestions. Delete removes pending suggestions only.
+                Click an input to review its suggestions. Delete removes pending suggestions only.
               </p>
             </div>
           </div>

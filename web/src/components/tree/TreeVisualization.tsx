@@ -13,6 +13,7 @@ import {
   FunnelIcon,
   ClockIcon,
   ExclamationTriangleIcon,
+  ArrowsPointingInIcon,
 } from "@heroicons/react/24/outline";
 import { getTree, getPlanningBoard } from "@/lib/api";
 
@@ -173,6 +174,10 @@ export default function TreeVisualization({
     setZoom(100);
   };
 
+  const handleFitToView = () => {
+    setZoom(50);
+  };
+
   const handleNodeClick = (node: TreeNodeData) => {
     setSelectedNodeForModal(node);
     setIsModalOpen(true);
@@ -308,6 +313,14 @@ export default function TreeVisualization({
 
           {/* Zoom Controls */}
           <div className="flex items-center gap-1 bg-neutral-100 rounded-md p-1">
+            <button
+              onClick={handleFitToView}
+              className="p-2 hover:bg-white rounded-md transition-all duration-200 hover:shadow-sm"
+              title="Fit to view"
+            >
+              <ArrowsPointingInIcon className="w-4 h-4 text-neutral-600" />
+            </button>
+            <div className="w-px h-4 bg-neutral-300" />
             <button
               onClick={handleZoomOut}
               className="p-2 hover:bg-white rounded-md transition-all duration-200 hover:shadow-sm"
