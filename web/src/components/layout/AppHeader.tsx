@@ -49,6 +49,10 @@ export default function AppHeader({ onToggleSidebar }: AppHeaderProps) {
       crumbs.push({ label: "Admin" });
     }
 
+    if (pathname === "/messages") {
+      crumbs.push({ label: "Messages" });
+    }
+
     return crumbs;
   };
 

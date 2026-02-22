@@ -20,7 +20,9 @@ import {
   ArrowRightOnRectangleIcon,
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline";
+import { getMessagingUnreadCount } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -43,6 +45,7 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   // Extract current project ID from URL
   const projectIdMatch = pathname.match(/\/projects\/([^/]+)/);
@@ -63,6 +66,20 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
   useEffect(() => {
     fetchRecentProjects();
   }, [fetchRecentProjects]);
+
+  // Fetch unread message count
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const fetchUnread = () => {
+      getMessagingUnreadCount()
+        .then((data) => setUnreadMessages(data.total))
+        .catch(() => {});
+    };
+    fetchUnread();
+    // Poll every 30 seconds
+    const interval = setInterval(fetchUnread, 30_000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   // Persist collapse state
   useEffect(() => {
@@ -129,6 +146,22 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
         >
           <FolderIcon className="w-4 h-4 text-neutral-600" />
         </Link>
+
+        {/* Messages */}
+        {isAuthenticated && (
+          <Link
+            href="/messages"
+            className={`p-2 rounded transition-colors relative ${
+              isActive("/messages") ? "bg-neutral-200" : "hover:bg-neutral-100"
+            }`}
+            title="Messages"
+          >
+            <ChatBubbleLeftRightIcon className="w-4 h-4 text-neutral-600" />
+            {unreadMessages > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
+            )}
+          </Link>
+        )}
 
         {/* Project phases (if inside a project) */}
         {currentProjectId && (
@@ -287,6 +320,29 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
           </div>
         )}
       </div>
+
+      {/* Messages */}
+      {isAuthenticated && (
+        <div className="px-3 mt-1">
+          <Link
+            href="/messages"
+            className={`w-full flex items-center gap-2 px-2 py-1.5 text-[13px] rounded transition-colors ${
+              isActive("/messages")
+                ? "bg-neutral-200 text-neutral-900 font-medium"
+                : "text-neutral-600 hover:bg-neutral-100"
+            }`}
+            style={{ borderRadius: "6px", minHeight: "30px" }}
+          >
+            <ChatBubbleLeftRightIcon className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1">Messages</span>
+            {unreadMessages > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {unreadMessages > 9 ? "9+" : unreadMessages}
+              </span>
+            )}
+          </Link>
+        </div>
+      )}
 
       {/* Project Phases (only when inside a project) */}
       {currentProjectId && (

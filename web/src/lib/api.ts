@@ -971,4 +971,137 @@ export const clearSessionChatHistory = async (sessionId: string) => {
   return response.data;
 };
 
+
+// ===== Global Messaging API ("Mini Slack") =====
+
+export interface ChatChannelMemberInfo {
+  user_id: string;
+  username: string;
+  email: string;
+  joined_at: string;
+}
+
+export interface ChatMessagePreview {
+  content: string | null;
+  sender_name: string | null;
+  created_at: string | null;
+}
+
+export interface ChatChannel {
+  id: string;
+  name: string | null;
+  is_direct: boolean;
+  other_user: { user_id: string; username: string } | null;
+  members: ChatChannelMemberInfo[];
+  member_count: number;
+  last_message: ChatMessagePreview | null;
+  unread_count: number;
+  created_at: string;
+}
+
+export interface ChatMessageItem {
+  id: string;
+  channel_id: string;
+  sender_id: string | null;
+  sender_name: string;
+  content: string;
+  reference_type: string | null;
+  reference_id: string | null;
+  reference_name: string | null;
+  is_edited: boolean;
+  created_at: string;
+}
+
+export interface MessagingUser {
+  id: string;
+  username: string;
+  email: string;
+  job_title: string | null;
+}
+
+export const getChannels = async (): Promise<ChatChannel[]> => {
+  const response = await api.get('/api/messaging/channels');
+  return response.data;
+};
+
+export const createChannel = async (data: {
+  name?: string;
+  is_direct: boolean;
+  member_ids: string[];
+}): Promise<{ id: string; name: string | null; is_direct: boolean; already_exists?: boolean }> => {
+  const response = await api.post('/api/messaging/channels', data);
+  return response.data;
+};
+
+export const getChannelDetail = async (channelId: string) => {
+  const response = await api.get(`/api/messaging/channels/${channelId}`);
+  return response.data;
+};
+
+export const updateChannelName = async (channelId: string, name: string) => {
+  const response = await api.patch(`/api/messaging/channels/${channelId}`, { name });
+  return response.data;
+};
+
+export const deleteChannel = async (channelId: string) => {
+  await api.delete(`/api/messaging/channels/${channelId}`);
+};
+
+export const addChannelMember = async (channelId: string, userId: string) => {
+  const response = await api.post(`/api/messaging/channels/${channelId}/members`, { user_id: userId });
+  return response.data;
+};
+
+export const removeChannelMember = async (channelId: string, userId: string) => {
+  await api.delete(`/api/messaging/channels/${channelId}/members/${userId}`);
+};
+
+export const getChannelMessages = async (
+  channelId: string,
+  limit: number = 50,
+  before?: string,
+): Promise<ChatMessageItem[]> => {
+  const params = new URLSearchParams({ limit: limit.toString() });
+  if (before) params.append('before', before);
+  const response = await api.get(`/api/messaging/channels/${channelId}/messages?${params.toString()}`);
+  return response.data;
+};
+
+export const sendChannelMessage = async (
+  channelId: string,
+  data: {
+    content: string;
+    reference_type?: string;
+    reference_id?: string;
+    reference_name?: string;
+  },
+): Promise<ChatMessageItem> => {
+  const response = await api.post(`/api/messaging/channels/${channelId}/messages`, data);
+  return response.data;
+};
+
+export const editChannelMessage = async (messageId: string, content: string): Promise<ChatMessageItem> => {
+  const response = await api.patch(`/api/messaging/messages/${messageId}`, { content });
+  return response.data;
+};
+
+export const deleteChannelMessage = async (messageId: string) => {
+  await api.delete(`/api/messaging/messages/${messageId}`);
+};
+
+export const markChannelRead = async (channelId: string) => {
+  const response = await api.post(`/api/messaging/channels/${channelId}/read`);
+  return response.data;
+};
+
+export const getMessagingUnreadCount = async (): Promise<{ total: number }> => {
+  const response = await api.get('/api/messaging/unread');
+  return response.data;
+};
+
+export const getMessagingUsers = async (): Promise<MessagingUser[]> => {
+  const response = await api.get('/api/messaging/users');
+  return response.data;
+};
+
 export default api;

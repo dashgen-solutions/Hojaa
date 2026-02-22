@@ -927,3 +927,80 @@ class SessionChatMessage(Base):
         Index("idx_session_chat_user", "user_id"),
         Index("idx_session_chat_created", "created_at"),
     )
+
+
+# ===== Messaging: Global Chat Channels =====
+
+class ChatChannel(Base):
+    """A messaging channel — either a 1:1 DM or a named group conversation."""
+    __tablename__ = "chat_channels"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String(255), nullable=True)  # null for DMs, named for groups
+    is_direct = Column(Boolean, default=False, nullable=False)  # True = 1:1 DM
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    members = relationship("ChatChannelMember", back_populates="channel", cascade="all, delete-orphan")
+    messages = relationship("ChatChannelMessage", back_populates="channel", cascade="all, delete-orphan")
+    creator = relationship("User", foreign_keys=[created_by])
+
+    __table_args__ = (
+        Index("idx_chat_channel_org", "organization_id"),
+        Index("idx_chat_channel_created_by", "created_by"),
+    )
+
+
+class ChatChannelMember(Base):
+    """Membership in a chat channel, with read-position tracking."""
+    __tablename__ = "chat_channel_members"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    channel_id = Column(UUID(as_uuid=True), ForeignKey("chat_channels.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    last_read_at = Column(DateTime, nullable=True)  # for unread tracking
+
+    joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    channel = relationship("ChatChannel", back_populates="members")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_chat_member_channel_user", "channel_id", "user_id", unique=True),
+        Index("idx_chat_member_user", "user_id"),
+    )
+
+
+class ChatChannelMessage(Base):
+    """A message within a chat channel."""
+    __tablename__ = "chat_channel_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    channel_id = Column(UUID(as_uuid=True), ForeignKey("chat_channels.id", ondelete="CASCADE"), nullable=False)
+    sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    content = Column(Text, nullable=False)
+
+    # Optional project/task reference
+    reference_type = Column(String(50), nullable=True)  # "project" | "node" | "card"
+    reference_id = Column(String(100), nullable=True)  # UUID of the referenced entity
+    reference_name = Column(String(255), nullable=True)  # display name snapshot
+
+    is_edited = Column(Boolean, default=False, nullable=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    channel = relationship("ChatChannel", back_populates="messages")
+    sender = relationship("User")
+
+    __table_args__ = (
+        Index("idx_chat_msg_channel", "channel_id"),
+        Index("idx_chat_msg_created", "created_at"),
+        Index("idx_chat_msg_sender", "sender_id"),
+    )

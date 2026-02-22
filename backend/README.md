@@ -9,6 +9,7 @@ AI-powered requirements discovery system built with **FastAPI**, **LangGraph**, 
 - **Tree Building**: Automatically organize requirements into hierarchical structure
 - **Feature Exploration**: Detailed conversations for each feature using LangGraph
 - **Progressive Questioning**: Adaptive questioning based on user responses
+- **Team Messaging**: Real-time "mini Slack" with DMs, group channels, project references, and WebSocket delivery
 - **RESTful API**: Clean, well-documented endpoints
 
 ## 📁 Project Structure
@@ -27,7 +28,8 @@ backend/
 │   │       ├── questions.py    # Question management
 │   │       ├── chat.py         # Feature chat
 │   │       ├── tree.py         # Tree operations
-│   │       └── sessions.py     # Session management
+│   │       ├── sessions.py     # Session management
+│   │       └── messaging.py    # Team messaging (channels, DMs, messages)
 │   ├── models/
 │   │   ├── database.py         # SQLAlchemy models
 │   │   └── schemas.py          # Pydantic models
@@ -36,7 +38,8 @@ backend/
 │   │   ├── document_analyzer.py    # Document parsing
 │   │   ├── question_generator.py   # Question generation
 │   │   ├── tree_builder.py         # Tree construction
-│   │   └── conversation_flow.py    # LangGraph conversation
+│   │   ├── conversation_flow.py    # LangGraph conversation
+│   │   └── messaging_ws_manager.py # Messaging WebSocket connection manager
 │   ├── db/
 │   │   └── session.py          # Database connection
 │   └── utils/
@@ -276,6 +279,28 @@ GET /api/sessions?limit=10
 ```
 List recent sessions.
 
+### Team Messaging
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/messaging/channels` | List user's channels (with last message + unread count) |
+| `POST` | `/api/messaging/channels` | Create a channel (DM or group) |
+| `GET` | `/api/messaging/channels/{id}` | Get channel details + members |
+| `PATCH` | `/api/messaging/channels/{id}` | Update channel name (groups only) |
+| `DELETE` | `/api/messaging/channels/{id}` | Delete channel (creator only) |
+| `POST` | `/api/messaging/channels/{id}/members` | Add member to group channel |
+| `DELETE` | `/api/messaging/channels/{id}/members/{user_id}` | Remove member / leave |
+| `GET` | `/api/messaging/channels/{id}/messages` | Get paginated messages |
+| `POST` | `/api/messaging/channels/{id}/messages` | Send a message |
+| `PATCH` | `/api/messaging/messages/{id}` | Edit own message |
+| `DELETE` | `/api/messaging/messages/{id}` | Delete own message |
+| `POST` | `/api/messaging/channels/{id}/read` | Mark channel as read |
+| `GET` | `/api/messaging/users` | List org users for messaging |
+| `GET` | `/api/messaging/unread` | Get total unread count |
+| `WS` | `/api/messaging/ws/messaging?token=...` | Real-time WebSocket |
+
+WebSocket events: `new_message`, `typing`, `channel_update`, `message_edited`, `message_deleted`.
+
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -315,6 +340,9 @@ MAX_FILE_SIZE_MB=10
 3. **nodes** - Tree structure
 4. **conversations** - Feature chats
 5. **messages** - Chat messages
+6. **chat_channels** - Messaging channels (DMs and groups)
+7. **chat_channel_members** - Channel membership with unread tracking
+8. **chat_channel_messages** - Channel messages with optional project references
 
 ### Migrations
 

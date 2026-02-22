@@ -9,7 +9,8 @@ A web-based interface for AI-powered requirements discovery through progressive 
 - **Branching Logic**: Each answer can spawn multiple paths/features to explore
 - **Real-time Chat Interface**: Clean, modern chat UI inspired by Specifai
 - **Session Management**: Save and resume discovery sessions
-- **Specifai Color Scheme**: Indigo primary, Slate secondary, professional design
+- **Team Messaging**: Built-in "mini Slack" with DMs, group channels, project references, and real-time WebSocket delivery
+- **ERPNext-Style Design**: Clean neutral palette with collapsible sidebar navigation
 
 ## 🚀 Getting Started
 
@@ -67,10 +68,16 @@ requirements-discovery-ui/
 │       ├── tree/
 │       │   ├── TreeVisualization.tsx # Tree view
 │       │   └── TreeNode.tsx          # Individual node
-│       └── chat/
-│           ├── ChatInterface.tsx     # Chat UI
-│           ├── ChatMessage.tsx       # Message component
-│           └── LoadingDots.tsx       # Loading indicator
+│       ├── chat/
+│       │   ├── ChatInterface.tsx     # Chat UI
+│       │   ├── ChatMessage.tsx       # Message component
+│       │   └── LoadingDots.tsx       # Loading indicator
+│       └── messaging/
+│           ├── ChannelList.tsx       # Channel sidebar with search + unread badges
+│           ├── MessageThread.tsx     # Scrollable message display
+│           ├── MessageComposer.tsx   # Message input with Enter-to-send
+│           ├── NewChannelModal.tsx   # Create DM or group channel
+│           └── ProjectReference.tsx  # Inline project/task reference chips
 ├── package.json
 ├── tailwind.config.ts                # Tailwind config (Specifai colors)
 └── tsconfig.json
