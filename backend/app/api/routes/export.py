@@ -10,6 +10,8 @@ Routes:
   POST /export/changelog  → Standalone change-log report (grouped by date)
   POST /export/summary    → AI executive summary (AI-3.5)
 """
+from __future__ import annotations
+
 import asyncio
 import io
 from datetime import datetime

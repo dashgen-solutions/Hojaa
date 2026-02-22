@@ -1,0 +1,52 @@
+# Environment files (NEVER commit)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Docker volumes
+postgres_data/
+
+# Logs
+*.log
+logs/
+
+# Uploads
+uploads/
+temp/
+
+# Testing
+coverage/
+
+# Stale root package-lock
+package-lock.json

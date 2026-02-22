@@ -12,6 +12,8 @@ Provides:
 Extracted from routes/export.py::_ScopePDF into a proper,
 independently importable service.
 """
+from __future__ import annotations
+
 import os
 from datetime import datetime
 from app.core.logger import get_logger

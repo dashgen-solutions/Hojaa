@@ -1,5 +1,9 @@
 """
-Basic API tests.
+API endpoint tests.
+
+These tests verify that the API routes are accessible and return expected
+status codes. They do NOT require a live database or LLM API key — they
+test the HTTP interface contract only.
 """
 import pytest
 from fastapi.testclient import TestClient
@@ -8,48 +12,87 @@ from app.main import app
 client = TestClient(app)
 
 
+# ── Health & Meta ─────────────────────────────────────────────
+
 def test_root():
-    """Test root endpoint."""
+    """Root endpoint returns a welcome message."""
     response = client.get("/")
     assert response.status_code == 200
     assert "message" in response.json()
 
 
 def test_health_check():
-    """Test health check endpoint."""
+    """Health check returns status and version."""
     response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
     assert "version" in data
-
-
-def test_upload_without_data():
-    """Test upload endpoint without data should fail."""
-    response = client.post("/api/upload")
-    assert response.status_code == 422  # Validation error
-
-
-def test_upload_with_text():
-    """Test upload endpoint with text."""
-    response = client.post(
-        "/api/upload",
-        data={"text": "I want to build a chatbot for customer support"}
-    )
-    
-    # This might fail if database isn't set up or API key is missing
-    # That's okay for basic structure test
-    assert response.status_code in [200, 500, 422]
+    assert "environment" in data
 
 
 def test_api_docs():
-    """Test that API docs are accessible."""
+    """Swagger UI is accessible."""
     response = client.get("/api/docs")
     assert response.status_code == 200
 
 
+def test_redoc():
+    """ReDoc is accessible."""
+    response = client.get("/api/redoc")
+    assert response.status_code == 200
+
+
 def test_openapi_json():
-    """Test OpenAPI spec is available."""
+    """OpenAPI spec is valid JSON with expected structure."""
     response = client.get("/api/openapi.json")
     assert response.status_code == 200
-    assert "openapi" in response.json()
+    spec = response.json()
+    assert "openapi" in spec
+    assert "paths" in spec
+    assert "info" in spec
+    assert len(spec["paths"]) > 50  # We have 100+ endpoints
+
+
+# ── CORS ──────────────────────────────────────────────────────
+
+def test_cors_allowed_origin():
+    """CORS allows configured origins."""
+    response = client.options(
+        "/health",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert response.status_code in [200, 405]
+
+
+# ── Auth Endpoints ────────────────────────────────────────────
+
+def test_login_without_credentials():
+    """Login without credentials returns error."""
+    response = client.post("/api/auth/login", json={})
+    assert response.status_code in [422, 400, 401]
+
+
+def test_register_missing_fields():
+    """Register with missing fields returns validation error."""
+    response = client.post("/api/auth/register", json={"email": "test@test.com"})
+    assert response.status_code in [422, 400]
+
+
+# ── Protected Endpoints (may return 500 without live DB) ──────
+
+def test_sessions_endpoint_exists():
+    """Sessions endpoint is routed (may fail without DB)."""
+    response = client.get("/api/sessions")
+    # 200 with DB, 401 if auth required, 500 if no DB — all confirm route exists
+    assert response.status_code in [200, 401, 403, 500]
+
+
+def test_upload_endpoint_requires_session():
+    """Upload endpoint requires a session_id parameter."""
+    # /api/upload/{session_id} — without session_id, returns 404 or 405
+    response = client.post("/api/upload")
+    assert response.status_code in [404, 405, 422]

@@ -24,6 +24,10 @@ if settings.openai_api_key:
     os.environ["OPENAI_API_KEY"] = settings.openai_api_key
 if settings.anthropic_api_key:
     os.environ["ANTHROPIC_API_KEY"] = settings.anthropic_api_key
+if settings.azure_openai_api_key and settings.azure_openai_endpoint:
+    os.environ["AZURE_OPENAI_API_KEY"] = settings.azure_openai_api_key
+    os.environ["AZURE_OPENAI_ENDPOINT"] = settings.azure_openai_endpoint
+    os.environ["AZURE_OPENAI_API_VERSION"] = settings.azure_openai_api_version
 
 # Type variable for generic agent creation
 ResultType = TypeVar('ResultType', bound=BaseModel)
@@ -91,11 +95,60 @@ def _resolve_model_name(task: Optional[str] = None) -> str:
             return candidate
         if provider == "anthropic" and settings.anthropic_api_key:
             return candidate
+        if provider == "azure" and settings.azure_openai_api_key:
+            return candidate
+        if provider == "ollama" and settings.ollama_base_url:
+            return candidate
 
     # 3. Global fallback
     if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
         return f"anthropic:{settings.anthropic_model}"
+    if settings.llm_provider == "azure" and settings.azure_openai_api_key:
+        return f"azure:{settings.azure_openai_deployment}"
+    if settings.llm_provider == "ollama":
+        return f"ollama:{settings.ollama_model}"
     return f"openai:{settings.openai_model}"
+
+
+def _resolve_model(model_str: str):
+    """
+    Resolve a 'provider:model' string into a Pydantic-AI compatible model.
+
+    For Azure OpenAI and Ollama, we create an OpenAI-compatible client
+    pointed at the right endpoint. For openai/anthropic, pydantic-ai
+    handles them natively via the string format.
+    """
+    if model_str.startswith("azure:"):
+        deployment = model_str.split(":", 1)[1]
+        try:
+            from pydantic_ai.models.openai import OpenAIModel
+            from openai import AzureOpenAI
+            client = AzureOpenAI(
+                api_key=settings.azure_openai_api_key,
+                azure_endpoint=settings.azure_openai_endpoint,
+                api_version=settings.azure_openai_api_version,
+            )
+            return OpenAIModel(deployment, openai_client=client)
+        except ImportError:
+            logger.warning("AzureOpenAI not available, falling back to default")
+            return f"openai:{settings.openai_model}"
+
+    if model_str.startswith("ollama:"):
+        model_name = model_str.split(":", 1)[1]
+        try:
+            from pydantic_ai.models.openai import OpenAIModel
+            from openai import OpenAI
+            client = OpenAI(
+                base_url=f"{settings.ollama_base_url}/v1",
+                api_key="ollama",  # Ollama doesn't require a real key
+            )
+            return OpenAIModel(model_name, openai_client=client)
+        except ImportError:
+            logger.warning("OpenAI client not available for Ollama, falling back")
+            return f"openai:{settings.openai_model}"
+
+    # openai:xxx and anthropic:xxx are handled natively by pydantic-ai
+    return model_str
 
 
 def _estimate_tokens(text: str) -> int:
@@ -294,7 +347,8 @@ class AIService:
         Returns:
             Configured Pydantic AI Agent
         """
-        model = self._get_model_name(task)
+        model_str = self._get_model_name(task)
+        model = _resolve_model(model_str)
         agent = Agent(
             model,
             output_type=output_type,
@@ -302,10 +356,10 @@ class AIService:
             retries=retries,
             system_prompt=system_prompt
         )
-        
-        logger.info(f"Created agent with output_type={output_type.__name__}")
+
+        logger.info(f"Created agent with output_type={output_type.__name__}, model={model_str}")
         return agent
-    
+
     def create_streaming_agent(
         self,
         system_prompt: str,
@@ -314,23 +368,24 @@ class AIService:
     ) -> Agent[None, str]:
         """
         Create an agent for streaming text responses.
-        
+
         Args:
             system_prompt: System prompt defining agent behavior
             deps_type: Optional dependency type for context
             task: Logical task name for per-task model selection
-        
+
         Returns:
             Agent configured for text streaming
         """
-        model = self._get_model_name(task)
+        model_str = self._get_model_name(task)
+        model = _resolve_model(model_str)
         agent = Agent(
             model,
             deps_type=deps_type,
             system_prompt=system_prompt
         )
-        
-        logger.info("Created streaming agent")
+
+        logger.info(f"Created streaming agent, model={model_str}")
         return agent
     
     def get_model_settings(self, temperature: float = None) -> dict:

@@ -1,491 +1,377 @@
-# 🎯 MoMetric Requirements Discovery System
+<div align="center">
+  <img src="assets/logo.svg" alt="MoMetric" width="180" />
 
-**AI-powered progressive requirements discovery with tree-based visualization**
+  <h1>MoMetric</h1>
 
-A complete full-stack application that helps gather detailed project requirements from clients through intelligent, progressive questioning.
+  <p><strong>AI-powered requirements discovery & scope management for teams that move fast</strong></p>
 
----
+  <p>Turn vague ideas into structured requirement trees through intelligent progressive questioning.<br/>Track scope changes, audit decisions, and plan execution — all in one place.</p>
 
-## 📁 Project Structure
+  <p>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License" /></a>
+    <img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
+    <img src="https://img.shields.io/badge/Next.js-14-black?logo=nextdotjs&logoColor=white" alt="Next.js 14" />
+    <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white" alt="Docker" />
+    <img src="https://img.shields.io/badge/PostgreSQL-14-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  </p>
 
-```
-Mometric_Mouaaz/
-│
-├── backend/                          🐍 FastAPI Backend
-│   ├── app/                         Main application
-│   │   ├── api/routes/             API endpoints
-│   │   ├── services/               Business logic
-│   │   ├── models/                 Data models
-│   │   ├── core/                   Configuration
-│   │   └── db/                     Database
-│   ├── tests/                       Unit tests
-│   ├── requirements.txt            Python dependencies
-│   ├── Dockerfile                   Docker support
-│   ├── docker-compose.yml          Multi-container setup
-│   ├── README.md                    Backend docs
-│   ├── QUICKSTART.md               Quick setup
-│   ├── PROJECT_STRUCTURE.md        Architecture
-│   ├── INTEGRATION_GUIDE.md        Frontend integration
-│   └── PROJECT_SUMMARY.md          Complete summary
-│
-├── requirements-discovery-ui/       ⚛️ Next.js Frontend
-│   ├── src/
-│   │   ├── app/                    Next.js app directory
-│   │   └── components/             React components
-│   │       ├── upload/             Document upload
-│   │       ├── questions/          Initial questions
-│   │       ├── tree/               Tree visualization
-│   │       ├── chat/               Chat interface
-│   │       └── layout/             Layout components
-│   ├── public/                      Static assets
-│   ├── tailwind.config.ts          Tailwind (Specifai colors)
-│   ├── package.json                Node dependencies
-│   ├── README.md                    Frontend docs
-│   ├── QUICKSTART.md               Quick setup
-│   └── VISUAL_GUIDE.md             UI walkthrough
-│
-├── problem statment/                📋 Product Documentation
-│   ├── README (2).md               MoMetric overview
-│   ├── MVP-Plan.md                 MVP specification
-│   ├── Ideation.md                 Initial brainstorming
-│   ├── Product-Structure.md        Product structure
-│   ├── Differentiation.md          Competitive analysis
-│   ├── Quick-Reference.md          Quick overview
-│   └── Scope-Canvas-Module.md      Feature details
-│
-└── README.md                        📖 This file
-```
+  <p>
+    <a href="#-quick-start">Quick Start</a> &bull;
+    <a href="#-why-mometric">Why MoMetric</a> &bull;
+    <a href="#-features">Features</a> &bull;
+    <a href="#-architecture">Architecture</a> &bull;
+    <a href="docs/">Documentation</a>
+  </p>
+</div>
 
 ---
 
-## 🎯 What This System Does
+<!-- Replace with your own demo GIF or screenshot -->
+<div align="center">
+  <img src="assets/demo-placeholder.png" alt="MoMetric Demo" width="800" />
+  <br/><em>Upload a document &rarr; Answer AI-generated questions &rarr; Explore your requirement tree</em>
+</div>
 
-### The Problem
-Clients often have vague ideas: *"I want a chatbot"* or *"I need an app"*
+---
 
-### The Solution
-**3-Step Progressive Requirements Discovery:**
+## Quick Start
 
-```
-1. 📄 UPLOAD
-   └─→ User uploads document or types description
-   
-2. ❓ QUESTIONS (10 Initial Questions)
-   └─→ AI asks 10 targeted, granular questions
-   
-3. 🌳 TREE & CHAT
-   ├─→ AI generates feature tree
-   └─→ Click [+] on any feature
-       └─→ Contextual chat opens
-           └─→ Detailed Q&A
-               └─→ Confirm & add nodes
-                   └─→ Tree expands
+```bash
+git clone https://github.com/YOUR_ORG/mometric.git && cd mometric
+cp .env.example .env          # Add your OpenAI or Anthropic API key
+make up                        # Starts PostgreSQL + API + Web UI
 ```
 
-### Example Flow
+Open **http://localhost:3000** — that's it.
+
+> **Need help?** Run `make help` for all available commands, or see the [full setup guide](#-development).
+
+---
+
+## Why MoMetric?
+
+AI project cycles are chaotic. A meeting changes priorities. An email redefines scope. Traditional PM tools track *tasks* — MoMetric tracks **decisions and their context**.
+
+| Capability | Jira | ClickUp | Notion | Linear | **MoMetric** |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| AI requirement extraction from documents | — | — | — | — | **Yes** |
+| Progressive questioning (10 targeted Qs) | — | — | — | — | **Yes** |
+| Interactive requirement tree visualization | — | — | — | — | **Yes** |
+| Per-feature contextual chat exploration | — | — | — | — | **Yes** |
+| Multi-source ingestion (meetings, PDFs, Slack) | — | — | — | — | **Yes** |
+| Scope change detection & audit trail | Partial | — | — | — | **Yes** |
+| Time-travel (view scope at any point in time) | — | — | — | — | **Yes** |
+| Planning board with AI acceptance criteria | Basic | Yes | — | Yes | **Yes** |
+| Export to PDF / JSON / Markdown | — | — | — | — | **Yes** |
+| Multi-LLM (OpenAI, Anthropic, Azure, Ollama) | — | — | — | — | **Yes** |
+| Self-hosted / on-premise ready | No | No | No | No | **Yes** |
+
+---
+
+## Features
+
+<details>
+<summary><strong>Document Upload & AI Analysis</strong></summary>
+
+Upload PDF, DOCX, or TXT documents. MoMetric extracts context and generates **10 targeted questions** tailored to your project type — technical and non-technical variants included.
+
+</details>
+
+<details>
+<summary><strong>Interactive Requirement Tree</strong></summary>
+
+Requirements are organized in a hierarchical tree powered by React Flow. Click **[+]** on any node to start a contextual AI conversation that explores that specific feature in depth. Confirmed insights are added as child nodes — the tree grows as understanding deepens.
+
+</details>
+
+<details>
+<summary><strong>Multi-Source Ingestion</strong></summary>
+
+Feed meeting notes, Slack threads, emails, or additional documents into your session. MoMetric's AI detects scope changes, suggests tree modifications, and attributes every change to its source. Nothing is lost.
+
+</details>
+
+<details>
+<summary><strong>Audit Trail & Time Travel</strong></summary>
+
+Every change is recorded with full attribution — who changed what, when, and why. Browse the complete history timeline or use **time-travel view** to see your requirement tree at any historical point.
+
+</details>
+
+<details>
+<summary><strong>Planning Board</strong></summary>
+
+Kanban-style board (Backlog &rarr; TODO &rarr; In Progress &rarr; Review &rarr; Done) that maps requirements directly to work items. AI-generated acceptance criteria for each card. Assign team members and track progress.
+
+</details>
+
+<details>
+<summary><strong>Export & Integrations</strong></summary>
+
+Export your requirement tree and planning board to **PDF**, **JSON**, or **Markdown**. Push cards to **Jira** or send notifications to **Slack**. White-label the interface with your own branding.
+
+</details>
+
+<details>
+<summary><strong>Real-Time Collaboration</strong></summary>
+
+WebSocket-powered presence indicators show who's viewing or editing. Multiple team members can work on the same session simultaneously with live updates.
+
+</details>
+
+<details>
+<summary><strong>Multi-LLM Provider Support</strong></summary>
+
+Switch between **OpenAI**, **Anthropic Claude**, **Azure OpenAI**, or **Ollama** (local/offline) with a single environment variable. Per-task model routing and cost-tier optimization built in.
+
+</details>
+
+---
+
+## Architecture
+
+```mermaid
+graph TB
+    subgraph Client
+        Browser["Browser<br/><small>Next.js 14 + Tailwind</small>"]
+    end
+
+    subgraph "Docker Compose"
+        API["FastAPI API<br/><small>:8000</small>"]
+        DB[("PostgreSQL<br/><small>:5432</small>")]
+        WS["WebSocket Hub"]
+    end
+
+    subgraph "AI Providers"
+        OpenAI["OpenAI<br/><small>GPT-4o</small>"]
+        Anthropic["Anthropic<br/><small>Claude 3.5</small>"]
+        Azure["Azure OpenAI"]
+        Ollama["Ollama<br/><small>Local LLM</small>"]
+    end
+
+    subgraph Integrations
+        Jira["Jira Cloud"]
+        Slack["Slack"]
+    end
+
+    Browser -->|"REST + WebSocket"| API
+    API --> DB
+    API --> WS
+    API -->|"Per-task routing"| OpenAI
+    API -->|"Per-task routing"| Anthropic
+    API -->|"Per-task routing"| Azure
+    API -->|"Per-task routing"| Ollama
+    API --> Jira
+    API --> Slack
+```
+
+### How It Works
 
 ```
-Input: "I want a customer support chatbot"
-
-↓ AI generates 10 questions:
-
-Q1: What's the primary goal?
-Q2: Who are the target users?
-Q3: What features do you want?
-...
-
-↓ User answers all questions
-
-↓ AI builds tree:
-
-Project: Customer Support Bot
-├── 💬 Chat Interface [+]
-├── 📚 Knowledge Base [+]
-├── 🔔 Escalation System [+]
-└── 📊 Analytics [+]
-
-↓ User clicks [+] on "Chat Interface"
-
-↓ Contextual chat opens:
-AI: "What capabilities should the chat have?"
-User: "FAQ handling and live chat handoff"
-AI: "How should FAQs be organized?"
-User: "By category with search"
-
-↓ User clicks "Confirm & Add to Tree"
-
-↓ Tree expands:
-
-Project: Customer Support Bot
-├── 💬 Chat Interface
-│   ├── FAQ Handling
-│   │   ├── Category-based organization
-│   │   └── Search functionality
-│   └── Live chat handoff
-├── 📚 Knowledge Base [+]
-...
+1. UPLOAD      User uploads a document or describes their project
+                    |
+2. QUESTIONS   AI generates 10 targeted questions based on context
+                    |
+3. TREE        AI builds a hierarchical requirement tree from answers
+                    |
+4. EXPLORE     Click [+] on any node → contextual AI chat → tree expands
+                    |
+5. INGEST      Feed meeting notes, emails → scope changes detected
+                    |
+6. PLAN        Map requirements to work items on the planning board
+                    |
+7. EXPORT      Generate PDF/JSON reports, push to Jira, notify Slack
 ```
 
 ---
 
-## 🚀 Quick Start
+## LLM Providers
+
+MoMetric supports multiple AI providers with **per-task model routing** and **cost-tier optimization**.
+
+| Provider | Config | Best For |
+|:---|:---|:---|
+| **OpenAI** | `OPENAI_API_KEY` | Default. GPT-4o for complex tasks, GPT-4o-mini for lightweight |
+| **Anthropic** | `ANTHROPIC_API_KEY` | Claude 3.5 Sonnet for nuanced analysis |
+| **Azure OpenAI** | `AZURE_OPENAI_*` | Enterprise deployments with data residency requirements |
+| **Ollama** | `OLLAMA_BASE_URL` | Fully local/offline — no data leaves your machine |
+
+Set `LLM_PROVIDER` in `.env` to your preferred default. Individual tasks can be routed to specific models via `TASK_MODEL_*` variables. See [.env.example](.env.example) for full configuration.
+
+---
+
+## Configuration
+
+<details>
+<summary><strong>Environment Variables Reference</strong></summary>
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `LLM_PROVIDER` | `openai` | Default provider: `openai`, `anthropic`, `azure`, `ollama` |
+| `OPENAI_API_KEY` | — | OpenAI API key |
+| `ANTHROPIC_API_KEY` | — | Anthropic API key |
+| `AZURE_OPENAI_API_KEY` | — | Azure OpenAI API key |
+| `AZURE_OPENAI_ENDPOINT` | — | Azure resource endpoint URL |
+| `AZURE_OPENAI_DEPLOYMENT` | — | Azure deployment name |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `OLLAMA_MODEL` | `llama3` | Ollama model name |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/mometric_db` | PostgreSQL connection |
+| `SECRET_KEY` | — | JWT signing key (change in production) |
+| `CORS_ORIGINS` | `["http://localhost:3000"]` | Allowed frontend origins |
+| `SMTP_ENABLED` | `false` | Enable email notifications |
+
+See [.env.example](.env.example) for the complete list.
+
+</details>
+
+---
+
+## Development
 
 ### Prerequisites
-- **Node.js** 18+ (for frontend)
-- **Python** 3.11+ (for backend)
-- **PostgreSQL** 14+ (for database)
-- **OpenAI API Key** or **Anthropic API Key**
 
-### Option 1: Full Docker Setup (Easiest)
+- **Docker & Docker Compose** (recommended) — OR:
+- Python 3.11+, Node.js 18+, PostgreSQL 14+
+
+### Docker (Recommended)
 
 ```bash
-# 1. Clone repository
-cd Mometric_Mouaaz
-
-# 2. Setup Backend
-cd backend
-echo "OPENAI_API_KEY=sk-your-key-here" > .env
-docker-compose up -d
-
-# 3. Setup Frontend
-cd ../requirements-discovery-ui
-npm install
-npm run dev
+cp .env.example .env          # Configure your API keys
+make up                        # Build and start all services
+make logs                      # Tail logs from all services
+make down                      # Stop everything
 ```
 
-**Done!** 
-- Backend: http://localhost:8000
-- Frontend: http://localhost:3000
+### Local Development (Without Docker)
 
-### Option 2: Local Development
+<details>
+<summary><strong>Backend</strong></summary>
 
-#### Backend Setup
 ```bash
 cd backend
-
-# Windows
-setup.bat
-
-# Mac/Linux
-python -m venv venv
-source venv/bin/activate
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-python setup.py
-
-# Edit .env with your API key
-# DATABASE_URL=postgresql://...
-# OPENAI_API_KEY=sk-...
-
-# Run
-python run_dev.py
+cp ../.env.example .env        # Edit with your config
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-#### Frontend Setup
+API docs at http://localhost:8000/api/docs
+
+</details>
+
+<details>
+<summary><strong>Frontend</strong></summary>
+
 ```bash
-cd requirements-discovery-ui
+cd web
 npm install
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
 npm run dev
 ```
 
----
+Web UI at http://localhost:3000
 
-## 🏗️ Tech Stack
-
-### Frontend
-- **Next.js 14** - React framework
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Styling (Specifai color scheme)
-- **React** - UI library
-
-### Backend
-- **FastAPI** - Modern Python web framework
-- **SQLAlchemy** - ORM
-- **PostgreSQL** - Database
-- **LangChain** - LLM framework
-- **LangGraph** - Conversation flows
-- **OpenAI/Anthropic** - AI models
-- **PyPDF2** - PDF parsing
-- **python-docx** - Word parsing
-
-### Infrastructure
-- **Docker** - Containerization
-- **Uvicorn** - ASGI server
-- **Pytest** - Testing
+</details>
 
 ---
 
-## 📚 Documentation
+## Testing
 
-### Backend Documentation
-- **[backend/README.md](backend/README.md)** - Complete backend guide (500+ lines)
-- **[backend/QUICKSTART.md](backend/QUICKSTART.md)** - 5-minute setup
-- **[backend/PROJECT_STRUCTURE.md](backend/PROJECT_STRUCTURE.md)** - Architecture details
-- **[backend/INTEGRATION_GUIDE.md](backend/INTEGRATION_GUIDE.md)** - Frontend integration
-- **[backend/PROJECT_SUMMARY.md](backend/PROJECT_SUMMARY.md)** - Complete summary
+```bash
+make test                      # Run backend test suite
+```
 
-### Frontend Documentation
-- **[requirements-discovery-ui/README.md](requirements-discovery-ui/README.md)** - Frontend guide
-- **[requirements-discovery-ui/QUICKSTART.md](requirements-discovery-ui/QUICKSTART.md)** - Quick setup
-- **[requirements-discovery-ui/VISUAL_GUIDE.md](requirements-discovery-ui/VISUAL_GUIDE.md)** - UI walkthrough
+Or manually:
 
-### Product Documentation
-- **[problem statment/README (2).md](problem%20statment/README%20(2).md)** - MoMetric overview
-- **[problem statment/MVP-Plan.md](problem%20statment/MVP-Plan.md)** - MVP details
+```bash
+cd backend
+python -m pytest tests/ -v
+```
 
 ---
 
-## 🔗 API Documentation
+## Project Structure
 
-Once backend is running:
+```
+mometric/
+├── backend/                   Python FastAPI API
+│   ├── app/
+│   │   ├── api/routes/        21 API endpoint modules
+│   │   ├── services/          30 service modules (business logic)
+│   │   ├── models/            SQLAlchemy ORM + Pydantic schemas
+│   │   ├── core/              Config, auth, logging, permissions
+│   │   ├── middleware/        Security, rate limiting, metrics
+│   │   └── db/                Database session management
+│   ├── alembic/               Database migrations
+│   ├── tests/                 Test suite
+│   └── Dockerfile
+├── web/                       Next.js 14 frontend
+│   ├── src/
+│   │   ├── app/               Pages (sessions, audit, planning, metrics)
+│   │   ├── components/        React components by feature
+│   │   ├── stores/            Zustand state management
+│   │   ├── hooks/             Custom hooks (WebSocket, audio, etc.)
+│   │   └── contexts/          Auth context
+│   └── Dockerfile
+├── docs/                      Documentation
+│   ├── product/               Product specs & competitive analysis
+│   └── WAY_FORWARD.md         Strategic roadmap
+├── assets/                    Logos, screenshots, diagrams
+├── scripts/                   Setup & utility scripts
+├── docker-compose.yml         One-command deployment
+├── Makefile                   Developer commands
+└── .env.example               Configuration template
+```
+
+---
+
+## Deployment
+
+MoMetric is designed to run on affordable infrastructure. A **$10-20/month VM** (1 vCPU, 2GB RAM) handles small teams comfortably.
+
+```bash
+# On your VM:
+git clone https://github.com/YOUR_ORG/mometric.git && cd mometric
+cp .env.example .env           # Configure production values
+docker compose up -d           # Detached mode
+```
+
+For production, remember to:
+- Set a strong `SECRET_KEY`
+- Set `ENVIRONMENT=production`
+- Configure `CORS_ORIGINS` for your domain
+- Use a managed PostgreSQL if available
+
+---
+
+## API Documentation
+
+Once the backend is running:
 - **Swagger UI**: http://localhost:8000/api/docs
 - **ReDoc**: http://localhost:8000/api/redoc
+- **OpenAPI Spec**: http://localhost:8000/api/openapi.json
 
 ---
 
-## 🧪 Testing
+## Contributing
 
-### Backend Tests
-```bash
-cd backend
-pytest tests/
-pytest --cov=app tests/
-```
-
-### Frontend (Manual)
-1. Open http://localhost:3000
-2. Upload document or enter text
-3. Answer 10 questions
-4. View tree
-5. Click [+] on feature
-6. Chat and confirm
-7. See tree expand
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
-## 🔧 Configuration
+## Security
 
-### Backend (.env)
-```bash
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/mometric_db
-OPENAI_API_KEY=sk-your-actual-key-here
-SECRET_KEY=random-secret-string
-CORS_ORIGINS=http://localhost:3000
-LLM_PROVIDER=openai
-```
-
-### Frontend (.env.local)
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
+See [SECURITY.md](SECURITY.md) for our security policy and responsible disclosure process.
 
 ---
 
-## 📊 Features
+## License
 
-### ✅ Implemented
-- [x] Document upload (PDF, DOCX, TXT)
-- [x] Text input
-- [x] AI question generation (10 questions)
-- [x] Question categorization
-- [x] Answer submission
-- [x] Tree generation
-- [x] Tree visualization
-- [x] Feature expansion (+ button)
-- [x] Contextual chat
-- [x] Progressive questioning
-- [x] Node addition
-- [x] Session management
-- [x] Conversation history
-- [x] Responsive UI
-- [x] Specifai-inspired design
-- [x] Error handling
-- [x] Loading states
-- [x] Docker support
-- [x] API documentation
-- [x] Comprehensive docs
-
-### 🔮 Future Enhancements
-- [ ] User authentication
-- [ ] Multi-user sessions
-- [ ] Export to PDF/JSON
-- [ ] Collaboration features
-- [ ] Version control
-- [ ] Templates
-- [ ] Advanced analytics
-- [ ] Mobile app
+[MIT](LICENSE) &copy; 2026 DashGen Solutions
 
 ---
 
-## 🎨 UI Inspiration
-
-Design inspired by **[Specifai](https://github.com/presidio-oss/specif-ai)**:
-- Indigo/slate color scheme
-- Modern, clean interface
-- Sidebar navigation
-- Tree visualization
-- Chat interface
-
----
-
-## 🐛 Troubleshooting
-
-### Backend Issues
-
-**Database Connection**
-```bash
-# Check PostgreSQL running
-# Verify DATABASE_URL in .env
-```
-
-**LLM API Error**
-```bash
-# Verify API key
-# Check .env file
-OPENAI_API_KEY=sk-...
-```
-
-**Port 8000 in Use**
-```bash
-# Change PORT in .env
-PORT=8001
-```
-
-### Frontend Issues
-
-**Cannot Connect to Backend**
-```bash
-# Verify backend is running
-curl http://localhost:8000/health
-
-# Check NEXT_PUBLIC_API_URL
-```
-
-**Scrolling Issues**
-- Already fixed with overflow-y-auto
-- Custom scrollbar styles applied
-
----
-
-## 🚀 Deployment
-
-### Backend
-```bash
-# Production with Docker
-docker-compose -f docker-compose.prod.yml up
-
-# Or with uvicorn
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
-```
-
-### Frontend
-```bash
-# Build
-npm run build
-
-# Deploy to Vercel
-vercel deploy
-
-# Or self-host
-npm run start
-```
-
----
-
-## 📖 Architecture
-
-```
-┌──────────────┐
-│   Browser    │
-└──────┬───────┘
-       │ HTTP
-       ▼
-┌──────────────┐
-│  Next.js UI  │
-│  (Port 3000) │
-└──────┬───────┘
-       │ REST API
-       ▼
-┌──────────────┐
-│   FastAPI    │
-│  (Port 8000) │
-└──────┬───────┘
-       │
-   ┌───┴────┬─────────┐
-   │        │         │
-   ▼        ▼         ▼
-┌────┐  ┌─────┐  ┌──────┐
-│ DB │  │ LLM │  │Redis │
-└────┘  └─────┘  └──────┘
-```
-
----
-
-## 💡 Key Design Decisions
-
-1. **FastAPI**: Modern, async, auto-documentation
-2. **LangGraph**: Conversation state management
-3. **PostgreSQL**: Relational tree structure
-4. **Next.js**: Modern React, server components
-5. **Tailwind**: Rapid UI development
-6. **Tree Structure**: Natural requirement hierarchy
-7. **Progressive Questioning**: Better than form dump
-8. **Contextual Chat**: Per-feature exploration
-
----
-
-## 🎯 Use Cases
-
-1. **Software Agencies**: Gather client requirements
-2. **Product Managers**: Define features
-3. **Consultants**: Scope projects
-4. **Developers**: Understand client needs
-5. **Business Analysts**: Document requirements
-
----
-
-## 📝 License
-
-MIT
-
----
-
-## 👥 Credits
-
-- **MoMetric Team**
-- **Specifai** - UI inspiration
-- **FastAPI** - Backend framework
-- **LangChain** - LLM integration
-
----
-
-## 🆘 Getting Help
-
-1. Check documentation in respective folders
-2. Review API docs at `/api/docs`
-3. Check logs for errors
-4. Verify environment configuration
-
----
-
-## ✅ Checklist for First Run
-
-- [ ] PostgreSQL installed and running
-- [ ] Python 3.11+ installed
-- [ ] Node.js 18+ installed
-- [ ] OpenAI API key obtained
-- [ ] Backend .env configured
-- [ ] Database created
-- [ ] Backend running (port 8000)
-- [ ] Frontend dependencies installed
-- [ ] Frontend running (port 3000)
-- [ ] Test upload works
-- [ ] Test question flow works
-- [ ] Test chat works
-
----
-
-**🎉 You're ready to discover requirements with AI!**
-
-**Version**: 1.0.0  
-**Status**: ✅ Production Ready  
-**Last Updated**: 2026-01-13
+<div align="center">
+  <sub>Built with FastAPI, Next.js, and a lot of AI &mdash; by the MoMetric team at DashGen Solutions</sub>
+</div>

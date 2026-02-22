@@ -55,8 +55,18 @@ class Settings(BaseSettings):
     # Anthropic
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
     anthropic_model: str = Field(default="claude-3-sonnet-20240229", alias="ANTHROPIC_MODEL")
-    
-    # LLM Provider
+
+    # Azure OpenAI
+    azure_openai_api_key: str = Field(default="", alias="AZURE_OPENAI_API_KEY")
+    azure_openai_endpoint: str = Field(default="", alias="AZURE_OPENAI_ENDPOINT")
+    azure_openai_deployment: str = Field(default="", alias="AZURE_OPENAI_DEPLOYMENT")
+    azure_openai_api_version: str = Field(default="2024-02-15-preview", alias="AZURE_OPENAI_API_VERSION")
+
+    # Ollama (local LLM — no data leaves your machine)
+    ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
+    ollama_model: str = Field(default="llama3", alias="OLLAMA_MODEL")
+
+    # LLM Provider (openai | anthropic | azure | ollama)
     llm_provider: str = Field(default="openai", alias="LLM_PROVIDER")
 
     # ── Per-task model overrides (AI-4.3) ──
