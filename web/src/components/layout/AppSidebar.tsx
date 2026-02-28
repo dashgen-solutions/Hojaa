@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOptionalProject } from "@/contexts/ProjectContext";
 import axios from "axios";
 import {
   FolderIcon,
@@ -21,8 +22,28 @@ import {
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
   ChatBubbleLeftRightIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { getMessagingUnreadCount } from "@/lib/api";
+
+// Generate a consistent color from a string (project id/name)
+const PROJECT_COLORS = [
+  "bg-blue-600", "bg-purple-600", "bg-emerald-600", "bg-amber-600",
+  "bg-rose-600", "bg-cyan-600", "bg-indigo-600", "bg-teal-600",
+  "bg-orange-600", "bg-pink-600",
+];
+
+function getProjectColor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+  }
+  return PROJECT_COLORS[Math.abs(hash) % PROJECT_COLORS.length];
+}
+
+function getProjectInitial(name: string): string {
+  return (name || "U").charAt(0).toUpperCase();
+}
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -50,6 +71,9 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
   // Extract current project ID from URL
   const projectIdMatch = pathname.match(/\/projects\/([^/]+)/);
   const currentProjectId = projectIdMatch ? projectIdMatch[1] : null;
+
+  // Get active project name from context (stays in sync on rename)
+  const activeProject = useOptionalProject();
 
   const fetchRecentProjects = useCallback(async () => {
     if (!token || !isAuthenticated) return;
@@ -103,14 +127,12 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
     return pathname === `/projects/${currentProjectId}/${phase}`;
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (date.toDateString() === today.toDateString()) return "Today";
-    if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  // Get display name for a project — use context for the active one (stays synced on rename)
+  const getProjectDisplayName = (project: Project): string => {
+    if (project.id === currentProjectId && activeProject?.projectName) {
+      return activeProject.projectName;
+    }
+    return project.document_filename || "Untitled";
   };
 
   // Collapsed state
@@ -167,6 +189,15 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
         {currentProjectId && (
           <>
             <div className="w-6 h-px bg-neutral-200 my-1" />
+            {/* Active project icon */}
+            <div
+              className={`w-7 h-7 rounded ${getProjectColor(currentProjectId)} flex items-center justify-center mb-1`}
+              title={activeProject?.projectName || "Project"}
+            >
+              <span className="text-white text-[10px] font-bold">
+                {getProjectInitial(activeProject?.projectName || "P")}
+              </span>
+            </div>
             <Link
               href={`/projects/${currentProjectId}/discovery`}
               className={`p-2 rounded transition-colors ${
@@ -184,6 +215,15 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
               title="Planning"
             >
               <ViewColumnsIcon className="w-4 h-4 text-neutral-600" />
+            </Link>
+            <Link
+              href={`/projects/${currentProjectId}/documents`}
+              className={`p-2 rounded transition-colors ${
+                isProjectPhaseActive("documents") ? "bg-neutral-200" : "hover:bg-neutral-100"
+              }`}
+              title="Documents"
+            >
+              <DocumentTextIcon className="w-4 h-4 text-neutral-600" />
             </Link>
             <Link
               href={`/projects/${currentProjectId}/audit`}
@@ -289,23 +329,29 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
             </button>
 
             {/* Recent projects */}
-            {isAuthenticated && recentProjects.map((project) => (
-              <Link
-                key={project.id}
-                href={`/projects/${project.id}/discovery`}
-                className={`w-full flex items-center gap-2 px-2 py-1.5 text-[13px] rounded transition-colors block ${
-                  project.id === currentProjectId
-                    ? "bg-neutral-200 text-neutral-900 font-medium"
-                    : "text-neutral-600 hover:bg-neutral-100"
-                }`}
-                style={{ borderRadius: "6px" }}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="truncate">{project.document_filename || "Untitled"}</div>
-                  <div className="text-[11px] text-neutral-400">{formatDate(project.created_at)}</div>
-                </div>
-              </Link>
-            ))}
+            {isAuthenticated && recentProjects.map((project) => {
+              const displayName = getProjectDisplayName(project);
+              const color = getProjectColor(project.id);
+              return (
+                <Link
+                  key={project.id}
+                  href={`/projects/${project.id}/discovery`}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 text-[13px] rounded transition-colors block ${
+                    project.id === currentProjectId
+                      ? "bg-neutral-200 text-neutral-900 font-medium"
+                      : "text-neutral-600 hover:bg-neutral-100"
+                  }`}
+                  style={{ borderRadius: "6px" }}
+                >
+                  <div className={`w-5 h-5 rounded ${color} flex items-center justify-center flex-shrink-0`}>
+                    <span className="text-white text-[10px] font-bold">{getProjectInitial(displayName)}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">{displayName}</div>
+                  </div>
+                </Link>
+              );
+            })}
 
             {/* View All */}
             {isAuthenticated && (
@@ -376,6 +422,18 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
             >
               <ViewColumnsIcon className="w-4 h-4 flex-shrink-0" />
               Planning
+            </Link>
+            <Link
+              href={`/projects/${currentProjectId}/documents`}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 text-[13px] rounded transition-colors block ${
+                isProjectPhaseActive("documents")
+                  ? "bg-neutral-200 text-neutral-900 font-medium"
+                  : "text-neutral-600 hover:bg-neutral-100"
+              }`}
+              style={{ borderRadius: "6px", minHeight: "30px" }}
+            >
+              <DocumentTextIcon className="w-4 h-4 flex-shrink-0" />
+              Documents
             </Link>
             <Link
               href={`/projects/${currentProjectId}/audit`}

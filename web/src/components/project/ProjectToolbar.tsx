@@ -124,7 +124,7 @@ export default function ProjectToolbar({ onInputAdded, onSelectInput }: ProjectT
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleSaveName}
               onKeyDown={handleKeyDown}
-              className="text-sm font-semibold text-neutral-900 bg-white border border-neutral-300 rounded-md px-2 py-1 focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-200 w-64"
+              className="text-base font-bold text-neutral-900 bg-white border border-neutral-300 rounded-md px-2.5 py-1 focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-200 w-72"
             />
             <button
               onClick={handleSaveName}
@@ -145,9 +145,9 @@ export default function ProjectToolbar({ onInputAdded, onSelectInput }: ProjectT
             className="flex items-center gap-1.5 group min-w-0"
             title={readOnly ? projectName : "Click to rename"}
           >
-            <span className="text-sm font-semibold text-neutral-900 truncate">
+            <h1 className="text-base font-bold text-neutral-900 truncate">
               {projectName}
-            </span>
+            </h1>
             {!readOnly && (
               <PencilIcon className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
             )}

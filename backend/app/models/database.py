@@ -1004,3 +1004,170 @@ class ChatChannelMessage(Base):
         Index("idx_chat_msg_created", "created_at"),
         Index("idx_chat_msg_sender", "sender_id"),
     )
+
+
+# ===== Documents: Block-Based Document Builder =====
+
+class DocumentStatus(str, enum.Enum):
+    """Document lifecycle status."""
+    DRAFT = "draft"
+    SENT = "sent"
+    VIEWED = "viewed"
+    COMPLETED = "completed"
+    EXPIRED = "expired"
+
+
+class Document(Base):
+    """A block-based document (proposal, SOW, contract, etc.) within a project."""
+    __tablename__ = "documents"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    title = Column(String(500), nullable=False, default="Untitled Document")
+    status = Column(SQLEnum(DocumentStatus), default=DocumentStatus.DRAFT, nullable=False)
+    template_id = Column(UUID(as_uuid=True), ForeignKey("document_templates.id", ondelete="SET NULL"), nullable=True)
+
+    # Content stored as JSON array of blocks (BlockNote format)
+    content = Column(JSON, default=list, nullable=False)
+
+    # Sharing
+    share_token = Column(String(64), unique=True, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+
+    # Lifecycle timestamps
+    sent_at = Column(DateTime, nullable=True)
+    viewed_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    session = relationship("Session")
+    organization = relationship("Organization")
+    creator = relationship("User", foreign_keys=[created_by])
+    template = relationship("DocumentTemplate")
+    recipients = relationship("DocumentRecipient", back_populates="document", cascade="all, delete-orphan")
+    pricing_items = relationship("PricingLineItem", back_populates="document", cascade="all, delete-orphan")
+    versions = relationship("DocumentVersion", back_populates="document", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("idx_document_session", "session_id"),
+        Index("idx_document_org", "organization_id"),
+        Index("idx_document_status", "status"),
+        Index("idx_document_share_token", "share_token"),
+    )
+
+
+class DocumentVersion(Base):
+    """Snapshot of document content for version history."""
+    __tablename__ = "document_versions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+    version_number = Column(Integer, nullable=False)
+    content = Column(JSON, nullable=False)
+    changed_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    change_summary = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    document = relationship("Document", back_populates="versions")
+    author = relationship("User", foreign_keys=[changed_by])
+
+    __table_args__ = (
+        Index("idx_docver_document", "document_id"),
+    )
+
+
+class DocumentTemplate(Base):
+    """Reusable document template with variable definitions."""
+    __tablename__ = "document_templates"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String(100), nullable=True)  # "proposal", "contract", "sow", "nda", "invoice"
+    thumbnail_url = Column(String(500), nullable=True)
+
+    # Content as JSON blocks (same format as Document.content)
+    content = Column(JSON, default=list, nullable=False)
+
+    # Variable definitions: [{name, label, default_value, source}]
+    variables = Column(JSON, default=list, nullable=False)
+
+    is_system = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    creator = relationship("User", foreign_keys=[created_by])
+
+    __table_args__ = (
+        Index("idx_doctempl_org", "organization_id"),
+        Index("idx_doctempl_category", "category"),
+    )
+
+
+class DocumentRecipient(Base):
+    """A recipient of a shared document."""
+    __tablename__ = "document_recipients"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False)
+    role = Column(String(50), default="viewer", nullable=False)  # "viewer", "approver"
+
+    # Tracking
+    sent_at = Column(DateTime, nullable=True)
+    viewed_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    access_token = Column(String(64), unique=True, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    document = relationship("Document", back_populates="recipients")
+
+    __table_args__ = (
+        Index("idx_docrecip_document", "document_id"),
+        Index("idx_docrecip_access_token", "access_token"),
+    )
+
+
+class PricingLineItem(Base):
+    """A line item in a document's pricing table."""
+    __tablename__ = "pricing_line_items"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+
+    name = Column(String(500), nullable=False)
+    description = Column(Text, nullable=True)
+    quantity = Column(Float, default=1.0, nullable=False)
+    unit_price = Column(Float, default=0.0, nullable=False)
+    discount_percent = Column(Float, default=0.0, nullable=False)
+    tax_percent = Column(Float, default=0.0, nullable=False)
+    is_optional = Column(Boolean, default=False, nullable=False)
+    is_selected = Column(Boolean, default=True, nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)
+
+    # Link to planning card (optional)
+    card_id = Column(UUID(as_uuid=True), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    document = relationship("Document", back_populates="pricing_items")
+    card = relationship("Card")
+
+    __table_args__ = (
+        Index("idx_pricing_document", "document_id"),
+    )

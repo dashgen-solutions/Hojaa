@@ -30,6 +30,7 @@ from app.api.routes import (
     api_keys,
     session_chat,
     messaging,
+    documents,
 )
 from app.models.schemas import HealthResponse
 from app.middleware.metrics import MetricsMiddleware
@@ -93,6 +94,7 @@ app.include_router(branding.router, prefix="/api")  # 18.2-C: White-labeling / b
 app.include_router(api_keys.router, prefix="/api")  # 18.2-D: Public API — API key management
 app.include_router(session_chat.router, prefix="/api")  # Session AI Chatbot (Command Center)
 app.include_router(messaging.router, prefix="/api")  # Global Messaging ("Mini Slack")
+app.include_router(documents.router, prefix="/api")  # Documents (PandaDoc replacement)
 
 
 @app.on_event("startup")

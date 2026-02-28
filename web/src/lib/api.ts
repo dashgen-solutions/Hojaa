@@ -1104,4 +1104,279 @@ export const getMessagingUsers = async (): Promise<MessagingUser[]> => {
   return response.data;
 };
 
+
+// ===== Documents API =====
+
+export interface ScopeDocument {
+  id: string;
+  session_id: string;
+  title: string;
+  status: string;
+  created_by: string | null;
+  creator_name: string | null;
+  template_id: string | null;
+  content: unknown[];
+  share_token: string | null;
+  recipients_count: number;
+  pricing_items_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  thumbnail_url: string | null;
+  variables: { name: string; label: string; default_value: string; source: string }[];
+  is_system: boolean;
+  created_at: string;
+}
+
+export interface DocumentRecipientInfo {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  sent_at: string | null;
+  viewed_at: string | null;
+  completed_at: string | null;
+  access_token: string | null;
+}
+
+export interface PricingLineItemInfo {
+  id: string;
+  document_id: string;
+  name: string;
+  description: string | null;
+  quantity: number;
+  unit_price: number;
+  discount_percent: number;
+  tax_percent: number;
+  is_optional: boolean;
+  is_selected: boolean;
+  order_index: number;
+  card_id: string | null;
+  line_total: number;
+}
+
+export interface DocumentVersionInfo {
+  id: string;
+  version_number: number;
+  changed_by: string | null;
+  author_name: string | null;
+  change_summary: string | null;
+  created_at: string;
+}
+
+export interface ResolvedVariables {
+  [key: string]: string;
+}
+
+export interface ScopeDataNode {
+  id: string;
+  question: string;
+  answer: string | null;
+  node_type: string;
+  status: string;
+  depth: number;
+}
+
+export interface ScopeDataCard {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  estimated_hours: number | null;
+  node_id: string | null;
+}
+
+// Document CRUD
+
+export const getProjectDocuments = async (sessionId: string): Promise<ScopeDocument[]> => {
+  const response = await api.get(`/api/documents/session/${sessionId}`);
+  return response.data;
+};
+
+export const createDocument = async (
+  sessionId: string,
+  data: { title?: string; template_id?: string }
+): Promise<ScopeDocument> => {
+  const response = await api.post(`/api/documents/session/${sessionId}`, data);
+  return response.data;
+};
+
+export const getDocument = async (documentId: string): Promise<ScopeDocument> => {
+  const response = await api.get(`/api/documents/${documentId}`);
+  return response.data;
+};
+
+export const updateDocument = async (
+  documentId: string,
+  data: { title?: string; status?: string }
+): Promise<ScopeDocument> => {
+  const response = await api.patch(`/api/documents/${documentId}`, data);
+  return response.data;
+};
+
+export const deleteDocument = async (documentId: string): Promise<void> => {
+  await api.delete(`/api/documents/${documentId}`);
+};
+
+export const duplicateDocument = async (documentId: string): Promise<ScopeDocument> => {
+  const response = await api.post(`/api/documents/${documentId}/duplicate`);
+  return response.data;
+};
+
+// Content & Auto-save
+
+export const saveDocumentContent = async (
+  documentId: string,
+  content: unknown[]
+): Promise<{ updated_at: string }> => {
+  const response = await api.put(`/api/documents/${documentId}/content`, { content });
+  return response.data;
+};
+
+export const getDocumentVersions = async (documentId: string): Promise<DocumentVersionInfo[]> => {
+  const response = await api.get(`/api/documents/${documentId}/versions`);
+  return response.data;
+};
+
+export const createDocumentVersion = async (
+  documentId: string,
+  changeSummary?: string
+): Promise<DocumentVersionInfo> => {
+  const response = await api.post(`/api/documents/${documentId}/versions`, {
+    change_summary: changeSummary,
+  });
+  return response.data;
+};
+
+// Variables & Scope Integration
+
+export const resolveDocumentVariables = async (documentId: string): Promise<ResolvedVariables> => {
+  const response = await api.get(`/api/documents/${documentId}/variables`);
+  return response.data;
+};
+
+export const getScopeDataForDocument = async (
+  sessionId: string
+): Promise<{ nodes: ScopeDataNode[]; cards: ScopeDataCard[] }> => {
+  const response = await api.get(`/api/documents/session/${sessionId}/scope-data`);
+  return response.data;
+};
+
+// Pricing
+
+export const getDocumentPricing = async (
+  documentId: string
+): Promise<{ items: PricingLineItemInfo[]; subtotal: number; total_tax: number; grand_total: number }> => {
+  const response = await api.get(`/api/documents/${documentId}/pricing`);
+  return response.data;
+};
+
+export const addPricingItem = async (
+  documentId: string,
+  data: {
+    name: string;
+    description?: string;
+    quantity?: number;
+    unit_price?: number;
+    discount_percent?: number;
+    tax_percent?: number;
+    is_optional?: boolean;
+    order_index?: number;
+  }
+): Promise<PricingLineItemInfo> => {
+  const response = await api.post(`/api/documents/${documentId}/pricing`, data);
+  return response.data;
+};
+
+export const updatePricingItem = async (
+  itemId: string,
+  data: Partial<{
+    name: string;
+    description: string;
+    quantity: number;
+    unit_price: number;
+    discount_percent: number;
+    tax_percent: number;
+    is_optional: boolean;
+    is_selected: boolean;
+    order_index: number;
+  }>
+): Promise<PricingLineItemInfo> => {
+  const response = await api.patch(`/api/documents/pricing/${itemId}`, data);
+  return response.data;
+};
+
+export const deletePricingItem = async (itemId: string): Promise<void> => {
+  await api.delete(`/api/documents/pricing/${itemId}`);
+};
+
+export const generatePricingFromCards = async (
+  documentId: string,
+  hourlyRate: number
+): Promise<PricingLineItemInfo[]> => {
+  const response = await api.post(`/api/documents/${documentId}/pricing/from-cards`, {
+    hourly_rate: hourlyRate,
+  });
+  return response.data;
+};
+
+// Sharing & Recipients
+
+export const shareDocument = async (
+  documentId: string,
+  recipients?: { name: string; email: string; role?: string }[]
+): Promise<{ share_url: string; share_token: string; recipients: DocumentRecipientInfo[] }> => {
+  const response = await api.post(`/api/documents/${documentId}/share`, {
+    recipients: recipients || [],
+  });
+  return response.data;
+};
+
+export const getDocumentRecipients = async (documentId: string): Promise<DocumentRecipientInfo[]> => {
+  const response = await api.get(`/api/documents/${documentId}/recipients`);
+  return response.data;
+};
+
+export const sendDocument = async (documentId: string): Promise<ScopeDocument> => {
+  const response = await api.post(`/api/documents/${documentId}/send`);
+  return response.data;
+};
+
+// Templates
+
+export const getDocumentTemplates = async (): Promise<DocumentTemplate[]> => {
+  const response = await api.get('/api/documents/templates');
+  return response.data;
+};
+
+export const saveAsTemplate = async (
+  documentId: string,
+  data: { name: string; description?: string; category?: string }
+): Promise<DocumentTemplate> => {
+  const response = await api.post('/api/documents/templates', {
+    document_id: documentId,
+    ...data,
+  });
+  return response.data;
+};
+
+export const deleteTemplate = async (templateId: string): Promise<void> => {
+  await api.delete(`/api/documents/templates/${templateId}`);
+};
+
+// PDF Export
+
+export const getDocumentPDF = async (documentId: string): Promise<Blob> => {
+  const response = await api.get(`/api/documents/${documentId}/pdf`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
 export default api;

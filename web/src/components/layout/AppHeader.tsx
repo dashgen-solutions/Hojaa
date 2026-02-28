@@ -36,6 +36,8 @@ export default function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         crumbs.push({ label: "Planning" });
       } else if (pathname.includes("/audit")) {
         crumbs.push({ label: "Audit" });
+      } else if (pathname.includes("/documents")) {
+        crumbs.push({ label: "Documents" });
       } else if (pathname.includes("/export")) {
         crumbs.push({ label: "Export" });
       }
