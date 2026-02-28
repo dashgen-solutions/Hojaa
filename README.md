@@ -1,11 +1,12 @@
 <div align="center">
-  <img src="assets/logo-dark.svg" alt="Hojaa" width="280" />
 
-  <br/><br/>
+  <img src="assets/logo.svg" alt="Hojaa Logo" width="120" />
 
-  <p><strong>Make it happen.</strong></p>
+  <h1>hojaa</h1>
 
-  <p>AI-powered requirements discovery & scope management.<br/>Turn vague ideas into structured requirement trees through intelligent progressive questioning.</p>
+  <p><em>Make it happen.</em></p>
+
+  <p>AI-powered requirements discovery & scope management for teams that ship fast.<br/>From vague idea to structured scope tree in minutes — not weeks.</p>
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License" /></a>
@@ -18,12 +19,24 @@
 
   <p>
     <a href="#-quick-start">Quick Start</a> &bull;
-    <a href="#-why-hojaa">Why Hojaa</a> &bull;
+    <a href="#-the-problem">The Problem</a> &bull;
     <a href="#-features">Features</a> &bull;
-    <a href="#-llm-providers">LLM Providers</a> &bull;
+    <a href="#-how-it-works">How It Works</a> &bull;
+    <a href="#-self-hosted">Self-Hosted</a> &bull;
     <a href="docs/">Docs</a>
   </p>
+
 </div>
+
+---
+
+## The Problem
+
+Every software project starts the same way: vague requirements, scattered across emails, Slack threads, and meeting notes. Teams jump straight into Jira tickets without truly understanding what they're building.
+
+**The result?** Scope creep. Missed requirements. Rework. Wasted sprints.
+
+Hojaa fixes this by putting **discovery before execution**. Upload a document, answer AI-generated questions, and watch a structured requirement tree emerge — with every decision tracked, attributed, and auditable.
 
 ---
 
@@ -35,110 +48,126 @@ cp .env.example .env          # Add your OpenAI or Anthropic API key
 make up                        # Starts PostgreSQL + API + Web UI
 ```
 
-Open **http://localhost:3000** and you're ready to go.
-
-> Run `make help` for all available commands, or see the [full setup guide](#-development).
-
----
-
-## Why Hojaa?
-
-AI project cycles are chaotic. Meetings change priorities. Emails redefine scope. Traditional PM tools track *tasks* — Hojaa tracks **decisions and their context**.
-
-| Capability | Jira | ClickUp | Notion | Linear | **Hojaa** |
-|:---|:---:|:---:|:---:|:---:|:---:|
-| AI requirement extraction from documents | — | — | — | — | **Yes** |
-| Progressive questioning (10 targeted Qs) | — | — | — | — | **Yes** |
-| Interactive requirement tree visualization | — | — | — | — | **Yes** |
-| Per-feature contextual chat exploration | — | — | — | — | **Yes** |
-| Multi-source ingestion (meetings, PDFs, Slack) | — | — | — | — | **Yes** |
-| Scope change detection & audit trail | Partial | — | — | — | **Yes** |
-| Time-travel (view scope at any point in time) | — | — | — | — | **Yes** |
-| Planning board with AI acceptance criteria | Basic | Yes | — | Yes | **Yes** |
-| Document builder (proposals, SOWs, contracts) | — | — | — | — | **Yes** |
-| Multi-LLM (OpenAI, Anthropic, Azure, Ollama) | — | — | — | — | **Yes** |
-| Self-hosted / on-premise ready | No | No | No | No | **Yes** |
+Open **http://localhost:3000** — that's it. Three commands to a running instance.
 
 ---
 
 ## Features
 
-### Document Upload & AI Analysis
+### AI-Powered Discovery
 
-Upload PDF, DOCX, or TXT documents. Hojaa extracts context and generates **10 targeted questions** tailored to your project type — technical and non-technical variants included.
+Upload PDF, DOCX, or TXT documents. Hojaa reads them and generates **10 targeted questions** — technical and non-technical variants — tailored to your specific project context. No generic templates.
 
-### Interactive Requirement Tree
+### Interactive Scope Tree
 
-Requirements are organized in a hierarchical tree powered by React Flow. Click **[+]** on any node to start a contextual AI conversation that explores that specific feature in depth. Confirmed insights are added as child nodes — the tree grows as understanding deepens.
+Requirements live in a visual tree powered by React Flow. Click **[+]** on any node to start a contextual AI conversation that digs deeper into that specific feature. Confirmed insights become child nodes. The tree grows as understanding deepens.
 
 ### Multi-Source Ingestion
 
-Feed meeting notes, Slack threads, emails, or additional documents into your session. Hojaa detects scope changes, suggests tree modifications, and attributes every change to its source.
+Meeting notes changed the scope? A Slack thread added a new requirement? Feed it in. Hojaa detects what changed, suggests tree modifications, and **attributes every change to its source**. Nothing gets lost.
 
-### Audit Trail & Time Travel
+### Full Audit Trail & Time Travel
 
-Every change is recorded with full attribution — who changed what, when, and why. Browse the complete history timeline or use **time-travel view** to see your requirement tree at any historical point.
+Every change is recorded — who changed what, when, and why. Use **time-travel view** to see your scope tree at any historical point. Perfect for regulated industries, client disputes, or just understanding how scope evolved.
 
 ### Document Builder
 
-Create proposals, SOWs, and contracts with an AI-powered block editor. Insert project variables, add pricing tables, and generate content with the built-in AI assistant. Share documents with clients via secure links.
+Create proposals, SOWs, and contracts with an AI-powered block editor. Insert **project variables** that auto-fill from your scope data, add pricing tables, and generate content with the built-in AI assistant. Share with clients via secure links.
 
 ### Planning Board
 
-Kanban-style board (Backlog → TODO → In Progress → Review → Done) that maps requirements directly to work items. AI-generated acceptance criteria for each card. Assign team members and track progress.
+Kanban board (Backlog &rarr; TODO &rarr; In Progress &rarr; Review &rarr; Done) that maps requirements directly to work items. **AI-generated acceptance criteria** for each card. Assign team members. Track progress.
 
 ### Team Messaging
 
-Built-in real-time messaging with DMs and group channels. Reference projects and tasks directly in conversations. WebSocket-powered with auto-reconnect.
+Built-in real-time messaging — DMs and group channels with project references. No need to context-switch to Slack for project discussions. WebSocket-powered with auto-reconnect.
 
 ### Export & Integrations
 
-Export your requirement tree and planning board to **PDF**, **JSON**, or **Markdown**. Push cards to **Jira** or send notifications to **Slack**. White-label the interface with your own branding.
+Export to **PDF**, **JSON**, or **Markdown**. Push cards to **Jira**. Send notifications to **Slack**. White-label the interface with your own branding, colors, and logo.
 
 ---
 
 ## How It Works
 
+| Step | What Happens |
+|:---|:---|
+| **1. Upload** | Upload a document or describe your project in plain text |
+| **2. Discover** | AI generates 10 targeted questions based on your context |
+| **3. Build** | AI constructs a hierarchical requirement tree from your answers |
+| **4. Explore** | Click [+] on any node — contextual AI chat expands the tree |
+| **5. Ingest** | Feed meeting notes, emails — scope changes auto-detected |
+| **6. Plan** | Map requirements to work items on the planning board |
+| **7. Deliver** | Generate documents, push to Jira, notify your team |
+
+---
+
+## Hojaa vs. The Alternatives
+
+| | Jira | ClickUp | Notion | Linear | **Hojaa** |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| AI requirement extraction | — | — | — | — | **Yes** |
+| Progressive discovery questions | — | — | — | — | **Yes** |
+| Visual requirement tree | — | — | — | — | **Yes** |
+| Per-feature AI exploration | — | — | — | — | **Yes** |
+| Multi-source ingestion | — | — | — | — | **Yes** |
+| Scope change audit trail | Partial | — | — | — | **Yes** |
+| Time-travel view | — | — | — | — | **Yes** |
+| AI acceptance criteria | — | — | — | — | **Yes** |
+| Document builder (proposals, SOWs) | — | — | — | — | **Yes** |
+| Self-hosted / on-premise | No | No | No | No | **Yes** |
+| Multi-LLM support | — | — | — | — | **Yes** |
+| Open source | No | No | No | No | **Yes** |
+
+---
+
+## Self-Hosted
+
+Hojaa is designed to run on your own infrastructure. A **$10-20/month VM** handles small teams comfortably.
+
+```bash
+git clone https://github.com/YOUR_ORG/hojaa.git && cd hojaa
+cp .env.example .env           # Configure your keys
+docker compose up -d           # That's it
 ```
-1. UPLOAD      Upload a document or describe your project
-2. QUESTIONS   AI generates 10 targeted questions based on context
-3. TREE        AI builds a hierarchical requirement tree from answers
-4. EXPLORE     Click [+] on any node → contextual AI chat → tree expands
-5. INGEST      Feed meeting notes, emails → scope changes detected
-6. PLAN        Map requirements to work items on the planning board
-7. EXPORT      Generate documents, push to Jira, notify Slack
-```
+
+**Your data stays on your servers.** No telemetry. No vendor lock-in. MIT licensed.
 
 ---
 
 ## LLM Providers
 
-Hojaa supports multiple AI providers with per-task model routing and cost-tier optimization.
+Swap AI providers with a single environment variable. Use the best model for each task.
 
 | Provider | Config | Best For |
 |:---|:---|:---|
-| **OpenAI** | `OPENAI_API_KEY` | Default. GPT-4o for complex tasks, GPT-4o-mini for lightweight |
-| **Anthropic** | `ANTHROPIC_API_KEY` | Claude for nuanced analysis |
-| **Azure OpenAI** | `AZURE_OPENAI_*` | Enterprise deployments with data residency requirements |
-| **Ollama** | `OLLAMA_BASE_URL` | Fully local/offline — no data leaves your machine |
+| **OpenAI** | `OPENAI_API_KEY` | GPT-4o for complex analysis, GPT-4o-mini for fast tasks |
+| **Anthropic** | `ANTHROPIC_API_KEY` | Claude for nuanced, context-heavy work |
+| **Azure OpenAI** | `AZURE_OPENAI_*` | Enterprise with data residency requirements |
+| **Ollama** | `OLLAMA_BASE_URL` | Fully local — no data leaves your machine |
 
-Set `LLM_PROVIDER` in `.env` to your preferred default. See [.env.example](.env.example) for full configuration.
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|:---|:---|
+| **Frontend** | Next.js 14, TypeScript, Tailwind CSS, React Flow, Zustand |
+| **Backend** | FastAPI, SQLAlchemy, Alembic, WebSockets |
+| **Database** | PostgreSQL 14 |
+| **AI** | OpenAI, Anthropic, Azure OpenAI, Ollama |
+| **Infra** | Docker Compose, one-command deployment |
 
 ---
 
 ## Development
-
-### Prerequisites
-
-- **Docker & Docker Compose** (recommended) — OR:
-- Python 3.11+, Node.js 18+, PostgreSQL 14+
 
 ### Docker (Recommended)
 
 ```bash
 cp .env.example .env          # Configure your API keys
 make up                        # Build and start all services
-make logs                      # Tail logs from all services
+make logs                      # Tail logs
 make down                      # Stop everything
 ```
 
@@ -173,9 +202,7 @@ Web UI at http://localhost:3000
 
 </details>
 
----
-
-## Testing
+### Testing
 
 ```bash
 make test                      # Run backend test suite
@@ -187,54 +214,28 @@ make test                      # Run backend test suite
 
 ```
 hojaa/
-├── backend/                   Python FastAPI API
+├── backend/                   FastAPI API server
 │   ├── app/
-│   │   ├── api/routes/        API endpoint modules
-│   │   ├── services/          Business logic
-│   │   ├── models/            SQLAlchemy ORM + Pydantic schemas
-│   │   ├── core/              Config, auth, logging, permissions
-│   │   └── middleware/        Security, rate limiting, metrics
+│   │   ├── api/routes/        API endpoints
+│   │   ├── services/          Business logic & AI
+│   │   ├── models/            ORM & schemas
+│   │   ├── core/              Config, auth, permissions
+│   │   └── middleware/        Security & rate limiting
 │   ├── alembic/               Database migrations
 │   └── Dockerfile
 ├── web/                       Next.js 14 frontend
 │   ├── src/
 │   │   ├── app/               Pages & route groups
-│   │   ├── components/        React components by feature
-│   │   ├── stores/            Zustand state management
+│   │   ├── components/        UI components by feature
+│   │   ├── stores/            State management
 │   │   ├── hooks/             Custom hooks
-│   │   └── contexts/          Auth & theme contexts
+│   │   └── contexts/          Auth & theme
 │   └── Dockerfile
 ├── docs/                      Documentation
-├── assets/                    Brand assets
 ├── docker-compose.yml         One-command deployment
 ├── Makefile                   Developer commands
 └── .env.example               Configuration template
 ```
-
----
-
-## Deployment
-
-Hojaa runs on affordable infrastructure. A **$10-20/month VM** (1 vCPU, 2GB RAM) handles small teams comfortably.
-
-```bash
-git clone https://github.com/YOUR_ORG/hojaa.git && cd hojaa
-cp .env.example .env           # Configure production values
-docker compose up -d
-```
-
-For production:
-- Set a strong `SECRET_KEY` and `ENVIRONMENT=production`
-- Configure `CORS_ORIGINS` for your domain
-- Use a managed PostgreSQL if available
-
----
-
-## API Documentation
-
-- **Swagger UI**: http://localhost:8000/api/docs
-- **ReDoc**: http://localhost:8000/api/redoc
-- **OpenAPI Spec**: http://localhost:8000/api/openapi.json
 
 ---
 
