@@ -26,6 +26,7 @@ from app.models.database import (
     Session as SessionModel, Node, Card, TeamMember,
     Document, DocumentVersion, DocumentTemplate,
     DocumentRecipient, PricingLineItem, DocumentStatus,
+    DocumentChatMessage,
 )
 
 logger = get_logger(__name__)
@@ -1230,3 +1231,73 @@ def _render_block_to_pdf(pdf: "FPDF", block: dict) -> None:
     for child in block.get("children", []):
         if isinstance(child, dict):
             _render_block_to_pdf(pdf, child)
+
+
+# -- AI Document Generation Endpoints ----------------------------------------
+
+class AIMessageRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=5000)
+
+
+@router.post("/{document_id}/ai/chat")
+async def send_ai_chat_message(
+    document_id: str,
+    body: AIMessageRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Send a message to the AI assistant and get generated document content."""
+    from app.services.document_ai_service import generate_document_content
+
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Verify session membership
+    session = db.query(SessionModel).filter(SessionModel.id == doc.session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        result = await generate_document_content(
+            db=db,
+            document_id=UUID(document_id),
+            user_message=body.message,
+            user=current_user,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/{document_id}/ai/history")
+def get_ai_chat_history(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get AI chat history for a document."""
+    from app.services.document_ai_service import get_chat_history
+
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return {"messages": get_chat_history(db, UUID(document_id))}
+
+
+@router.delete("/{document_id}/ai/history")
+def clear_ai_chat_history(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Clear AI chat history for a document."""
+    from app.services.document_ai_service import clear_chat_history
+
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    clear_chat_history(db, UUID(document_id))
+    return {"status": "cleared"}

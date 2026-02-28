@@ -204,6 +204,30 @@ async def test_integration(
         )
         return {"status": "ok" if result else "error"}
 
+    elif int_type == IntegrationType.LLM_OPENAI:
+        cfg = integ.config or {}
+        try:
+            import openai
+            client = openai.OpenAI(api_key=cfg.get("api_key", ""))
+            models = client.models.list()
+            return {"status": "ok", "message": f"Connected. {len(models.data)} models available."}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    elif int_type == IntegrationType.LLM_ANTHROPIC:
+        cfg = integ.config or {}
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=cfg.get("api_key", ""))
+            response = client.messages.create(
+                model=cfg.get("model", "claude-sonnet-4-20250514"),
+                max_tokens=10,
+                messages=[{"role": "user", "content": "ping"}],
+            )
+            return {"status": "ok", "message": "Connected successfully."}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
     return {"status": "unknown_type"}
 
 

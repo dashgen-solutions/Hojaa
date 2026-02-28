@@ -12,6 +12,7 @@ import {
   TrashIcon,
   ArrowPathIcon,
   ExclamationTriangleIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 import {
   listIntegrations,
@@ -28,7 +29,7 @@ import {
   type APIKeyInfo,
 } from "@/lib/api";
 
-type Tab = "integrations" | "branding" | "api-keys";
+type Tab = "integrations" | "branding" | "api-keys" | "ai";
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>("integrations");
@@ -37,6 +38,7 @@ export default function SettingsPage() {
     { key: "integrations", label: "Integrations", icon: LinkIcon },
     { key: "branding", label: "Branding", icon: PaintBrushIcon },
     { key: "api-keys", label: "API Keys", icon: KeyIcon },
+    { key: "ai", label: "AI", icon: SparklesIcon },
   ];
 
   return (
@@ -69,6 +71,7 @@ export default function SettingsPage() {
         {tab === "integrations" && <IntegrationsTab />}
         {tab === "branding" && <BrandingTab />}
         {tab === "api-keys" && <APIKeysTab />}
+        {tab === "ai" && <AIProvidersTab />}
         </div>
       </div>
     </div>
@@ -812,6 +815,289 @@ console.log(sessions);`}</pre>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  AI Providers Tab
+// ═══════════════════════════════════════════════════════════
+
+const OPENAI_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"];
+const ANTHROPIC_MODELS = ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"];
+
+interface AIProviderState {
+  integrationId: string | null;
+  apiKey: string;
+  maskedKey: string;
+  model: string;
+  status: "connected" | "not_configured" | "error";
+  statusMessage: string;
+  saving: boolean;
+  testing: boolean;
+}
+
+function makeInitialState(defaultModel: string): AIProviderState {
+  return {
+    integrationId: null,
+    apiKey: "",
+    maskedKey: "",
+    model: defaultModel,
+    status: "not_configured",
+    statusMessage: "",
+    saving: false,
+    testing: false,
+  };
+}
+
+function AIProvidersTab() {
+  const [loading, setLoading] = useState(true);
+  const [openai, setOpenai] = useState<AIProviderState>(makeInitialState(OPENAI_MODELS[0]));
+  const [anthropic, setAnthropic] = useState<AIProviderState>(makeInitialState(ANTHROPIC_MODELS[0]));
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const integrations = await listIntegrations();
+
+      const oai = integrations.find((i: any) => i.integration_type === "llm_openai");
+      if (oai) {
+        const key = oai.config?.api_key || "";
+        setOpenai((prev) => ({
+          ...prev,
+          integrationId: oai.id,
+          apiKey: "",
+          maskedKey: key ? `\u2022\u2022\u2022\u2022 ${key.slice(-4)}` : "",
+          model: oai.config?.model || OPENAI_MODELS[0],
+          status: oai.is_active ? "connected" : "not_configured",
+          statusMessage: oai.is_active ? "Connected" : "",
+        }));
+      } else {
+        setOpenai(makeInitialState(OPENAI_MODELS[0]));
+      }
+
+      const ant = integrations.find((i: any) => i.integration_type === "llm_anthropic");
+      if (ant) {
+        const key = ant.config?.api_key || "";
+        setAnthropic((prev) => ({
+          ...prev,
+          integrationId: ant.id,
+          apiKey: "",
+          maskedKey: key ? `\u2022\u2022\u2022\u2022 ${key.slice(-4)}` : "",
+          model: ant.config?.model || ANTHROPIC_MODELS[0],
+          status: ant.is_active ? "connected" : "not_configured",
+          statusMessage: ant.is_active ? "Connected" : "",
+        }));
+      } else {
+        setAnthropic(makeInitialState(ANTHROPIC_MODELS[0]));
+      }
+    } catch {
+      // silently handle errors
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleSave = async (
+    type: "llm_openai" | "llm_anthropic",
+    state: AIProviderState,
+    setState: React.Dispatch<React.SetStateAction<AIProviderState>>
+  ) => {
+    setState((prev) => ({ ...prev, saving: true }));
+    try {
+      await upsertIntegration({
+        integration_type: type,
+        config: {
+          api_key: state.apiKey || "",
+          model: state.model,
+        },
+        is_active: true,
+      });
+      await load();
+    } catch (e: any) {
+      setState((prev) => ({
+        ...prev,
+        status: "error",
+        statusMessage: e.message || "Failed to save",
+      }));
+    }
+    setState((prev) => ({ ...prev, saving: false }));
+  };
+
+  const handleTest = async (
+    type: "llm_openai" | "llm_anthropic",
+    setState: React.Dispatch<React.SetStateAction<AIProviderState>>
+  ) => {
+    setState((prev) => ({ ...prev, testing: true }));
+    try {
+      const res = await testIntegration(type);
+      setState((prev) => ({
+        ...prev,
+        status: res.status === "ok" ? "connected" : "error",
+        statusMessage: res.status === "ok" ? "Connected" : res.message || "Connection failed",
+      }));
+    } catch (e: any) {
+      setState((prev) => ({
+        ...prev,
+        status: "error",
+        statusMessage: e.message || "Connection failed",
+      }));
+    }
+    setState((prev) => ({ ...prev, testing: false }));
+  };
+
+  const handleRemove = async (
+    integrationId: string,
+    defaultModel: string,
+    setState: React.Dispatch<React.SetStateAction<AIProviderState>>
+  ) => {
+    try {
+      await deleteIntegration(integrationId);
+      setState(makeInitialState(defaultModel));
+    } catch (e: any) {
+      setState((prev) => ({
+        ...prev,
+        status: "error",
+        statusMessage: e.message || "Failed to remove",
+      }));
+    }
+  };
+
+  if (loading) return <div className="text-neutral-500">Loading AI providers...</div>;
+
+  const renderProviderCard = (
+    label: string,
+    type: "llm_openai" | "llm_anthropic",
+    models: string[],
+    state: AIProviderState,
+    setState: React.Dispatch<React.SetStateAction<AIProviderState>>,
+    bgColor: string,
+    textColor: string
+  ) => {
+    const statusDotColor =
+      state.status === "connected"
+        ? "bg-green-500"
+        : state.status === "error"
+        ? "bg-red-500"
+        : "bg-yellow-500";
+    const statusText =
+      state.status === "connected"
+        ? "Connected"
+        : state.status === "error"
+        ? `Error: ${state.statusMessage}`
+        : "Not configured";
+
+    return (
+      <div className="bg-white rounded-lg border border-neutral-200 p-5">
+        {/* Provider header */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className={`w-10 h-10 ${bgColor} rounded-md flex items-center justify-center`}>
+            <span className={`${textColor} font-bold text-sm`}>{label.charAt(0)}</span>
+          </div>
+          <div>
+            <h3 className="font-semibold text-neutral-900">{label}</h3>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className={`w-2 h-2 rounded-full ${statusDotColor}`} />
+              <span className="text-xs text-neutral-500">{statusText}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* API Key */}
+        <div className="mb-4">
+          <label className="text-xs font-medium text-neutral-600 mb-1 block">API Key</label>
+          <input
+            type="password"
+            value={state.apiKey}
+            onChange={(e) => setState((prev) => ({ ...prev, apiKey: e.target.value }))}
+            placeholder={state.maskedKey || "Enter API key"}
+            className="w-full border rounded-md px-3 py-2 text-sm"
+          />
+        </div>
+
+        {/* Model selector */}
+        <div className="mb-5">
+          <label className="text-xs font-medium text-neutral-600 mb-1 block">Model</label>
+          <select
+            value={state.model}
+            onChange={(e) => setState((prev) => ({ ...prev, model: e.target.value }))}
+            className="w-full border rounded-md px-3 py-2 text-sm bg-white"
+          >
+            {models.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleSave(type, state, setState)}
+            disabled={state.saving}
+            className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-md hover:bg-neutral-800 disabled:opacity-50"
+          >
+            {state.saving ? "Saving..." : "Save"}
+          </button>
+          <button
+            onClick={() => handleTest(type, setState)}
+            disabled={state.testing}
+            className="px-4 py-2 border text-sm rounded-md hover:bg-neutral-50 disabled:opacity-50"
+          >
+            {state.testing ? (
+              <span className="flex items-center gap-1.5">
+                <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
+                Testing...
+              </span>
+            ) : (
+              "Test Connection"
+            )}
+          </button>
+          {state.integrationId && (
+            <button
+              onClick={() =>
+                handleRemove(
+                  state.integrationId!,
+                  models[0],
+                  setState
+                )
+              }
+              className="p-2 text-red-500 hover:bg-red-50 rounded-md ml-auto"
+              title={`Remove ${label}`}
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-6">
+      {renderProviderCard(
+        "OpenAI",
+        "llm_openai",
+        OPENAI_MODELS,
+        openai,
+        setOpenai,
+        "bg-green-100",
+        "text-green-700"
+      )}
+      {renderProviderCard(
+        "Anthropic",
+        "llm_anthropic",
+        ANTHROPIC_MODELS,
+        anthropic,
+        setAnthropic,
+        "bg-amber-100",
+        "text-amber-700"
+      )}
     </div>
   );
 }

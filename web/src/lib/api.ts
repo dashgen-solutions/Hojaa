@@ -1379,4 +1379,42 @@ export const getDocumentPDF = async (documentId: string): Promise<Blob> => {
   return response.data;
 };
 
+
+// ── Document AI Chat ──────────────────────────────────────────
+
+export interface DocumentAIChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  generated_blocks?: any[];
+  created_at: string;
+}
+
+export interface DocumentAIChatResponse {
+  message_id: string;
+  response: string;
+  blocks: any[];
+  provider: string;
+  model: string;
+}
+
+export const sendDocumentAIMessage = async (
+  documentId: string,
+  message: string,
+): Promise<DocumentAIChatResponse> => {
+  const response = await api.post(`/api/documents/${documentId}/ai/chat`, { message });
+  return response.data;
+};
+
+export const getDocumentAIHistory = async (
+  documentId: string,
+): Promise<DocumentAIChatMessage[]> => {
+  const response = await api.get(`/api/documents/${documentId}/ai/history`);
+  return response.data.messages || [];
+};
+
+export const clearDocumentAIHistory = async (documentId: string): Promise<void> => {
+  await api.delete(`/api/documents/${documentId}/ai/history`);
+};
+
 export default api;

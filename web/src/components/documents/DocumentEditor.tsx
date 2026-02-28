@@ -11,6 +11,7 @@ import {
   ArrowDownTrayIcon,
   ClockIcon,
   XMarkIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
@@ -21,6 +22,7 @@ import { useDocumentAutoSave } from '@/hooks/useDocumentAutoSave';
 import VariableInserter from './VariableInserter';
 import PricingTableBlock from './PricingTableBlock';
 import DocumentShareModal from './DocumentShareModal';
+import DocumentAIChat from './DocumentAIChat';
 
 interface DocumentEditorProps {
   document: ScopeDocument;
@@ -29,7 +31,7 @@ interface DocumentEditorProps {
   onStatusChange: (status: string) => void;
 }
 
-type PanelTab = 'variables' | 'pricing' | 'share' | 'versions' | null;
+type PanelTab = 'variables' | 'pricing' | 'share' | 'versions' | 'ai' | null;
 
 const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
   draft: { bg: 'bg-neutral-100', text: 'text-neutral-600', label: 'Draft' },
@@ -112,6 +114,23 @@ export default function DocumentEditor({
           { type: 'text', text: `{{${variable}}}`, styles: {} },
         ],
       });
+    },
+    [editor],
+  );
+
+  const handleInsertAIBlocks = useCallback(
+    (blocks: any[]) => {
+      if (!blocks || blocks.length === 0) return;
+      try {
+        const currentBlock = editor.getTextCursorPosition().block;
+        editor.insertBlocks(blocks, currentBlock, 'after');
+      } catch {
+        // Fallback: insert at end of document
+        const lastBlock = editor.document[editor.document.length - 1];
+        if (lastBlock) {
+          editor.insertBlocks(blocks, lastBlock, 'after');
+        }
+      }
     },
     [editor],
   );
@@ -229,6 +248,17 @@ export default function DocumentEditor({
             <CurrencyDollarIcon className="h-4 w-4" />
           </button>
           <button
+            onClick={() => togglePanel('ai')}
+            className={`rounded-md p-2 text-sm transition-colors ${
+              activePanel === 'ai'
+                ? 'bg-indigo-600 text-white'
+                : 'text-indigo-600 hover:bg-indigo-50'
+            }`}
+            title="AI Assistant"
+          >
+            <SparklesIcon className="h-4 w-4" />
+          </button>
+          <button
             onClick={() => togglePanel('share')}
             className={`rounded-md p-2 text-sm transition-colors ${
               activePanel === 'share'
@@ -264,8 +294,8 @@ export default function DocumentEditor({
           <div className="w-80 border-l border-neutral-200 bg-[#f8f8f8] flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
             {/* Panel Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-white">
-              <h3 className="text-sm font-semibold text-neutral-900 capitalize">
-                {activePanel}
+              <h3 className="text-sm font-semibold text-neutral-900">
+                {activePanel === 'ai' ? 'AI Assistant' : activePanel === 'versions' ? 'Version History' : activePanel?.charAt(0).toUpperCase() + activePanel?.slice(1)}
               </h3>
               <button
                 onClick={() => setActivePanel(null)}
@@ -294,6 +324,14 @@ export default function DocumentEditor({
                     onClose={() => setActivePanel(null)}
                   />
                 </div>
+              )}
+
+              {activePanel === 'ai' && (
+                <DocumentAIChat
+                  documentId={doc.id}
+                  sessionId={doc.session_id}
+                  onInsertBlocks={handleInsertAIBlocks}
+                />
               )}
 
               {activePanel === 'versions' && (
@@ -357,6 +395,18 @@ export default function DocumentEditor({
 
         {/* Panel Toggle Tabs (right edge) */}
         <div className="flex flex-col gap-1 py-2 px-1 bg-[#f8f8f8] border-l border-neutral-200">
+          <button
+            onClick={() => togglePanel('ai')}
+            className={`rounded-md p-2 transition-colors ${
+              activePanel === 'ai'
+                ? 'bg-indigo-600 text-white'
+                : 'text-indigo-500 hover:bg-indigo-100'
+            }`}
+            title="AI Assistant"
+          >
+            <SparklesIcon className="h-4 w-4" />
+          </button>
+          <div className="w-full h-px bg-neutral-200 my-0.5" />
           <button
             onClick={() => togglePanel('variables')}
             className={`rounded-md p-2 transition-colors ${
