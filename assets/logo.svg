@@ -1,11 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#4f46e5;stop-opacity:1" />
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E4FF1A"/>
+      <stop offset="100%" stop-color="#c8e600"/>
     </linearGradient>
   </defs>
-  <rect width="200" height="200" rx="32" fill="url(#grad)"/>
-  <text x="100" y="90" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="700" fill="white" text-anchor="middle">Mo</text>
-  <text x="100" y="140" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="400" fill="rgba(255,255,255,0.9)" text-anchor="middle">Metric</text>
+  <rect width="200" height="200" rx="40" fill="url(#g)" transform="rotate(-3 100 100)"/>
+  <circle cx="122" cy="72" r="34" fill="none" stroke="#111" stroke-width="8"/>
+  <g transform="translate(32, 50)">
+    <path d="M10 28h54M42 8l22 20-22 20" stroke="#111" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <polygon points="0,-22 -24,22 24,22" transform="translate(64,130) rotate(-15)" fill="#111"/>
 </svg>
