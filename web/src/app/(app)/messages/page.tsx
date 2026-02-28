@@ -171,9 +171,9 @@ export default function MessagesPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center h-full bg-neutral-50">
+      <div className="flex items-center justify-center h-full bg-neutral-50 dark:bg-[#060606]">
         <div className="text-center">
-          <ChatBubbleLeftRightIcon className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
+          <ChatBubbleLeftRightIcon className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mx-auto mb-3" />
           <p className="text-neutral-500 text-sm">Please sign in to use messaging.</p>
         </div>
       </div>
@@ -181,11 +181,11 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden bg-neutral-50">
+    <div className="flex h-full overflow-hidden bg-neutral-50 dark:bg-[#060606]">
       {/* Channel List */}
       <div
-        className="flex-shrink-0 border-r border-neutral-200 flex flex-col overflow-hidden"
-        style={{ width: "300px", backgroundColor: "#f8f8f8" }}
+        className="flex-shrink-0 border-r border-neutral-200 dark:border-neutral-700 flex flex-col overflow-hidden bg-[#f8f8f8] dark:bg-[#0a0a0a]"
+        style={{ width: "300px" }}
       >
         <ChannelList
           channels={channels}
@@ -198,13 +198,13 @@ export default function MessagesPage() {
       </div>
 
       {/* Message Area */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-white">
+      <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-neutral-900">
         {selectedChannel ? (
           <>
             {/* Channel Header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-200 flex-shrink-0">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-200 dark:border-neutral-700 flex-shrink-0">
               <div>
-                <h2 className="text-sm font-semibold text-neutral-900">
+                <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                   {selectedChannel.is_direct
                     ? selectedChannel.other_user?.username || "Direct Message"
                     : selectedChannel.name || "Group"}
@@ -241,7 +241,7 @@ export default function MessagesPage() {
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <ChatBubbleLeftRightIcon className="w-16 h-16 text-neutral-200 mx-auto mb-4" />
+              <ChatBubbleLeftRightIcon className="w-16 h-16 text-neutral-200 dark:text-neutral-700 mx-auto mb-4" />
               <p className="text-neutral-500 text-sm font-medium">
                 {channels.length === 0
                   ? "No conversations yet"
@@ -255,7 +255,7 @@ export default function MessagesPage() {
               {channels.length === 0 && (
                 <button
                   onClick={() => setShowNewChannelModal(true)}
-                  className="mt-4 px-4 py-2 bg-neutral-900 text-white text-sm rounded-md hover:bg-neutral-800 transition-colors"
+                  className="mt-4 px-4 py-2 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-sm rounded-md hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
                 >
                   New Conversation
                 </button>

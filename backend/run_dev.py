@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 if __name__ == "__main__":
-    print("Starting MoMetric Requirements Discovery API")
+    print("Starting Hojaa API")
     print("Server will be at: http://localhost:8000")
     print("API Docs will be at: http://localhost:8000/api/docs")
     # NOTE:
@@ -20,8 +20,8 @@ if __name__ == "__main__":
     #
     # To run reliably everywhere, auto-reload is OPT-IN:
     #   MOMETRIC_RELOAD=1 python run_dev.py
-    enable_reload = os.getenv("MOMETRIC_RELOAD", "0") == "1"
-    print(f"Auto-reload is {'ENABLED' if enable_reload else 'DISABLED'} (set MOMETRIC_RELOAD=1 to enable)\n")
+    enable_reload = os.getenv("HOJAA_RELOAD", os.getenv("MOMETRIC_RELOAD", "0")) == "1"
+    print(f"Auto-reload is {'ENABLED' if enable_reload else 'DISABLED'} (set HOJAA_RELOAD=1 to enable)\n")
 
     if enable_reload:
         try:

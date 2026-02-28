@@ -26,7 +26,7 @@ const FORMAT_META: Record<string, { label: string; icon: typeof DocumentTextIcon
   pdf: { label: 'PDF', icon: DocumentArrowDownIcon, color: 'bg-red-50 text-red-700 border-red-200' },
 };
 
-const STORAGE_KEY = 'mometric_export_history';
+const STORAGE_KEY = 'hojaa_export_history';
 
 function getHistory(): ExportRecord[] {
   try {
@@ -132,14 +132,14 @@ export default function ExportHistory({ sessionId }: ExportHistoryProps) {
           return (
             <div
               key={record.id}
-              className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-neutral-200 bg-neutral-50 hover:bg-white transition-colors"
+              className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:bg-white dark:hover:bg-neutral-700 transition-colors"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${meta.color}`}>
                   <FormatIcon className="w-3 h-3 inline mr-0.5" />
                   {meta.label}
                 </span>
-                <span className="text-xs text-neutral-600 truncate">{record.filename}</span>
+                <span className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{record.filename}</span>
                 <span className="text-[10px] text-neutral-400 flex-shrink-0">
                   {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
@@ -148,7 +148,7 @@ export default function ExportHistory({ sessionId }: ExportHistoryProps) {
                 <button
                   onClick={() => handleReExport(record)}
                   disabled={reExporting === record.id}
-                  className="p-1 rounded hover:bg-neutral-100 text-neutral-900 disabled:opacity-50"
+                  className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-100 disabled:opacity-50"
                   title="Re-download"
                 >
                   <ArrowPathIcon className={`w-3.5 h-3.5 ${reExporting === record.id ? 'animate-spin' : ''}`} />

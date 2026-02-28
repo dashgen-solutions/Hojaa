@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== MoMetric Setup ==="
+echo "=== Hojaa Setup ==="
 echo ""
 
 # Check Docker
@@ -57,7 +57,7 @@ else
 fi
 
 echo ""
-echo "=== MoMetric is ready ==="
+echo "=== Hojaa is ready ==="
 echo ""
 echo "  Web UI:     http://localhost:${WEB_PORT}"
 echo "  API:        http://localhost:${API_PORT}"

@@ -40,10 +40,10 @@ export default function TeamSelector({
   };
 
   return (
-    <div className="border-b border-neutral-200 bg-white px-6 py-4">
+    <div className="border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-6 py-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-neutral-800">Team Members</h3>
-        <button onClick={onClose} className="p-1 rounded hover:bg-neutral-100">
+        <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Team Members</h3>
+        <button onClick={onClose} className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">
           <XMarkIcon className="w-4 h-4 text-neutral-500" />
         </button>
       </div>
@@ -51,34 +51,37 @@ export default function TeamSelector({
       {/* Add member form */}
       <div className="flex items-end gap-2 mb-3">
         <div className="flex-1">
-          <label className="block text-xs text-neutral-500 mb-1">Name</label>
+          <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Name</label>
           <input
             type="text"
             value={memberName}
             onChange={(e) => setMemberName(e.target.value)}
             placeholder="e.g., John Smith"
-            className="w-full px-2.5 py-1.5 rounded-md border border-neutral-300 text-sm 
-                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none"
+            className="w-full px-2.5 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm
+                       bg-white dark:bg-neutral-800 dark:text-neutral-100
+                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none"
             onKeyDown={(e) => e.key === 'Enter' && handleAddMember()}
           />
         </div>
         <div className="w-44">
-          <label className="block text-xs text-neutral-500 mb-1">Email</label>
+          <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Email</label>
           <input
             type="email"
             value={memberEmail}
             onChange={(e) => setMemberEmail(e.target.value)}
             placeholder="john@company.com"
-            className="w-full px-2.5 py-1.5 rounded-md border border-neutral-300 text-sm 
-                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none"
+            className="w-full px-2.5 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm
+                       bg-white dark:bg-neutral-800 dark:text-neutral-100
+                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none"
           />
         </div>
         <div className="w-32">
-          <label className="block text-xs text-neutral-500 mb-1">Role</label>
+          <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Role</label>
           <select
             value={memberRole}
             onChange={(e) => setMemberRole(e.target.value)}
-            className="w-full px-2.5 py-1.5 rounded-md border border-neutral-300 text-sm 
+            className="w-full px-2.5 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm
+                       bg-white dark:bg-neutral-800 dark:text-neutral-100
                        focus:border-neutral-400 outline-none"
           >
             {ROLE_OPTIONS.map((role) => (
@@ -102,7 +105,7 @@ export default function TeamSelector({
           {teamMembers.map((member) => (
             <div
               key={member.id}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800
                          text-sm group"
             >
               <span
@@ -111,9 +114,9 @@ export default function TeamSelector({
               >
                 {member.name[0]}
               </span>
-              <span className="text-neutral-800 font-medium">{member.name}</span>
+              <span className="text-neutral-800 dark:text-neutral-200 font-medium">{member.name}</span>
               {member.role && (
-                <span className="text-neutral-500 text-xs">({member.role})</span>
+                <span className="text-neutral-500 dark:text-neutral-400 text-xs">({member.role})</span>
               )}
               <button
                 onClick={() => onRemoveMember(member.id)}

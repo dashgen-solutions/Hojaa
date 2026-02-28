@@ -1,4 +1,4 @@
-# MoMetric Requirements Discovery - Backend API
+# Hojaa Requirements Discovery - Backend API
 
 AI-powered requirements discovery system built with **FastAPI**, **LangGraph**, and **PostgreSQL**.
 
@@ -85,17 +85,17 @@ cp .env.example .env
 5. **Configure PostgreSQL**:
 ```bash
 # Create database
-createdb mometric_db
+createdb hojaa_db
 
 # Or using psql:
 psql -U postgres
-CREATE DATABASE mometric_db;
+CREATE DATABASE hojaa_db;
 \q
 ```
 
 6. **Update .env** with your database URL:
 ```
-DATABASE_URL=postgresql://username:password@localhost:5432/mometric_db
+DATABASE_URL=postgresql://username:password@localhost:5432/hojaa_db
 OPENAI_API_KEY=your_actual_key_here
 ```
 
@@ -309,12 +309,12 @@ Create `.env` file with:
 
 ```bash
 # Application
-APP_NAME="MoMetric Requirements Discovery API"
+APP_NAME="Hojaa Requirements Discovery API"
 ENVIRONMENT=development
 DEBUG=True
 
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/mometric_db
+DATABASE_URL=postgresql://user:password@localhost:5432/hojaa_db
 
 # OpenAI
 OPENAI_API_KEY=sk-...
@@ -419,7 +419,7 @@ const response = await fetch('http://localhost:8000/api/chat/message', {
 sudo service postgresql status
 
 # Check connection string in .env
-DATABASE_URL=postgresql://user:password@localhost:5432/mometric_db
+DATABASE_URL=postgresql://user:password@localhost:5432/hojaa_db
 ```
 
 ### LLM API Error
@@ -453,7 +453,7 @@ MIT
 
 ## 👥 Contributors
 
-MoMetric Team
+Hojaa Team
 
 ---
 

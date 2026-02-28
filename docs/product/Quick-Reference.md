@@ -1,12 +1,12 @@
-# MoMetric Quick Reference
+# Hojaa Quick Reference
 
 *One-page overview for quick understanding*
 
 ---
 
-## What is MoMetric?
+## What is Hojaa?
 
-**MoMetric bridges the gap between business strategy and data execution using AI.**
+**Hojaa bridges the gap between business strategy and data execution using AI.**
 
 It helps teams:
 1. Clarify what they're building (Scope Canvas)

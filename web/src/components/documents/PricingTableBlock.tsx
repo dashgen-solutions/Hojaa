@@ -213,7 +213,7 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
       <div className="p-4 space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="animate-pulse">
-            <div className="h-10 w-full bg-neutral-200 rounded mb-2" />
+            <div className="h-10 w-full bg-neutral-200 dark:bg-neutral-700 rounded mb-2" />
           </div>
         ))}
       </div>
@@ -233,17 +233,17 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
   return (
     <div className="flex flex-col h-full">
       {/* Actions Bar */}
-      <div className="flex items-center gap-2 p-3 border-b border-neutral-200">
+      <div className="flex items-center gap-2 p-3 border-b border-neutral-200 dark:border-neutral-700">
         <button
           onClick={handleAddRow}
-          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
         >
           <PlusIcon className="h-3.5 w-3.5" />
           Add Item
         </button>
         <button
           onClick={() => setShowImportDialog(true)}
-          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
         >
           <ArrowPathIcon className="h-3.5 w-3.5" />
           Import from Planning
@@ -252,8 +252,8 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
 
       {/* Import Dialog */}
       {showImportDialog && (
-        <div className="p-3 border-b border-neutral-200 bg-neutral-50">
-          <p className="text-xs text-neutral-700 mb-2">
+        <div className="p-3 border-b border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">
+          <p className="text-xs text-neutral-700 dark:text-neutral-300 mb-2">
             Enter hourly rate to generate pricing from planning cards:
           </p>
           <div className="flex items-center gap-2">
@@ -266,7 +266,7 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
                 placeholder="0.00"
                 value={hourlyRate}
                 onChange={(e) => setHourlyRate(e.target.value)}
-                className="w-full rounded-md border border-neutral-200 bg-white py-1.5 pl-7 pr-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                className="w-full rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1.5 pl-7 pr-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
               />
             </div>
             <button
@@ -281,7 +281,7 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
                 setShowImportDialog(false);
                 setHourlyRate('');
               }}
-              className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 transition-colors"
+              className="rounded-md border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
             >
               Cancel
             </button>
@@ -306,7 +306,7 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
             {items.map((item) => (
               <div
                 key={item.id}
-                className="group rounded-lg border border-neutral-200 bg-white p-3 hover:border-neutral-300 transition-colors relative"
+                className="group rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors relative"
               >
                 {/* Delete Button */}
                 <button
@@ -337,7 +337,7 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
                   onChange={(e) => handleLocalChange(item.id, 'name', e.target.value)}
                   onBlur={() => handleFieldBlur(item, 'name', item.name)}
                   placeholder="Item name"
-                  className="w-full text-sm font-medium text-neutral-900 bg-transparent border-none outline-none focus:ring-0 placeholder:text-neutral-400 mb-1"
+                  className="w-full text-sm font-medium text-neutral-900 dark:text-neutral-100 bg-transparent border-none outline-none focus:ring-0 placeholder:text-neutral-400 mb-1"
                 />
 
                 {/* Description */}
@@ -363,7 +363,7 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
                         handleLocalChange(item.id, 'quantity', parseFloat(e.target.value) || 0)
                       }
                       onBlur={() => handleFieldBlur(item, 'quantity', item.quantity)}
-                      className="w-full rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-900 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                      className="w-full rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-2 py-1 text-xs text-neutral-900 dark:text-neutral-100 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
                     />
                   </div>
                   <div>
@@ -377,7 +377,7 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
                         handleLocalChange(item.id, 'unit_price', parseFloat(e.target.value) || 0)
                       }
                       onBlur={() => handleFieldBlur(item, 'unit_price', item.unit_price)}
-                      className="w-full rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-900 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                      className="w-full rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-2 py-1 text-xs text-neutral-900 dark:text-neutral-100 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
                     />
                   </div>
                   <div>
@@ -398,7 +398,7 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
                       onBlur={() =>
                         handleFieldBlur(item, 'discount_percent', item.discount_percent)
                       }
-                      className="w-full rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-900 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                      className="w-full rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-2 py-1 text-xs text-neutral-900 dark:text-neutral-100 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
                     />
                   </div>
                   <div>
@@ -413,13 +413,13 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
                         handleLocalChange(item.id, 'tax_percent', parseFloat(e.target.value) || 0)
                       }
                       onBlur={() => handleFieldBlur(item, 'tax_percent', item.tax_percent)}
-                      className="w-full rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-900 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                      className="w-full rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-2 py-1 text-xs text-neutral-900 dark:text-neutral-100 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
                     />
                   </div>
                 </div>
 
                 {/* Line Total */}
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-100">
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
                   <div className="flex items-center gap-2">
                     <label className="flex items-center gap-1.5 text-xs text-neutral-500">
                       <input
@@ -437,7 +437,7 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
                       <span className="text-xs text-neutral-400">Saving...</span>
                     )}
                   </div>
-                  <span className="text-sm font-medium text-neutral-900">
+                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                     {formatCurrency(computeLineTotal(item))}
                   </span>
                 </div>
@@ -449,18 +449,18 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
 
       {/* Totals */}
       {items.length > 0 && (
-        <div className="border-t border-neutral-200 bg-white p-3 space-y-1.5">
+        <div className="border-t border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3 space-y-1.5">
           <div className="flex items-center justify-between text-xs">
             <span className="text-neutral-500">Subtotal</span>
-            <span className="text-neutral-900 font-medium">{formatCurrency(subtotal)}</span>
+            <span className="text-neutral-900 dark:text-neutral-100 font-medium">{formatCurrency(subtotal)}</span>
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-neutral-500">Tax</span>
-            <span className="text-neutral-900 font-medium">{formatCurrency(totalTax)}</span>
+            <span className="text-neutral-900 dark:text-neutral-100 font-medium">{formatCurrency(totalTax)}</span>
           </div>
-          <div className="flex items-center justify-between text-sm pt-1.5 border-t border-neutral-200">
-            <span className="font-semibold text-neutral-900">Grand Total</span>
-            <span className="font-semibold text-neutral-900">{formatCurrency(grandTotal)}</span>
+          <div className="flex items-center justify-between text-sm pt-1.5 border-t border-neutral-200 dark:border-neutral-700">
+            <span className="font-semibold text-neutral-900 dark:text-neutral-100">Grand Total</span>
+            <span className="font-semibold text-neutral-900 dark:text-neutral-100">{formatCurrency(grandTotal)}</span>
           </div>
         </div>
       )}

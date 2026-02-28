@@ -77,14 +77,14 @@ export default function NotificationSettings({ sessionId }: NotificationSettings
   const isConnected = notificationHealth?.status === 'ok';
 
   return (
-    <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white dark:bg-neutral-900 rounded-md shadow-sm border border-gray-200 dark:border-neutral-700 overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="px-6 py-4 border-b border-gray-100 dark:border-neutral-700 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <BellIcon className="h-5 w-5 text-neutral-900" />
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Email Notifications</h3>
-            <p className="text-xs text-gray-500">Email notifications via SMTP</p>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-neutral-100">Email Notifications</h3>
+            <p className="text-xs text-gray-500 dark:text-neutral-400">Email notifications via SMTP</p>
           </div>
         </div>
 
@@ -110,16 +110,16 @@ export default function NotificationSettings({ sessionId }: NotificationSettings
       </div>
 
       {isLoadingNotifications || !notificationPreferences ? (
-        <div className="px-6 py-8 text-center text-sm text-gray-400">Loading preferences…</div>
+        <div className="px-6 py-8 text-center text-sm text-gray-400 dark:text-neutral-500">Loading preferences...</div>
       ) : (
         <>
           {/* Master toggle */}
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="px-6 py-4 border-b border-gray-100 dark:border-neutral-700 flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-gray-900 dark:text-neutral-100">
                 {notificationPreferences.is_subscribed ? 'Notifications enabled' : 'Notifications paused'}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-neutral-400">
                 {notificationPreferences.is_subscribed
                   ? 'You will receive emails for selected events'
                   : 'All email notifications are paused for this project'}
@@ -142,18 +142,18 @@ export default function NotificationSettings({ sessionId }: NotificationSettings
 
           {/* Individual toggles */}
           <div className={notificationPreferences.is_subscribed ? '' : 'opacity-50 pointer-events-none'}>
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-gray-100 dark:divide-neutral-700">
               {PREF_OPTIONS.map((opt) => (
                 <li key={opt.key} className="px-6 py-3 flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-800">{opt.label}</p>
-                    <p className="text-xs text-gray-400">{opt.description}</p>
+                    <p className="text-sm text-gray-800 dark:text-neutral-200">{opt.label}</p>
+                    <p className="text-xs text-gray-400 dark:text-neutral-500">{opt.description}</p>
                   </div>
                   <button
                     onClick={() => handleToggle(opt.key)}
                     disabled={saving === opt.key}
                     className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-1 ${
-                      notificationPreferences[opt.key] ? 'bg-neutral-900' : 'bg-gray-200'
+                      notificationPreferences[opt.key] ? 'bg-neutral-900' : 'bg-gray-200 dark:bg-neutral-600'
                     }`}
                   >
                     <span
@@ -168,14 +168,14 @@ export default function NotificationSettings({ sessionId }: NotificationSettings
           </div>
 
           {/* Footer: test email */}
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-            <p className="text-xs text-gray-400">
+          <div className="px-6 py-4 border-t border-gray-100 dark:border-neutral-700 flex items-center justify-between">
+            <p className="text-xs text-gray-400 dark:text-neutral-500">
               Notifications are sent to your account email address
             </p>
             <button
               onClick={handleTestEmail}
               disabled={testStatus === 'sending' || !isConnected}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-gray-50 dark:bg-neutral-800 text-gray-700 dark:text-neutral-300 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 transition-colors"
             >
               {testStatus === 'sending' ? (
                 <>

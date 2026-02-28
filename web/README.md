@@ -1,4 +1,4 @@
-# MoMetric Requirements Discovery UI
+# Hojaa Requirements Discovery UI
 
 A web-based interface for AI-powered requirements discovery through progressive questioning. Built with **Next.js**, **TypeScript**, and **Tailwind CSS**, inspired by [Specifai](https://github.com/presidio-oss/specif-ai)'s design system.
 
@@ -237,4 +237,4 @@ MIT
 
 ---
 
-**For questions or issues, please contact the MoMetric team.**
+**For questions or issues, please contact the Hojaa team.**

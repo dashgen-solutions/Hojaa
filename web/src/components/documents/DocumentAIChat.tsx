@@ -148,7 +148,7 @@ export default function DocumentAIChat({
         <div className="flex justify-end px-3 pt-2">
           <button
             onClick={handleClearHistory}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
             title="Clear chat history"
           >
             <TrashIcon className="w-3.5 h-3.5" />
@@ -166,10 +166,10 @@ export default function DocumentAIChat({
         ) : showQuickPrompts ? (
           <div className="py-4">
             <div className="flex flex-col items-center mb-4">
-              <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center mb-2">
-                <SparklesIcon className="w-5 h-5 text-indigo-500" />
+              <div className="w-10 h-10 rounded-full bg-brand-lime/20 flex items-center justify-center mb-2">
+                <SparklesIcon className="w-5 h-5 text-brand-dark dark:text-[#E4FF1A]" />
               </div>
-              <h4 className="text-sm font-semibold text-neutral-800">
+              <h4 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
                 AI Document Assistant
               </h4>
               <p className="text-xs text-neutral-500 text-center mt-1 max-w-[260px]">
@@ -185,7 +185,7 @@ export default function DocumentAIChat({
                 <button
                   key={action.label}
                   onClick={() => sendMessage(action.prompt)}
-                  className="w-full text-left px-3 py-2 rounded-md border border-neutral-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors text-xs text-neutral-700"
+                  className="w-full text-left px-3 py-2 rounded-md border border-neutral-200 dark:border-neutral-700 hover:border-[#E4FF1A]/60 hover:bg-brand-lime/10 transition-colors text-xs text-neutral-700 dark:text-neutral-300"
                 >
                   {action.label}
                 </button>
@@ -204,7 +204,7 @@ export default function DocumentAIChat({
               className={`max-w-[90%] rounded-md px-3 py-2.5 text-sm leading-relaxed ${
                 msg.role === 'user'
                   ? 'bg-neutral-900 text-white'
-                  : 'bg-neutral-100 text-neutral-800'
+                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200'
               }`}
             >
               {msg.role === 'assistant' ? (
@@ -219,7 +219,7 @@ export default function DocumentAIChat({
                 msg.generated_blocks.length > 0 && (
                   <button
                     onClick={() => onInsertBlocks(msg.generated_blocks!)}
-                    className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md text-xs font-medium px-3 py-1.5 mt-2 transition-colors"
+                    className="inline-flex items-center gap-1.5 bg-brand-lime/20 text-brand-dark dark:text-[#E4FF1A] hover:bg-brand-lime/30 rounded-md text-xs font-medium px-3 py-1.5 mt-2 transition-colors"
                   >
                     <DocumentArrowDownIcon className="w-3.5 h-3.5" />
                     Insert into Document
@@ -232,7 +232,7 @@ export default function DocumentAIChat({
         {/* Loading indicator */}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-neutral-100 rounded-md px-4 py-3">
+            <div className="bg-neutral-100 dark:bg-neutral-800 rounded-md px-4 py-3">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1">
                   <div
@@ -279,7 +279,7 @@ export default function DocumentAIChat({
       </div>
 
       {/* Input area */}
-      <div className="border-t border-neutral-200 px-3 py-2.5">
+      <div className="border-t border-neutral-200 dark:border-neutral-700 px-3 py-2.5">
         <div className="flex items-end gap-2">
           <textarea
             ref={inputRef}
@@ -288,7 +288,7 @@ export default function DocumentAIChat({
             onKeyDown={handleKeyDown}
             placeholder="Describe what to generate..."
             rows={1}
-            className="flex-1 resize-none rounded-md border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none placeholder:text-neutral-400 max-h-24 overflow-y-auto"
+            className="flex-1 resize-none rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none placeholder:text-neutral-400 max-h-24 overflow-y-auto"
             style={{ minHeight: '38px' }}
             onInput={(e) => {
               const t = e.currentTarget;
@@ -299,7 +299,7 @@ export default function DocumentAIChat({
           <button
             onClick={() => sendMessage()}
             disabled={!input.trim() || isLoading}
-            className="p-2 rounded-md bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+            className="p-2 rounded-md bg-brand-lime text-brand-dark hover:bg-brand-lime/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
           >
             <PaperAirplaneIcon className="w-4 h-4" />
           </button>
@@ -389,7 +389,7 @@ function MarkdownRenderer({ content }: { content: string }) {
       elements.push(
         <h4
           key={`h3-${i}`}
-          className="font-semibold text-neutral-800 text-xs mt-2 mb-0.5"
+          className="font-semibold text-neutral-800 dark:text-neutral-200 text-xs mt-2 mb-0.5"
         >
           {processInline(line.slice(4))}
         </h4>,
@@ -400,7 +400,7 @@ function MarkdownRenderer({ content }: { content: string }) {
       elements.push(
         <h3
           key={`h2-${i}`}
-          className="font-bold text-neutral-900 text-sm mt-2 mb-0.5"
+          className="font-bold text-neutral-900 dark:text-neutral-100 text-sm mt-2 mb-0.5"
         >
           {processInline(line.slice(3))}
         </h3>,
@@ -411,7 +411,7 @@ function MarkdownRenderer({ content }: { content: string }) {
       elements.push(
         <h2
           key={`h1-${i}`}
-          className="font-bold text-neutral-900 text-base mt-2 mb-1"
+          className="font-bold text-neutral-900 dark:text-neutral-100 text-base mt-2 mb-1"
         >
           {processInline(line.slice(2))}
         </h2>,
@@ -453,7 +453,7 @@ function MarkdownRenderer({ content }: { content: string }) {
     // Horizontal rule
     if (line.trim() === '---' || line.trim() === '***') {
       elements.push(
-        <hr key={`hr-${i}`} className="border-neutral-200 my-2" />,
+        <hr key={`hr-${i}`} className="border-neutral-200 dark:border-neutral-700 my-2" />,
       );
       continue;
     }

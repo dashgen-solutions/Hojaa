@@ -188,8 +188,8 @@ export default function DocumentsPage() {
   // Loading state
   if (projectLoading) {
     return (
-      <div className="flex items-center justify-center h-full bg-neutral-50">
-        <div className="w-8 h-8 border-3 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" />
+      <div className="flex items-center justify-center h-full bg-neutral-50 dark:bg-[#060606]">
+        <div className="w-8 h-8 border-3 border-neutral-200 dark:border-neutral-700 border-t-neutral-600 dark:border-t-neutral-400 rounded-full animate-spin" />
       </div>
     );
   }
@@ -213,9 +213,9 @@ export default function DocumentsPage() {
   // Loading selected doc
   if (selectedDocId && !selectedDoc) {
     return (
-      <div className="flex items-center justify-center h-full bg-neutral-50">
+      <div className="flex items-center justify-center h-full bg-neutral-50 dark:bg-[#060606]">
         <div className="text-center">
-          <div className="w-8 h-8 border-3 border-neutral-200 border-t-neutral-600 rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-8 h-8 border-3 border-neutral-200 dark:border-neutral-700 border-t-neutral-600 dark:border-t-neutral-400 rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm text-neutral-500">Loading document...</p>
         </div>
       </div>
@@ -228,11 +228,11 @@ export default function DocumentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 pt-5 pb-4 flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center">
-            <DocumentTextIcon className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center">
+            <DocumentTextIcon className="w-4 h-4 text-white dark:text-neutral-900" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-neutral-900 leading-tight">Documents</h1>
+            <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 leading-tight">Documents</h1>
             {!loading && (
               <p className="text-xs text-neutral-500">
                 {documents.length} {documents.length === 1 ? 'document' : 'documents'}
@@ -245,7 +245,7 @@ export default function DocumentsPage() {
           <button
             onClick={() => setShowNewMenu((prev) => !prev)}
             disabled={creatingDoc}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-neutral-900 rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-brand-lime text-brand-dark rounded-lg hover:bg-brand-lime/90 shadow-sm hover:shadow-[0_0_16px_-4px_rgba(228,255,26,0.4)] transition-colors disabled:opacity-50"
           >
             {creatingDoc ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -263,16 +263,16 @@ export default function DocumentsPage() {
                 className="fixed inset-0 z-10"
                 onClick={() => setShowNewMenu(false)}
               />
-              <div className="absolute right-0 mt-1.5 w-56 bg-white rounded-lg shadow-lg border border-neutral-200 z-20 py-1">
+              <div className="absolute right-0 mt-1.5 w-56 bg-white dark:bg-neutral-900 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 z-20 py-1">
                 <button
                   onClick={handleCreateBlank}
-                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left"
+                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-left"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center flex-shrink-0">
                     <DocumentTextIcon className="w-4 h-4 text-neutral-500" />
                   </div>
                   <div>
-                    <p className="font-medium text-neutral-900">Blank Document</p>
+                    <p className="font-medium text-neutral-900 dark:text-neutral-100">Blank Document</p>
                     <p className="text-xs text-neutral-500">Start from scratch</p>
                   </div>
                 </button>
@@ -281,13 +281,13 @@ export default function DocumentsPage() {
                     setShowNewMenu(false);
                     setShowTemplateGallery(true);
                   }}
-                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left"
+                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-left"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center flex-shrink-0">
                     <Squares2X2Icon className="w-4 h-4 text-neutral-500" />
                   </div>
                   <div>
-                    <p className="font-medium text-neutral-900">From Template</p>
+                    <p className="font-medium text-neutral-900 dark:text-neutral-100">From Template</p>
                     <p className="text-xs text-neutral-500">Use a pre-built template</p>
                   </div>
                 </button>
@@ -301,7 +301,7 @@ export default function DocumentsPage() {
       <div className="flex-1 overflow-y-auto px-6 pb-6">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="w-8 h-8 border-3 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" />
+            <div className="w-8 h-8 border-3 border-neutral-200 dark:border-neutral-700 border-t-neutral-600 dark:border-t-neutral-400 rounded-full animate-spin" />
           </div>
         ) : (
           <DocumentList

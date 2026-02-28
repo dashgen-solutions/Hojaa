@@ -813,20 +813,20 @@ class BrandSettings(Base):
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, unique=True)
 
     # Naming
-    app_name = Column(String(100), default="MoMetric", nullable=False)
+    app_name = Column(String(100), default="Hojaa", nullable=False)
     tagline = Column(String(255), nullable=True)
 
     # Visual
     logo_url = Column(String(500), nullable=True)
     favicon_url = Column(String(500), nullable=True)
-    primary_color = Column(String(7), default="#6366f1", nullable=False)     # hex
-    secondary_color = Column(String(7), default="#8b5cf6", nullable=False)
+    primary_color = Column(String(7), default="#E4FF1A", nullable=False)     # hex
+    secondary_color = Column(String(7), default="#c8e600", nullable=False)
     accent_color = Column(String(7), default="#f59e0b", nullable=False)
     background_color = Column(String(7), default="#ffffff", nullable=False)
     text_color = Column(String(7), default="#111827", nullable=False)
 
     # Typography
-    font_family = Column(String(100), default="Inter, system-ui, sans-serif", nullable=False)
+    font_family = Column(String(100), default="Outfit, DM Sans, system-ui, sans-serif", nullable=False)
 
     # PDF export branding
     pdf_header_text = Column(String(255), nullable=True)

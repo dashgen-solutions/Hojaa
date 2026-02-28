@@ -12,7 +12,7 @@ setup: ## First-time setup: copy env template and pull Docker images
 up: ## Build and start all services (PostgreSQL + API + Web)
 	docker compose up -d --build
 	@echo ""
-	@echo "\033[32mMoMetric is starting...\033[0m"
+	@echo "\033[32mHojaa is starting...\033[0m"
 	@echo ""
 	@echo "  Web UI:   http://localhost:$${WEB_PORT:-3000}"
 	@echo "  API:      http://localhost:$${API_PORT:-8000}"

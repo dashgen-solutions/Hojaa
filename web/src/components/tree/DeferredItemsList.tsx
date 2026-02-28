@@ -79,7 +79,7 @@ export default function DeferredItemsList({ sessionId, onReactivated }: Deferred
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12 text-neutral-500 text-sm gap-2">
+      <div className="flex items-center justify-center py-12 text-neutral-500 dark:text-neutral-400 text-sm gap-2">
         <ArrowPathIcon className="w-4 h-4 animate-spin" />
         Loading deferred items...
       </div>
@@ -91,8 +91,8 @@ export default function DeferredItemsList({ sessionId, onReactivated }: Deferred
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <ClockIcon className="w-5 h-5 text-neutral-500" />
-          <h3 className="text-sm font-semibold text-neutral-800">
+          <ClockIcon className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
+          <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
             Deferred Items ({nodes.length})
           </h3>
         </div>
@@ -104,7 +104,7 @@ export default function DeferredItemsList({ sessionId, onReactivated }: Deferred
               placeholder="Filter..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-7 pr-2 py-1 text-xs border border-neutral-200 rounded-md w-40 focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
+              className="pl-7 pr-2 py-1 text-xs border border-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 rounded-md w-40 focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-500 focus:border-transparent"
             />
           </div>
         )}
@@ -112,7 +112,7 @@ export default function DeferredItemsList({ sessionId, onReactivated }: Deferred
 
       {/* Empty state */}
       {nodes.length === 0 && (
-        <div className="text-center py-8 text-sm text-neutral-400">
+        <div className="text-center py-8 text-sm text-neutral-400 dark:text-neutral-500">
           <CheckCircleIcon className="w-8 h-8 mx-auto mb-2 text-emerald-300" />
           No deferred items — all requirements are active.
         </div>
@@ -127,24 +127,24 @@ export default function DeferredItemsList({ sessionId, onReactivated }: Deferred
               className={`
                 rounded-md border p-3 transition-all duration-300
                 ${successId === node.id
-                  ? 'border-emerald-300 bg-emerald-50 scale-[0.98] opacity-60'
-                  : 'border-neutral-200 bg-white hover:border-neutral-300'
+                  ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-900/30 scale-[0.98] opacity-60'
+                  : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900 hover:border-neutral-300 dark:hover:border-neutral-600'
                 }
               `}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-neutral-800 truncate">
+                  <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 truncate">
                     {node.question}
                   </p>
                   {node.deferred_reason && (
-                    <p className="text-xs text-neutral-500 mt-0.5 flex items-center gap-1">
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 flex items-center gap-1">
                       <ExclamationTriangleIcon className="w-3 h-3 flex-shrink-0" />
                       {node.deferred_reason}
                     </p>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 capitalize">
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 capitalize">
                       {node.type}
                     </span>
                   </div>
@@ -153,7 +153,7 @@ export default function DeferredItemsList({ sessionId, onReactivated }: Deferred
                   onClick={() => handleReactivate(node.id)}
                   disabled={reactivating === node.id}
                   className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md
-                             bg-neutral-50 text-neutral-900 hover:bg-neutral-100 transition-colors
+                             bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors
                              disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Reactivate this requirement"
                 >
@@ -168,7 +168,7 @@ export default function DeferredItemsList({ sessionId, onReactivated }: Deferred
 
       {/* Filtered empty */}
       {filtered.length === 0 && nodes.length > 0 && (
-        <p className="text-xs text-neutral-400 text-center py-4">No items match &quot;{search}&quot;</p>
+        <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center py-4">No items match &quot;{search}&quot;</p>
       )}
     </div>
   );

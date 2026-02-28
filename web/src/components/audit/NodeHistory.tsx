@@ -233,7 +233,7 @@ export default function NodeHistoryPanel({ nodeId, nodeTitle, onClose }: NodeHis
                       <div className="flex items-center gap-2 mt-1.5 text-[10px] text-neutral-400">
                         {entry.changed_by_name && <span>by {entry.changed_by_name}</span>}
                         {entry.source_name && (
-                          <span className="bg-neutral-200 px-1.5 py-0.5 rounded text-primary-500 font-medium cursor-pointer hover:underline">
+                          <span className="bg-neutral-200 px-1.5 py-0.5 rounded text-primary-700 font-medium cursor-pointer hover:underline">
                             {entry.source_name}
                           </span>
                         )}

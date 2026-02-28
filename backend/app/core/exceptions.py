@@ -4,9 +4,9 @@ Custom exceptions for clean error handling across the application.
 from fastapi import HTTPException, status
 
 
-class MoMetricException(Exception):
+class HojaaException(Exception):
     """
-    Base exception for all MoMetric errors.
+    Base exception for all Hojaa errors.
     Provides structured error information with optional details.
     """
     
@@ -23,37 +23,37 @@ class MoMetricException(Exception):
         super().__init__(self.message)
 
 
-class ResourceNotFoundException(MoMetricException):
+class ResourceNotFoundException(HojaaException):
     """Raised when a requested resource is not found."""
     pass
 
 
-class DocumentProcessingException(MoMetricException):
+class DocumentProcessingException(HojaaException):
     """Raised when document processing fails."""
     pass
 
 
-class AIGenerationException(MoMetricException):
+class AIGenerationException(HojaaException):
     """Raised when AI generation fails."""
     pass
 
 
-class ValidationException(MoMetricException):
+class ValidationException(HojaaException):
     """Raised when validation fails."""
     pass
 
 
-class UnauthorizedException(MoMetricException):
+class UnauthorizedException(HojaaException):
     """Raised when authentication fails."""
     pass
 
 
-class ConversationException(MoMetricException):
+class ConversationException(HojaaException):
     """Raised when conversation operations fail."""
     pass
 
 
-class TreeBuildingException(MoMetricException):
+class TreeBuildingException(HojaaException):
     """Raised when tree building operations fail."""
     pass
 

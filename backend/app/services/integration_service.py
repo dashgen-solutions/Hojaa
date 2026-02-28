@@ -382,7 +382,7 @@ async def export_cards_to_jira(
             summary=title,
             description=desc,
             priority=card.priority.value if card.priority else "medium",
-            labels=["mometric"],
+            labels=["hojaa"],
             session_id=session_id,
             entity_type="card",
             entity_id=card.id,

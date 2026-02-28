@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document explains how MoMetric's Scope Canvas differs from existing project management, collaboration, and documentation tools. Understanding these differences is crucial for positioning and selling the product.
+This document explains how Hojaa's Scope Canvas differs from existing project management, collaboration, and documentation tools. Understanding these differences is crucial for positioning and selling the product.
 
 ---
 
@@ -280,7 +280,7 @@ Requirements
 **KPI Karta**: "What should we measure?"
 **Scope Canvas**: "What are we building and does everyone agree?"
 
-**MoMetric's advantage**: Combines both (Scope Canvas for delivery + KPI Mapping for measurement)
+**Hojaa's advantage**: Combines both (Scope Canvas for delivery + KPI Mapping for measurement)
 
 ---
 

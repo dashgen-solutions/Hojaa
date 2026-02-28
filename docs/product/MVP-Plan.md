@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the Minimum Viable Product (MVP) for the Scope Canvas module of MoMetric. The MVP will be used internally on our AI projects to validate the concept before offering to external customers.
+This document outlines the Minimum Viable Product (MVP) for the Scope Canvas module of Hojaa. The MVP will be used internally on our AI projects to validate the concept before offering to external customers.
 
 ---
 
@@ -353,7 +353,7 @@ These features can be added in future versions based on feedback.
 ### Infrastructure
 - **Hosting**: Railway or Render (backend), Vercel (frontend)
 - **Database**: Managed PostgreSQL (Supabase or Railway)
-- **Domain**: *.mometric.ai or similar
+- **Domain**: *.hojaa.com or similar
 - **SSL**: Auto-provisioned via platform
 - **Monitoring**: Sentry (errors), Plausible (analytics)
 

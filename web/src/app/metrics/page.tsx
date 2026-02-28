@@ -9,6 +9,7 @@ import {
   platformAdminLogout,
   getPlatformToken,
 } from "@/lib/api";
+import HojaaLogo from '@/components/brand/HojaaLogo';
 import {
   ChartBarIcon,
   ArrowTrendingUpIcon,
@@ -190,25 +191,25 @@ function MetricCard({
   return (
     <div className="card p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-neutral-500">
+        <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
           <Icon className="w-4 h-4" />
           <span className="text-xs font-medium uppercase tracking-wider">{label}</span>
         </div>
         {target !== undefined && <StatusDot pass={pass} />}
       </div>
       <div className="flex items-end gap-1.5">
-        <span className="text-3xl font-bold text-neutral-900">{value}</span>
-        {unit && <span className="text-sm text-neutral-400 mb-1">{unit}</span>}
+        <span className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">{value}</span>
+        {unit && <span className="text-sm text-neutral-400 dark:text-neutral-500 mb-1">{unit}</span>}
       </div>
       {target !== undefined && (
-        <p className="text-xs text-neutral-400">
+        <p className="text-xs text-neutral-400 dark:text-neutral-500">
           Target: {target}{unit ? ` ${unit}` : ""} —{" "}
           <span className={pass ? "text-success-600" : "text-danger-600"}>
             {pass ? "On track" : "Below target"}
           </span>
         </p>
       )}
-      {description && <p className="text-xs text-neutral-400">{description}</p>}
+      {description && <p className="text-xs text-neutral-400 dark:text-neutral-500">{description}</p>}
     </div>
   );
 }
@@ -218,13 +219,13 @@ function ProgressBar({ label, pct, detail }: { label: string; pct: number; detai
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-neutral-700 font-medium">{label}</span>
-        <span className="text-neutral-500">{pct}%</span>
+        <span className="text-neutral-700 dark:text-neutral-300 font-medium">{label}</span>
+        <span className="text-neutral-500 dark:text-neutral-400">{pct}%</span>
       </div>
-      <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+      <div className="h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${Math.min(pct, 100)}%` }} />
       </div>
-      {detail && <p className="text-xs text-neutral-400">{detail}</p>}
+      {detail && <p className="text-xs text-neutral-400 dark:text-neutral-500">{detail}</p>}
     </div>
   );
 }
@@ -349,13 +350,13 @@ export default function MetricsPage() {
 
   if (authChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
         <div className="text-center animate-fade-in">
           <div className="relative w-16 h-16 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-4 border-neutral-200" />
-            <div className="absolute inset-0 rounded-full border-4 border-neutral-500 border-t-transparent animate-spin" />
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-200 dark:border-neutral-700" />
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-500 dark:border-neutral-400 border-t-transparent animate-spin" />
           </div>
-          <p className="text-neutral-500 font-medium">Checking access…</p>
+          <p className="text-neutral-500 dark:text-neutral-400 font-medium">Checking access…</p>
         </div>
       </div>
     );
@@ -363,14 +364,11 @@ export default function MetricsPage() {
 
   if (!isAuthed) {
     return (
-      <div className="h-screen bg-neutral-50 flex flex-col overflow-hidden">
+      <div className="h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col overflow-hidden">
         {/* Mini header */}
         <header className="shrink-0 p-4">
           <Link href="/" className="inline-flex items-center gap-2">
-            <div className="w-8 h-8 bg-neutral-900 rounded-md flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-sm">M</span>
-            </div>
-            <span className="text-lg font-semibold text-neutral-900">MoMetric</span>
+            <HojaaLogo size={32} />
           </Link>
         </header>
 
@@ -378,11 +376,11 @@ export default function MetricsPage() {
         <div className="flex-1 flex items-center justify-center px-4 -mt-14">
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
-              <div className="w-14 h-14 mx-auto mb-4 bg-neutral-900 rounded-md flex items-center justify-center shadow-sm">
-                <ChartBarIcon className="w-7 h-7 text-white" />
+              <div className="w-14 h-14 mx-auto mb-4 bg-neutral-900 dark:bg-brand-lime rounded-md flex items-center justify-center shadow-sm">
+                <ChartBarIcon className="w-7 h-7 text-white dark:text-brand-dark" />
               </div>
-              <h1 className="text-2xl font-bold text-neutral-900">Platform Metrics</h1>
-              <p className="text-sm text-neutral-500 mt-1">
+              <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Platform Metrics</h1>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
                 App developer access only — no signup required
               </p>
             </div>
@@ -394,11 +392,11 @@ export default function MetricsPage() {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Email</label>
                 <input
                   type="email"
                   className="input"
-                  placeholder="admin@mometric.app"
+                  placeholder="admin@hojaa.com"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   required
@@ -406,7 +404,7 @@ export default function MetricsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Password</label>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Password</label>
                 <input
                   type="password"
                   className="input"
@@ -433,7 +431,7 @@ export default function MetricsPage() {
                   </div>
                 )}
               </button>
-              <p className="text-xs text-center text-neutral-400">
+              <p className="text-xs text-center text-neutral-400 dark:text-neutral-500">
                 Credentials are configured via environment variables
               </p>
             </form>
@@ -479,8 +477,8 @@ export default function MetricsPage() {
               return (
                 <div key={key} className="card p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{label}</span>
-                    <span className="text-lg font-bold text-neutral-900">{total}</span>
+                    <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{label}</span>
+                    <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{total}</span>
                   </div>
                   <MiniBarChart data={trends} dataKey={key} color={color} />
                 </div>
@@ -535,7 +533,7 @@ export default function MetricsPage() {
           {s?.whats_in_scope && (
             <div className="space-y-2">
               <ProgressBar label={`METRIC-2.1: ${s.whats_in_scope.label}`} pct={s.whats_in_scope.pct ?? 0} />
-              <div className="flex gap-6 text-xs text-neutral-400 pl-1">
+              <div className="flex gap-6 text-xs text-neutral-400 dark:text-neutral-500 pl-1">
                 <span>Sessions with scope: {s.whats_in_scope.sessions_with_scope}</span>
                 <span>Total sessions: {s.whats_in_scope.total_sessions}</span>
               </div>
@@ -545,7 +543,7 @@ export default function MetricsPage() {
           {s?.why_is_this_here && (
             <div className="space-y-2">
               <ProgressBar label={`METRIC-2.2: ${s.why_is_this_here.label}`} pct={s.why_is_this_here.traceability_pct ?? 0} />
-              <div className="flex gap-6 text-xs text-neutral-400 pl-1">
+              <div className="flex gap-6 text-xs text-neutral-400 dark:text-neutral-500 pl-1">
                 <span>Nodes with source: {s.why_is_this_here.nodes_with_source}</span>
                 <span>Total nodes: {s.why_is_this_here.total_nodes}</span>
               </div>
@@ -555,7 +553,7 @@ export default function MetricsPage() {
           {s?.what_changed && (
             <div className="space-y-2">
               <ProgressBar label={`METRIC-2.3: ${s.what_changed.label}`} pct={s.what_changed.pct ?? 0} />
-              <div className="flex gap-6 text-xs text-neutral-400 pl-1">
+              <div className="flex gap-6 text-xs text-neutral-400 dark:text-neutral-500 pl-1">
                 <span>Sessions with history: {s.what_changed.sessions_with_history}</span>
                 <span>Total sessions: {s.what_changed.total_sessions}</span>
               </div>
@@ -563,11 +561,11 @@ export default function MetricsPage() {
           )}
           <div className="divider" />
           {[s?.scope_disputes, s?.team_alignment].filter(Boolean).map((item, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-md">
-              <ExclamationTriangleIcon className="w-5 h-5 text-neutral-400 shrink-0" />
+            <div key={i} className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-md">
+              <ExclamationTriangleIcon className="w-5 h-5 text-neutral-400 dark:text-neutral-500 shrink-0" />
               <div>
-                <p className="text-sm text-neutral-600">{item!.label}</p>
-                <p className="text-xs text-neutral-400">{item!.note}</p>
+                <p className="text-sm text-neutral-600 dark:text-neutral-300">{item!.label}</p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500">{item!.note}</p>
               </div>
             </div>
           ))}
@@ -597,11 +595,11 @@ export default function MetricsPage() {
             <MetricCard label="Test Coverage" value={t.test_coverage_pct} target={t.target_test_coverage_pct} unit="%" icon={ShieldCheckIcon} />
           ) : (
             <div className="card p-5 flex flex-col gap-3">
-              <div className="flex items-center gap-2 text-neutral-500">
+              <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
                 <ShieldCheckIcon className="w-4 h-4" />
                 <span className="text-xs font-medium uppercase tracking-wider">Test Coverage</span>
               </div>
-              <p className="text-sm text-neutral-400 mt-2">Requires CI pipeline integration</p>
+              <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-2">Requires CI pipeline integration</p>
             </div>
           )}
         </div>
@@ -611,24 +609,24 @@ export default function MetricsPage() {
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-100 text-left text-neutral-500">
+              <tr className="border-b border-neutral-100 dark:border-neutral-700 text-left text-neutral-500 dark:text-neutral-400">
                 <th className="px-5 py-3 font-medium">Percentile</th>
                 <th className="px-5 py-3 font-medium">Latency</th>
                 <th className="px-5 py-3 font-medium">Target</th>
                 <th className="px-5 py-3 font-medium">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-50">
+            <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800">
               {[
                 { label: "p50 (median)", val: t?.api_p50_ms ?? 0 },
                 { label: "p95", val: t?.api_p95_ms ?? 0, target: t?.target_api_p95_ms },
                 { label: "p99", val: t?.api_p99_ms ?? 0 },
               ].map((row) => (
-                <tr key={row.label} className="hover:bg-neutral-50 transition-colors">
-                  <td className="px-5 py-3 font-medium text-neutral-700">{row.label}</td>
-                  <td className="px-5 py-3 text-neutral-600">{row.val} ms</td>
-                  <td className="px-5 py-3 text-neutral-400">{row.target ? `${row.target} ms` : "—"}</td>
-                  <td className="px-5 py-3">{row.target ? <StatusDot pass={row.val <= row.target} /> : <span className="text-neutral-300">—</span>}</td>
+                <tr key={row.label} className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                  <td className="px-5 py-3 font-medium text-neutral-700 dark:text-neutral-300">{row.label}</td>
+                  <td className="px-5 py-3 text-neutral-600 dark:text-neutral-400">{row.val} ms</td>
+                  <td className="px-5 py-3 text-neutral-400 dark:text-neutral-500">{row.target ? `${row.target} ms` : "—"}</td>
+                  <td className="px-5 py-3">{row.target ? <StatusDot pass={row.val <= row.target} /> : <span className="text-neutral-300 dark:text-neutral-600">—</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -642,7 +640,7 @@ export default function MetricsPage() {
             <div className="flex flex-wrap gap-3">
               {Object.entries(t.status_code_distribution).sort(([a], [b]) => a.localeCompare(b)).map(([code, count]) => {
                 const codeNum = parseInt(code);
-                const color = codeNum < 300 ? "bg-success-50 text-success-700 border-success-200" : codeNum < 400 ? "bg-neutral-50 text-neutral-700 border-neutral-200" : codeNum < 500 ? "bg-warning-50 text-warning-700 border-warning-200" : "bg-danger-50 text-danger-700 border-danger-200";
+                const color = codeNum < 300 ? "bg-success-50 text-success-700 border-success-200 dark:bg-success-900/30 dark:text-success-400 dark:border-success-800" : codeNum < 400 ? "bg-neutral-50 text-neutral-700 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700" : codeNum < 500 ? "bg-warning-50 text-warning-700 border-warning-200 dark:bg-warning-900/30 dark:text-warning-400 dark:border-warning-800" : "bg-danger-50 text-danger-700 border-danger-200 dark:bg-danger-900/30 dark:text-danger-400 dark:border-danger-800";
                 return <div key={code} className={`px-3 py-1.5 rounded-md border text-sm font-medium ${color}`}>{code}: {count}</div>;
               })}
             </div>
@@ -655,7 +653,7 @@ export default function MetricsPage() {
           <div className="card overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-neutral-100 text-left text-neutral-500">
+                <tr className="border-b border-neutral-100 dark:border-neutral-700 text-left text-neutral-500 dark:text-neutral-400">
                   <th className="px-5 py-3 font-medium">Route</th>
                   <th className="px-5 py-3 font-medium text-right">Requests</th>
                   <th className="px-5 py-3 font-medium text-right">p50</th>
@@ -663,14 +661,14 @@ export default function MetricsPage() {
                   <th className="px-5 py-3 font-medium text-right">p99</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-50">
+              <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800">
                 {t.slowest_routes.map((r, i) => (
-                  <tr key={i} className="hover:bg-neutral-50 transition-colors">
-                    <td className="px-5 py-3 font-mono text-xs text-neutral-700 max-w-xs truncate">{r.route}</td>
-                    <td className="px-5 py-3 text-right text-neutral-600">{r.count}</td>
-                    <td className="px-5 py-3 text-right text-neutral-600">{r.p50_ms} ms</td>
-                    <td className="px-5 py-3 text-right text-neutral-600">{r.p95_ms} ms</td>
-                    <td className="px-5 py-3 text-right text-neutral-600">{r.p99_ms} ms</td>
+                  <tr key={i} className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                    <td className="px-5 py-3 font-mono text-xs text-neutral-700 dark:text-neutral-300 max-w-xs truncate">{r.route}</td>
+                    <td className="px-5 py-3 text-right text-neutral-600 dark:text-neutral-400">{r.count}</td>
+                    <td className="px-5 py-3 text-right text-neutral-600 dark:text-neutral-400">{r.p50_ms} ms</td>
+                    <td className="px-5 py-3 text-right text-neutral-600 dark:text-neutral-400">{r.p95_ms} ms</td>
+                    <td className="px-5 py-3 text-right text-neutral-600 dark:text-neutral-400">{r.p99_ms} ms</td>
                   </tr>
                 ))}
               </tbody>
@@ -701,11 +699,11 @@ export default function MetricsPage() {
               return (
                 <div key={key} className="card p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-neutral-700">{label}</span>
-                    <div className="flex items-center gap-3 text-xs text-neutral-400">
-                      <span>Total: <strong className="text-neutral-600">{total}</strong></span>
-                      <span>Avg: <strong className="text-neutral-600">{avg}/d</strong></span>
-                      <span>Peak: <strong className="text-neutral-600">{peak}</strong></span>
+                    <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>
+                    <div className="flex items-center gap-3 text-xs text-neutral-400 dark:text-neutral-500">
+                      <span>Total: <strong className="text-neutral-600 dark:text-neutral-300">{total}</strong></span>
+                      <span>Avg: <strong className="text-neutral-600 dark:text-neutral-300">{avg}/d</strong></span>
+                      <span>Peak: <strong className="text-neutral-600 dark:text-neutral-300">{peak}</strong></span>
                     </div>
                   </div>
                   <MiniBarChart data={trends} dataKey={key} color={color} />
@@ -718,8 +716,8 @@ export default function MetricsPage() {
           <h3 className="section-title mb-4">Daily Breakdown</h3>
           <div className="card overflow-hidden max-h-96 overflow-y-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white">
-                <tr className="border-b border-neutral-100 text-left text-neutral-500">
+              <thead className="sticky top-0 bg-white dark:bg-neutral-900">
+                <tr className="border-b border-neutral-100 dark:border-neutral-700 text-left text-neutral-500 dark:text-neutral-400">
                   <th className="px-5 py-3 font-medium">Date</th>
                   <th className="px-5 py-3 font-medium text-right">Sessions</th>
                   <th className="px-5 py-3 font-medium text-right">Nodes</th>
@@ -727,14 +725,14 @@ export default function MetricsPage() {
                   <th className="px-5 py-3 font-medium text-right">Cards</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-50">
+              <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800">
                 {[...trends].reverse().map((d) => (
-                  <tr key={d.date} className="hover:bg-neutral-50 transition-colors">
-                    <td className="px-5 py-2.5 text-neutral-700 font-medium">{d.date}</td>
-                    <td className="px-5 py-2.5 text-right text-neutral-600">{d.sessions}</td>
-                    <td className="px-5 py-2.5 text-right text-neutral-600">{d.nodes}</td>
-                    <td className="px-5 py-2.5 text-right text-neutral-600">{d.changes}</td>
-                    <td className="px-5 py-2.5 text-right text-neutral-600">{d.cards}</td>
+                  <tr key={d.date} className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                    <td className="px-5 py-2.5 text-neutral-700 dark:text-neutral-300 font-medium">{d.date}</td>
+                    <td className="px-5 py-2.5 text-right text-neutral-600 dark:text-neutral-400">{d.sessions}</td>
+                    <td className="px-5 py-2.5 text-right text-neutral-600 dark:text-neutral-400">{d.nodes}</td>
+                    <td className="px-5 py-2.5 text-right text-neutral-600 dark:text-neutral-400">{d.changes}</td>
+                    <td className="px-5 py-2.5 text-right text-neutral-600 dark:text-neutral-400">{d.cards}</td>
                   </tr>
                 ))}
               </tbody>
@@ -752,15 +750,15 @@ export default function MetricsPage() {
         <div className="flex items-center justify-center py-16">
           <div className="text-center">
             <div className="relative w-10 h-10 mx-auto mb-3">
-              <div className="absolute inset-0 rounded-full border-4 border-neutral-200" />
-              <div className="absolute inset-0 rounded-full border-4 border-neutral-500 border-t-transparent animate-spin" />
+              <div className="absolute inset-0 rounded-full border-4 border-neutral-200 dark:border-neutral-700" />
+              <div className="absolute inset-0 rounded-full border-4 border-neutral-500 dark:border-neutral-400 border-t-transparent animate-spin" />
             </div>
-            <p className="text-neutral-400 text-xs">Loading AI usage data…</p>
+            <p className="text-neutral-400 dark:text-neutral-500 text-xs">Loading AI usage data…</p>
           </div>
         </div>
       );
     }
-    if (!aiUsage) return <p className="text-neutral-500 text-sm">No AI usage data available.</p>;
+    if (!aiUsage) return <p className="text-neutral-500 dark:text-neutral-400 text-sm">No AI usage data available.</p>;
 
     const taskEntries = Object.entries(aiUsage.by_task).sort((a, b) => b[1].cost_usd - a[1].cost_usd);
     const modelEntries = Object.entries(aiUsage.by_model).sort((a, b) => b[1].cost_usd - a[1].cost_usd);
@@ -774,24 +772,24 @@ export default function MetricsPage() {
           <MetricCard label="Total Calls" value={aiUsage.total_calls} icon={CpuChipIcon} description={`${aiUsage.cache_hits} cache hits (${(aiUsage.cache_hit_rate * 100).toFixed(1)}%)`} />
           <MetricCard label="Total Tokens" value={aiUsage.total_tokens} icon={CircleStackIcon} description={`Avg ${aiUsage.avg_tokens_per_call}/call`} />
           <div className="card p-5 flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-neutral-500">
+            <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
               <CurrencyDollarIcon className="w-4 h-4" />
               <span className="text-xs font-medium uppercase tracking-wider">Total Cost</span>
             </div>
             <div className="flex items-end gap-1.5">
-              <span className="text-3xl font-bold text-neutral-900">${aiUsage.total_cost_usd.toFixed(2)}</span>
+              <span className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">${aiUsage.total_cost_usd.toFixed(2)}</span>
             </div>
-            <p className="text-xs text-neutral-400">Last {aiUsage.period_days} days</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">Last {aiUsage.period_days} days</p>
           </div>
           <div className="card p-5 flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-neutral-500">
+            <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
               <BoltIcon className="w-4 h-4" />
               <span className="text-xs font-medium uppercase tracking-wider">Avg Cost/Call</span>
             </div>
             <div className="flex items-end gap-1.5">
-              <span className="text-3xl font-bold text-neutral-900">${aiUsage.avg_cost_per_call.toFixed(4)}</span>
+              <span className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">${aiUsage.avg_cost_per_call.toFixed(4)}</span>
             </div>
-            <p className="text-xs text-neutral-400">{aiUsage.total_prompt_tokens} prompt + {aiUsage.total_completion_tokens} completion tokens</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">{aiUsage.total_prompt_tokens} prompt + {aiUsage.total_completion_tokens} completion tokens</p>
           </div>
         </div>
 
@@ -800,8 +798,8 @@ export default function MetricsPage() {
           <h3 className="section-title mb-4">Cost by Task</h3>
           <div className="card overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-50">
-                <tr className="border-b border-neutral-100 text-left text-neutral-500">
+              <thead className="bg-neutral-50 dark:bg-neutral-800">
+                <tr className="border-b border-neutral-100 dark:border-neutral-700 text-left text-neutral-500 dark:text-neutral-400">
                   <th className="px-5 py-3 font-medium">Task</th>
                   <th className="px-5 py-3 font-medium text-right">Calls</th>
                   <th className="px-5 py-3 font-medium text-right">Tokens</th>
@@ -809,14 +807,14 @@ export default function MetricsPage() {
                   <th className="px-5 py-3 font-medium text-right">Cost</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-50">
+              <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800">
                 {taskEntries.map(([task, data]) => (
-                  <tr key={task} className="hover:bg-neutral-50 transition-colors">
-                    <td className="px-5 py-2.5 text-neutral-700 font-medium">{task}</td>
-                    <td className="px-5 py-2.5 text-right text-neutral-600">{data.calls}</td>
-                    <td className="px-5 py-2.5 text-right text-neutral-600">{data.tokens.toLocaleString()}</td>
-                    <td className="px-5 py-2.5 text-right text-neutral-600">{data.cache_hits ?? 0}</td>
-                    <td className="px-5 py-2.5 text-right font-medium text-neutral-800">${data.cost_usd.toFixed(4)}</td>
+                  <tr key={task} className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                    <td className="px-5 py-2.5 text-neutral-700 dark:text-neutral-300 font-medium">{task}</td>
+                    <td className="px-5 py-2.5 text-right text-neutral-600 dark:text-neutral-400">{data.calls}</td>
+                    <td className="px-5 py-2.5 text-right text-neutral-600 dark:text-neutral-400">{data.tokens.toLocaleString()}</td>
+                    <td className="px-5 py-2.5 text-right text-neutral-600 dark:text-neutral-400">{data.cache_hits ?? 0}</td>
+                    <td className="px-5 py-2.5 text-right font-medium text-neutral-800 dark:text-neutral-200">${data.cost_usd.toFixed(4)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -830,12 +828,12 @@ export default function MetricsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {modelEntries.map(([model, data]) => (
               <div key={model} className="card p-5 space-y-2">
-                <p className="text-xs font-mono text-neutral-500 truncate" title={model}>{model}</p>
+                <p className="text-xs font-mono text-neutral-500 dark:text-neutral-400 truncate" title={model}>{model}</p>
                 <div className="flex items-end gap-2">
-                  <span className="text-xl font-bold text-neutral-900">${data.cost_usd.toFixed(4)}</span>
-                  <span className="text-xs text-neutral-400 mb-0.5">{data.calls} calls</span>
+                  <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">${data.cost_usd.toFixed(4)}</span>
+                  <span className="text-xs text-neutral-400 dark:text-neutral-500 mb-0.5">{data.calls} calls</span>
                 </div>
-                <p className="text-xs text-neutral-400">{data.tokens.toLocaleString()} tokens</p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500">{data.tokens.toLocaleString()} tokens</p>
               </div>
             ))}
           </div>
@@ -856,7 +854,7 @@ export default function MetricsPage() {
                   />
                 ))}
               </div>
-              <div className="flex justify-between text-[10px] text-neutral-400">
+              <div className="flex justify-between text-[10px] text-neutral-400 dark:text-neutral-500">
                 <span>{dailyCosts[0]?.date}</span>
                 <span>{dailyCosts[dailyCosts.length - 1]?.date}</span>
               </div>
@@ -869,26 +867,23 @@ export default function MetricsPage() {
 
   /* ── Main Render (Dashboard) ── */
   return (
-    <div className="h-screen flex flex-col bg-neutral-50 overflow-hidden">
+    <div className="h-screen flex flex-col bg-neutral-50 dark:bg-neutral-950 overflow-hidden">
       {/* Standalone metrics header (not the main app Header) */}
-      <header className="bg-white border-b border-neutral-200 h-14 w-full flex-shrink-0 relative z-50">
+      <header className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 h-14 w-full flex-shrink-0 relative z-50">
         <div className="flex items-center justify-between px-4 h-full max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 bg-neutral-900 rounded-md flex items-center justify-center shadow-sm transition-shadow duration-300">
-                <span className="text-white font-bold text-base">M</span>
-              </div>
-              <span className="text-lg font-semibold text-neutral-900">MoMetric</span>
+              <HojaaLogo size={32} />
             </Link>
-            <div className="w-px h-5 bg-neutral-200 mx-2" />
-            <div className="flex items-center gap-1.5 text-sm text-neutral-500">
+            <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700 mx-2" />
+            <div className="flex items-center gap-1.5 text-sm text-neutral-500 dark:text-neutral-400">
               <ChartBarIcon className="w-4 h-4" />
               <span className="font-medium">Platform Metrics</span>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 px-3 py-2 rounded-md transition-all"
+            className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 px-3 py-2 rounded-md transition-all"
           >
             <ArrowRightOnRectangleIcon className="w-4 h-4" />
             Sign out
@@ -901,12 +896,12 @@ export default function MetricsPage() {
           {/* Page header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-md bg-neutral-900 flex items-center justify-center shadow-sm">
-                <ChartBarIcon className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-md bg-neutral-900 dark:bg-brand-lime flex items-center justify-center shadow-sm">
+                <ChartBarIcon className="w-5 h-5 text-white dark:text-brand-dark" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-neutral-900">Success Metrics</h1>
-                <p className="text-sm text-neutral-500">Platform-wide analytics — all organisations</p>
+                <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Success Metrics</h1>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">Platform-wide analytics — all organisations</p>
               </div>
             </div>
 
@@ -917,11 +912,11 @@ export default function MetricsPage() {
                   <ChevronDownIcon className="w-4 h-4" />
                 </button>
                 {showPeriodDropdown && (
-                  <div className="absolute right-0 mt-1 w-36 bg-white border border-neutral-200 rounded-md shadow z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-md shadow z-50 overflow-hidden">
                     {PERIOD_OPTIONS.map((opt) => (
                       <button
                         key={opt.value}
-                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 transition-colors ${opt.value === days ? "bg-neutral-50 text-neutral-900 font-medium" : "text-neutral-700"}`}
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors ${opt.value === days ? "bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-medium" : "text-neutral-700 dark:text-neutral-300"}`}
                         onClick={() => { setDays(opt.value); setShowPeriodDropdown(false); }}
                       >
                         Last {opt.label}
@@ -937,12 +932,12 @@ export default function MetricsPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex items-center gap-1 border-b border-neutral-200 mb-6">
+          <div className="flex items-center gap-1 border-b border-neutral-200 dark:border-neutral-700 mb-6">
             {TABS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${activeTab === tab ? "border-neutral-900 text-neutral-900" : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"}`}
+                className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${activeTab === tab ? "border-neutral-900 dark:border-brand-lime text-neutral-900 dark:text-neutral-100" : "border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-600"}`}
               >
                 {tab}
               </button>
@@ -957,10 +952,10 @@ export default function MetricsPage() {
             <div className="flex items-center justify-center py-24">
               <div className="text-center">
                 <div className="relative w-12 h-12 mx-auto mb-4">
-                  <div className="absolute inset-0 rounded-full border-4 border-neutral-200" />
-                  <div className="absolute inset-0 rounded-full border-4 border-neutral-500 border-t-transparent animate-spin" />
+                  <div className="absolute inset-0 rounded-full border-4 border-neutral-200 dark:border-neutral-700" />
+                  <div className="absolute inset-0 rounded-full border-4 border-neutral-500 dark:border-neutral-400 border-t-transparent animate-spin" />
                 </div>
-                <p className="text-neutral-400 text-sm">Loading metrics…</p>
+                <p className="text-neutral-400 dark:text-neutral-500 text-sm">Loading metrics…</p>
               </div>
             </div>
           ) : metrics ? (

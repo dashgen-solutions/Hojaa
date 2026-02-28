@@ -767,7 +767,7 @@ class SessionChatTools:
 
 # ── Main chat orchestration ─────────────────────────────────────
 
-SYSTEM_PROMPT = """You are the **Session Intelligence Assistant** for MoMetric, an AI-powered requirements discovery and project scoping platform.
+SYSTEM_PROMPT = """You are the **Session Intelligence Assistant** for Hojaa, an AI-powered requirements discovery and project scoping platform.
 
 You are scoped to a **specific project session**. You have access to tools that let you query and modify the session's scope tree, team, planning cards, audit history, and more.
 

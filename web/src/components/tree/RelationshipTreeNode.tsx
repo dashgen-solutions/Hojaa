@@ -86,42 +86,42 @@ export default function RelationshipTreeNode({
       case "root":
         return {
           accentColor: "#171717",
-          border: "border-neutral-200",
+          border: "border-neutral-200 dark:border-neutral-700",
           icon: CubeIcon,
           iconColor: "text-neutral-700",
-          iconBg: "bg-neutral-100",
+          iconBg: "bg-neutral-100 dark:bg-neutral-800",
           badge: "Project",
           badgeColor: "bg-neutral-900 text-white",
         };
       case "feature":
         return {
           accentColor: "#f0ad4e",
-          border: "border-neutral-200",
+          border: "border-neutral-200 dark:border-neutral-700",
           icon: SparklesIcon,
           iconColor: "text-warning-600",
-          iconBg: "bg-warning-50",
+          iconBg: "bg-warning-50 dark:bg-warning-900/30",
           badge: "Feature",
-          badgeColor: "bg-warning-50 text-warning-700",
+          badgeColor: "bg-warning-50 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400",
         };
       case "detail":
         return {
           accentColor: "#28a745",
-          border: "border-neutral-200",
+          border: "border-neutral-200 dark:border-neutral-700",
           icon: DocumentCheckIcon,
           iconColor: "text-success-600",
-          iconBg: "bg-success-50",
+          iconBg: "bg-success-50 dark:bg-success-900/30",
           badge: "Requirement",
-          badgeColor: "bg-success-50 text-success-700",
+          badgeColor: "bg-success-50 text-success-700 dark:bg-success-900/30 dark:text-success-400",
         };
       default:
         return {
           accentColor: "#7c7c7c",
-          border: "border-neutral-200",
+          border: "border-neutral-200 dark:border-neutral-700",
           icon: DocumentCheckIcon,
           iconColor: "text-neutral-600",
-          iconBg: "bg-neutral-100",
+          iconBg: "bg-neutral-100 dark:bg-neutral-800",
           badge: "Item",
-          badgeColor: "bg-neutral-100 text-neutral-600",
+          badgeColor: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400",
         };
     }
   };
@@ -133,7 +133,7 @@ export default function RelationshipTreeNode({
           ringClass: "ring-2 ring-green-400 ring-offset-1",
           opacityClass: "",
           badgeLabel: "New",
-          badgeBg: "bg-green-100 text-green-700 border-green-200",
+          badgeBg: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800",
           BadgeIcon: StarIcon,
           dotColor: "bg-green-500",
         };
@@ -142,7 +142,7 @@ export default function RelationshipTreeNode({
           ringClass: "ring-2 ring-blue-400 ring-offset-1",
           opacityClass: "",
           badgeLabel: "Modified",
-          badgeBg: "bg-blue-100 text-blue-700 border-blue-200",
+          badgeBg: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
           BadgeIcon: ArrowPathIcon,
           dotColor: "bg-blue-500",
         };
@@ -151,7 +151,7 @@ export default function RelationshipTreeNode({
           ringClass: "ring-1 ring-neutral-300",
           opacityClass: "opacity-60",
           badgeLabel: "Deferred",
-          badgeBg: "bg-neutral-200 text-neutral-600 border-neutral-300",
+          badgeBg: "bg-neutral-200 text-neutral-600 border-neutral-300 dark:bg-neutral-700 dark:text-neutral-400 dark:border-neutral-600",
           BadgeIcon: ClockIcon,
           dotColor: "bg-neutral-400",
         };
@@ -160,7 +160,7 @@ export default function RelationshipTreeNode({
           ringClass: "ring-2 ring-emerald-400 ring-offset-1",
           opacityClass: "",
           badgeLabel: "Completed",
-          badgeBg: "bg-emerald-100 text-emerald-700 border-emerald-200",
+          badgeBg: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
           BadgeIcon: CheckCircleIcon,
           dotColor: "bg-emerald-500",
         };
@@ -273,19 +273,19 @@ export default function RelationshipTreeNode({
   };
 
   const STATUS_OPTIONS = [
-    { value: "active", label: "Active", bg: "bg-neutral-50 text-neutral-700 hover:bg-neutral-100" },
-    { value: "new", label: "New", bg: "bg-green-50 text-green-700 hover:bg-green-100" },
-    { value: "modified", label: "Modified", bg: "bg-blue-50 text-blue-700 hover:bg-blue-100" },
-    { value: "deferred", label: "Deferred", bg: "bg-neutral-100 text-neutral-600 hover:bg-neutral-200" },
-    { value: "completed", label: "Completed", bg: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" },
+    { value: "active", label: "Active", bg: "bg-neutral-50 text-neutral-700 hover:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700" },
+    { value: "new", label: "New", bg: "bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50" },
+    { value: "modified", label: "Modified", bg: "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50" },
+    { value: "deferred", label: "Deferred", bg: "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-600" },
+    { value: "completed", label: "Completed", bg: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50" },
   ];
 
   // Render edit form
   if (isEditing) {
     return (
-      <div className="bg-white border border-neutral-200 p-3 space-y-2.5 min-w-[280px] max-w-[380px] mb-4 animate-fade-in" style={{ borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-3 space-y-2.5 min-w-[280px] max-w-[380px] mb-4 animate-fade-in" style={{ borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
         <div>
-          <label className="text-[11px] font-medium text-neutral-600 mb-1 block uppercase tracking-wide">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400 mb-1 block uppercase tracking-wide">
             Node Title
           </label>
           <input
@@ -296,7 +296,7 @@ export default function RelationshipTreeNode({
           />
         </div>
         <div>
-          <label className="text-[11px] font-medium text-neutral-600 mb-1 block uppercase tracking-wide">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400 mb-1 block uppercase tracking-wide">
             Description
           </label>
           <textarea
@@ -325,9 +325,9 @@ export default function RelationshipTreeNode({
   // Render add child form
   if (isAddingChild) {
     return (
-      <div className="bg-white border border-neutral-200 p-3 space-y-2.5 min-w-[280px] max-w-[380px] mb-4 animate-fade-in" style={{ borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-3 space-y-2.5 min-w-[280px] max-w-[380px] mb-4 animate-fade-in" style={{ borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
         <div>
-          <label className="text-[11px] font-medium text-neutral-600 mb-1 block uppercase tracking-wide">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400 mb-1 block uppercase tracking-wide">
             New Child Node Title
           </label>
           <input
@@ -340,7 +340,7 @@ export default function RelationshipTreeNode({
           />
         </div>
         <div>
-          <label className="text-[11px] font-medium text-neutral-600 mb-1 block uppercase tracking-wide">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400 mb-1 block uppercase tracking-wide">
             Description (optional)
           </label>
           <textarea
@@ -382,7 +382,7 @@ export default function RelationshipTreeNode({
       <div className="relative group z-20">
         <div
           className={`
-            relative bg-white border ${
+            relative bg-white dark:bg-neutral-900 border ${
               isSelected
                 ? "border-primary-500 shadow-md"
                 : style.border + " shadow-sm"
@@ -401,7 +401,7 @@ export default function RelationshipTreeNode({
           {/* Top connection handle */}
           {!isRoot && (
             <div
-              className="absolute -top-[4px] left-1/2 -translate-x-1/2 w-[8px] h-[8px] rounded-full bg-white border-[1.5px] z-30"
+              className="absolute -top-[4px] left-1/2 -translate-x-1/2 w-[8px] h-[8px] rounded-full bg-white dark:bg-neutral-900 border-[1.5px] z-30"
               style={{ borderColor: style.accentColor }}
             />
           )}
@@ -434,7 +434,7 @@ export default function RelationshipTreeNode({
 
               {/* Title and badges */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-neutral-900 leading-tight truncate">
+                <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 leading-tight truncate">
                   {node.question}
                 </h3>
 
@@ -450,14 +450,14 @@ export default function RelationshipTreeNode({
                   )}
 
                   {hasChildren && (
-                    <span className="text-[11px] font-medium px-1.5 py-0.5 bg-neutral-100 text-neutral-600 flex items-center gap-1" style={{ borderRadius: "4px" }}>
+                    <span className="text-[11px] font-medium px-1.5 py-0.5 bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 flex items-center gap-1" style={{ borderRadius: "4px" }}>
                       <CheckCircleIcon className="w-3 h-3" />
                       {node.children!.length}
                     </span>
                   )}
 
                   {hasAnswer && (
-                    <span className="text-[11px] font-medium px-1.5 py-0.5 bg-info-50 text-primary-500 flex items-center gap-1" style={{ borderRadius: "4px" }}>
+                    <span className="text-[11px] font-medium px-1.5 py-0.5 bg-info-50 text-primary-700 dark:bg-info-900/30 dark:text-brand-lime flex items-center gap-1" style={{ borderRadius: "4px" }}>
                       <InformationCircleIcon className="w-3 h-3" />
                       Details
                     </span>
@@ -466,7 +466,7 @@ export default function RelationshipTreeNode({
                   {/* Source badge */}
                   {node.source_name && (
                     <span
-                      className="text-[11px] font-medium px-1.5 py-0.5 bg-neutral-100 text-neutral-600 flex items-center gap-1"
+                      className="text-[11px] font-medium px-1.5 py-0.5 bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 flex items-center gap-1"
                       style={{ borderRadius: "4px" }}
                       title={`Added from: ${node.source_name} (${node.source_type || 'source'})`}
                     >
@@ -513,31 +513,31 @@ export default function RelationshipTreeNode({
 
                       {showStatusDropdown && (
                         <div
-                          className="absolute left-0 top-full mt-1 w-40 bg-white rounded-md border border-neutral-200 z-50 overflow-hidden animate-fade-in"
+                          className="absolute left-0 top-full mt-1 w-40 bg-white dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700 z-50 overflow-hidden animate-fade-in"
                           style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
                           onClick={(e) => e.stopPropagation()}
                         >
                           {pendingStatus === "deferred" ? (
                             <div className="p-2.5 space-y-2">
-                              <p className="text-[11px] font-medium text-neutral-600">Reason for deferring:</p>
+                              <p className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Reason for deferring:</p>
                               <input
                                 type="text"
                                 placeholder="Optional reason..."
                                 value={deferredReason}
                                 onChange={(e) => setDeferredReason(e.target.value)}
-                                className="w-full text-[12px] px-2 py-1 border border-neutral-200 rounded"
+                                className="w-full text-[12px] px-2 py-1 border border-neutral-200 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 rounded"
                                 autoFocus
                               />
                               <div className="flex gap-1.5">
                                 <button
                                   onClick={() => handleStatusChange("deferred", deferredReason || undefined)}
-                                  className="flex-1 text-[12px] px-2 py-1 bg-neutral-900 text-white rounded hover:bg-neutral-800"
+                                  className="flex-1 text-[12px] px-2 py-1 bg-neutral-900 text-white dark:bg-brand-lime dark:text-neutral-900 rounded hover:bg-neutral-800"
                                 >
                                   Defer
                                 </button>
                                 <button
                                   onClick={() => { setPendingStatus(null); setDeferredReason(""); }}
-                                  className="text-[12px] px-2 py-1 text-neutral-500 hover:text-neutral-700"
+                                  className="text-[12px] px-2 py-1 text-neutral-500 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300"
                                 >
                                   Cancel
                                 </button>
@@ -578,31 +578,31 @@ export default function RelationshipTreeNode({
                   {!statusIndicator && showStatusDropdown && sessionId && !isRoot && (
                     <div className="relative">
                       <div
-                        className="absolute left-0 top-0 mt-1 w-40 bg-white rounded-md border border-neutral-200 z-50 overflow-hidden animate-fade-in"
+                        className="absolute left-0 top-0 mt-1 w-40 bg-white dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700 z-50 overflow-hidden animate-fade-in"
                         style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         {pendingStatus === "deferred" ? (
                           <div className="p-2.5 space-y-2">
-                            <p className="text-[11px] font-medium text-neutral-600">Reason for deferring:</p>
+                            <p className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Reason for deferring:</p>
                             <input
                               type="text"
                               placeholder="Optional reason..."
                               value={deferredReason}
                               onChange={(e) => setDeferredReason(e.target.value)}
-                              className="w-full text-[12px] px-2 py-1 border border-neutral-200 rounded"
+                              className="w-full text-[12px] px-2 py-1 border border-neutral-200 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 rounded"
                               autoFocus
                             />
                             <div className="flex gap-1.5">
                               <button
                                 onClick={() => handleStatusChange("deferred", deferredReason || undefined)}
-                                className="flex-1 text-[12px] px-2 py-1 bg-neutral-900 text-white rounded hover:bg-neutral-800"
+                                className="flex-1 text-[12px] px-2 py-1 bg-neutral-900 text-white dark:bg-brand-lime dark:text-neutral-900 rounded hover:bg-neutral-800"
                               >
                                 Defer
                               </button>
                               <button
                                 onClick={() => { setPendingStatus(null); setDeferredReason(""); }}
-                                className="text-[12px] px-2 py-1 text-neutral-500 hover:text-neutral-700"
+                                className="text-[12px] px-2 py-1 text-neutral-500 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300"
                               >
                                 Cancel
                               </button>
@@ -637,7 +637,7 @@ export default function RelationshipTreeNode({
               {showAssignDropdown && teamMembers.length > 0 && (
                 <div className="mt-1.5">
                   <div
-                    className="bg-white rounded-md border border-neutral-200 p-1.5 animate-fade-in"
+                    className="bg-white dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700 p-1.5 animate-fade-in"
                     style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -647,7 +647,7 @@ export default function RelationshipTreeNode({
                         <button
                           key={member.id}
                           onClick={() => handleAssignNode(member.id)}
-                          className="w-full px-2 py-1 text-left text-[12px] text-neutral-700 hover:bg-neutral-50 rounded flex items-center gap-2 transition-colors"
+                          className="w-full px-2 py-1 text-left text-[12px] text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-700 rounded flex items-center gap-2 transition-colors"
                         >
                           <span
                             className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0"
@@ -661,7 +661,7 @@ export default function RelationshipTreeNode({
                     </div>
                     <button
                       onClick={() => setShowAssignDropdown(false)}
-                      className="w-full mt-1 px-2 py-0.5 text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors"
+                      className="w-full mt-1 px-2 py-0.5 text-[11px] text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300 transition-colors"
                     >
                       Cancel
                     </button>
@@ -679,21 +679,21 @@ export default function RelationshipTreeNode({
                         e.stopPropagation();
                         setShowMenu(!showMenu);
                       }}
-                      className="p-1 rounded bg-neutral-50 hover:bg-neutral-100 text-neutral-500 transition-colors"
+                      className="p-1 rounded bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-500 transition-colors"
                       title="Node actions"
                     >
                       <EllipsisVerticalIcon className="w-3.5 h-3.5" />
                     </button>
 
                     {showMenu && (
-                      <div className="absolute right-0 mt-1 w-44 bg-white rounded-md border border-neutral-200 z-50 overflow-hidden animate-fade-in" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                      <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700 z-50 overflow-hidden animate-fade-in" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setIsEditing(true);
                             setShowMenu(false);
                           }}
-                          className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                          className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-700 flex items-center gap-2 transition-colors"
                         >
                           <PencilIcon className="w-3.5 h-3.5" />
                           Edit Node
@@ -704,7 +704,7 @@ export default function RelationshipTreeNode({
                             setIsAddingChild(true);
                             setShowMenu(false);
                           }}
-                          className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                          className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-700 flex items-center gap-2 transition-colors"
                         >
                           <PlusIcon className="w-3.5 h-3.5" />
                           Add Child
@@ -715,7 +715,7 @@ export default function RelationshipTreeNode({
                             setShowMenu(false);
                             setShowStatusDropdown(true);
                           }}
-                          className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                          className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-700 flex items-center gap-2 transition-colors"
                         >
                           <ArrowPathIcon className="w-3.5 h-3.5" />
                           Change Status
@@ -727,7 +727,7 @@ export default function RelationshipTreeNode({
                               setShowMenu(false);
                               setShowAssignDropdown(true);
                             }}
-                            className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                            className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-700 flex items-center gap-2 transition-colors"
                           >
                             <PlusIcon className="w-3.5 h-3.5" />
                             Assign Member
@@ -739,13 +739,13 @@ export default function RelationshipTreeNode({
                               e.stopPropagation();
                               handleUnassignNode();
                             }}
-                            className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 transition-colors"
+                            className="w-full px-3 py-2 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-700 flex items-center gap-2 transition-colors"
                           >
                             <XMarkIcon className="w-3.5 h-3.5" />
                             Unassign {node.assignee.name}
                           </button>
                         )}
-                        <div className="border-t border-neutral-200 my-0.5" />
+                        <div className="border-t border-neutral-200 dark:border-neutral-700 my-0.5" />
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -778,7 +778,7 @@ export default function RelationshipTreeNode({
                       e.stopPropagation();
                       if (onExpand) onExpand(node.id);
                     }}
-                    className="p-1 rounded bg-neutral-900 text-white hover:bg-neutral-800 transition-colors"
+                    className="p-1 rounded bg-neutral-900 text-white dark:bg-brand-lime dark:text-neutral-900 hover:bg-neutral-800 transition-colors"
                     title="Explore this node further"
                   >
                     <PlusIcon className="w-3.5 h-3.5" />
@@ -797,7 +797,7 @@ export default function RelationshipTreeNode({
                       ${
                         node.isExpanded
                           ? "bg-neutral-900 hover:bg-neutral-800 text-white"
-                          : "bg-neutral-200 hover:bg-neutral-300 text-neutral-700"
+                          : "bg-neutral-200 hover:bg-neutral-300 text-neutral-700 dark:bg-neutral-700 dark:hover:bg-neutral-600 dark:text-neutral-300"
                       }
                     `}
                     title={node.isExpanded ? "Collapse" : "Expand"}
@@ -821,7 +821,7 @@ export default function RelationshipTreeNode({
 
             {/* Expandable hint */}
             {node.canExpand && !hasChildren && (
-              <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-warning-700 bg-warning-50 px-2 py-1 rounded" style={{ borderRadius: "4px" }}>
+              <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-warning-700 bg-warning-50 dark:bg-warning-900/30 dark:text-warning-400 px-2 py-1 rounded" style={{ borderRadius: "4px" }}>
                 <SparklesIcon className="w-3 h-3" />
                 <span>Click + to explore this node</span>
               </div>
@@ -854,7 +854,7 @@ export default function RelationshipTreeNode({
           {/* Bottom connection handle */}
           {hasChildren && (
             <div
-              className="absolute -bottom-[4px] left-1/2 -translate-x-1/2 w-[8px] h-[8px] rounded-full bg-white border-[1.5px] z-30"
+              className="absolute -bottom-[4px] left-1/2 -translate-x-1/2 w-[8px] h-[8px] rounded-full bg-white dark:bg-neutral-900 border-[1.5px] z-30"
               style={{ borderColor: style.accentColor }}
             />
           )}
@@ -864,7 +864,7 @@ export default function RelationshipTreeNode({
       {/* Collapsed children count */}
       {hasChildren && !node.isExpanded && (
         <div className="mt-1.5 flex justify-center animate-fade-in">
-          <span className="text-[10px] text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded" style={{ borderRadius: "4px" }}>
+          <span className="text-[10px] text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded" style={{ borderRadius: "4px" }}>
             {node.children!.length} {node.children!.length === 1 ? 'child' : 'children'}
           </span>
         </div>

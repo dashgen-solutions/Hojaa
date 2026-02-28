@@ -230,7 +230,7 @@ export interface GraphComparison {
 
 // ===== Store Interface =====
 
-interface MoMetricStore {
+interface HojaaStore {
   // Sources state
   sources: Source[];
   currentSourceDetail: { suggestions: Suggestion[]; [key: string]: any } | null;
@@ -376,7 +376,7 @@ interface MoMetricStore {
 
 // ===== Store Implementation =====
 
-export const useStore = create<MoMetricStore>((set, get) => ({
+export const useStore = create<HojaaStore>((set, get) => ({
   // Initial state
   sources: [],
   currentSourceDetail: null,

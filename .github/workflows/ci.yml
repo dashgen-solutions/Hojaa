@@ -16,7 +16,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: mometric_db
+          POSTGRES_DB: hojaa_db
         ports:
           - 5432:5432
         options: >-
@@ -33,7 +33,7 @@ jobs:
       - run: pip install -r backend/requirements.txt
       - run: cd backend && python -m pytest tests/ -v
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mometric_db
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hojaa_db
           OPENAI_API_KEY: test-key-not-real
           LLM_PROVIDER: openai
           SECRET_KEY: ci-test-secret-key

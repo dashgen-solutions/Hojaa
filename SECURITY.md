@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in MoMetric, please report it responsibly:
+If you discover a security vulnerability in Hojaa, please report it responsibly:
 
 - **Email**: security@dashgensolutions.com
 - **Do NOT** open a public GitHub issue for security vulnerabilities
@@ -17,7 +17,7 @@ We will acknowledge receipt within 48 hours and provide a timeline for a fix.
 
 ## Security Features
 
-MoMetric includes the following security measures:
+Hojaa includes the following security measures:
 
 - **JWT Authentication** with configurable token expiration
 - **Rate Limiting** — sliding window, per-IP and per-user
@@ -31,7 +31,7 @@ MoMetric includes the following security measures:
 
 ## Self-Hosted Security Recommendations
 
-When deploying MoMetric on your own infrastructure:
+When deploying Hojaa on your own infrastructure:
 
 1. **Change `SECRET_KEY`** to a random 64+ character string
 2. **Set `ENVIRONMENT=production`** and **`DEBUG=False`**

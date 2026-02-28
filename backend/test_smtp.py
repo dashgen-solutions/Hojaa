@@ -25,7 +25,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = sys.argv[1] if len(sys.argv) > 1 else os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = sys.argv[2] if len(sys.argv) > 2 else os.getenv("SMTP_PASSWORD", "")
 FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USERNAME)
-FROM_NAME = os.getenv("SMTP_FROM_NAME", "MoMetric")
+FROM_NAME = os.getenv("SMTP_FROM_NAME", "Hojaa")
 
 if not SMTP_USERNAME or not SMTP_PASSWORD:
     print("ERROR: SMTP_USERNAME and SMTP_PASSWORD are required.")
@@ -71,7 +71,7 @@ except smtplib.SMTPAuthenticationError as exc:
 print(f"3. Sending test email to {SMTP_USERNAME}...")
 try:
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "[MoMetric] SMTP Test - Email Working!"
+    msg["Subject"] = "[Hojaa] SMTP Test - Email Working!"
     msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
     msg["To"] = SMTP_USERNAME
 
@@ -83,18 +83,18 @@ try:
         </div>
         <div style="padding:24px 28px;">
             <p style="margin:0 0 8px;color:#374151;font-size:14px;">
-                Your MoMetric email notifications are configured and working correctly.
+                Your Hojaa email notifications are configured and working correctly.
             </p>
             <p style="margin:0;color:#6B7280;font-size:13px;">
                 Notifications will be sent for node changes, source ingestion, and card assignments.
             </p>
         </div>
         <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
-            <p style="margin:0;font-size:12px;color:#9CA3AF;">Sent from MoMetric SMTP test script.</p>
+            <p style="margin:0;font-size:12px;color:#9CA3AF;">Sent from Hojaa SMTP test script.</p>
         </div>
     </div>
     """
-    msg.attach(MIMEText("SMTP Test Successful! Your MoMetric emails are working.", "plain"))
+    msg.attach(MIMEText("SMTP Test Successful! Your Hojaa emails are working.", "plain"))
     msg.attach(MIMEText(html, "html"))
 
     server.sendmail(FROM_EMAIL, [SMTP_USERNAME], msg.as_string())

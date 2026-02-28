@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo MoMetric Backend Setup Script
+echo Hojaa Backend Setup Script
 echo ========================================
 echo.
 
@@ -41,7 +41,7 @@ echo.
 echo NEXT STEPS:
 echo 1. Edit .env file and add your OPENAI_API_KEY
 echo 2. Make sure PostgreSQL is running
-echo 3. Create database: CREATE DATABASE mometric_db;
+echo 3. Create database: CREATE DATABASE hojaa_db;
 echo 4. Run: python run_dev.py
 echo.
 echo ========================================

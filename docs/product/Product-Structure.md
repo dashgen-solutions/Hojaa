@@ -1,8 +1,8 @@
-# MoMetric Product Structure
+# Hojaa Product Structure
 
 ## Overview
 
-MoMetric is an end-to-end platform that takes businesses from initial idea through execution to measurement. It combines AI-powered scope clarity, business-data mapping, and KPI tracking into a cohesive workflow.
+Hojaa is an end-to-end platform that takes businesses from initial idea through execution to measurement. It combines AI-powered scope clarity, business-data mapping, and KPI tracking into a cohesive workflow.
 
 ---
 
@@ -10,7 +10,7 @@ MoMetric is an end-to-end platform that takes businesses from initial idea throu
 
 **"From ideation to impact — automatically map business objectives to data and execution"**
 
-MoMetric helps enterprises and project teams:
+Hojaa helps enterprises and project teams:
 1. **Clarify** what they want to build (Ideation → Scope)
 2. **Align** stakeholders on deliverables (Scope Canvas)
 3. **Map** business goals to data structures (KPI/Data Mapping)
@@ -20,11 +20,11 @@ MoMetric helps enterprises and project teams:
 
 ## Module Architecture
 
-MoMetric is organized into four interconnected modules:
+Hojaa is organized into four interconnected modules:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        MoMetric Platform                      │
+│                        Hojaa Platform                      │
 └─────────────────────────────────────────────────────────────┘
          │
          ├─── 📋 Module 1: Ideation
@@ -391,7 +391,7 @@ KPI Dashboard (in BI tool)
 - Data Catalog: Alation, Collibra (too technical, no KPI focus)
 - BI: PowerBI, Tableau (visualization, not strategy mapping)
 
-### MoMetric's Unique Position
+### Hojaa's Unique Position
 **"The only platform that connects business strategy to data execution with AI"**
 
 - Combines scope clarity + KPI mapping (others do one or the other)

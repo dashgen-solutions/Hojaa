@@ -24,7 +24,7 @@ async def basic_health_check():
     """
     return {
         "status": "healthy",
-        "service": "mometric-requirements-api",
+        "service": "hojaa-api",
         "version": settings.app_version,
         "timestamp": datetime.utcnow().isoformat(),
         "environment": settings.environment
@@ -84,7 +84,7 @@ async def detailed_health_check(db: Session = Depends(get_db)):
     """
     health_status = {
         "status": "healthy",
-        "service": "mometric-requirements-api",
+        "service": "hojaa-api",
         "version": settings.app_version,
         "timestamp": datetime.utcnow().isoformat(),
         "environment": settings.environment,

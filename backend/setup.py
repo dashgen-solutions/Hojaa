@@ -7,7 +7,7 @@ from pathlib import Path
 def create_env_file():
     """Create .env file from template."""
     env_content = """# Application
-APP_NAME=MoMetric Requirements Discovery API
+APP_NAME=Hojaa API
 APP_VERSION=1.0.0
 ENVIRONMENT=development
 DEBUG=True
@@ -17,7 +17,7 @@ HOST=0.0.0.0
 PORT=8000
 
 # Database
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/mometric_db
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hojaa_db
 DATABASE_POOL_SIZE=10
 DATABASE_MAX_OVERFLOW=20
 

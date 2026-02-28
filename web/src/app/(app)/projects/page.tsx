@@ -100,10 +100,10 @@ export default function ProjectsPage() {
 
   const getStatusBadge = (status: string) => {
     const statusColors: Record<string, string> = {
-      upload_pending: "bg-yellow-100 text-yellow-800",
-      questions_pending: "bg-blue-100 text-blue-800",
-      in_progress: "bg-purple-100 text-purple-800",
-      completed: "bg-green-100 text-green-800",
+      upload_pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
+      questions_pending: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+      in_progress: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+      completed: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
     };
 
     const statusLabels: Record<string, string> = {
@@ -116,7 +116,7 @@ export default function ProjectsPage() {
     return (
       <span
         className={`px-3 py-1 rounded-full text-xs font-medium ${
-          statusColors[status] || "bg-gray-100 text-gray-800"
+          statusColors[status] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
         }`}
       >
         {statusLabels[status] || status}
@@ -130,8 +130,8 @@ export default function ProjectsPage() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neutral-900 mx-auto"></div>
-          <p className="mt-4 text-neutral-500">Loading your projects...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neutral-900 dark:border-neutral-100 mx-auto"></div>
+          <p className="mt-4 text-neutral-500 dark:text-neutral-400">Loading your projects...</p>
         </div>
       </div>
     );
@@ -143,8 +143,8 @@ export default function ProjectsPage() {
         {/* Page header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-neutral-900">My Projects</h1>
-            <p className="text-sm text-neutral-500 mt-1">
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">My Projects</h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
               Welcome back, {user?.username}!
             </p>
           </div>
@@ -152,7 +152,7 @@ export default function ProjectsPage() {
             {!isViewer && (
               <button
                 onClick={handleCreateNewProject}
-                className="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded-md hover:bg-neutral-800 transition-colors text-sm font-medium"
+                className="flex items-center gap-2 bg-brand-lime text-brand-dark hover:bg-brand-lime/90 font-medium shadow-sm hover:shadow-[0_0_16px_-4px_rgba(228,255,26,0.4)] px-4 py-2 rounded-md transition-colors text-sm"
               >
                 <PlusIcon className="w-4 h-4" />
                 New Project
@@ -162,21 +162,21 @@ export default function ProjectsPage() {
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300 px-4 py-3 rounded-md text-sm">
             {error}
           </div>
         )}
 
         {projects.length === 0 ? (
-          <div className="bg-white rounded-md shadow-sm p-12 text-center border border-neutral-200">
-            <DocumentTextIcon className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-neutral-900 mb-2">No Projects Yet</h2>
-            <p className="text-neutral-500 mb-6 text-sm">
+          <div className="bg-white dark:bg-neutral-900 rounded-md shadow-sm p-12 text-center border border-neutral-200 dark:border-neutral-700">
+            <DocumentTextIcon className="w-16 h-16 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">No Projects Yet</h2>
+            <p className="text-neutral-500 dark:text-neutral-400 mb-6 text-sm">
               Start your first requirements discovery project to get started!
             </p>
             <button
               onClick={handleCreateNewProject}
-              className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-md hover:bg-neutral-800 transition-colors text-sm font-medium"
+              className="inline-flex items-center gap-2 bg-brand-lime text-brand-dark hover:bg-brand-lime/90 font-medium shadow-sm hover:shadow-[0_0_16px_-4px_rgba(228,255,26,0.4)] px-6 py-3 rounded-md transition-colors text-sm"
             >
               <PlusIcon className="w-5 h-5" />
               Create Your First Project
@@ -191,13 +191,13 @@ export default function ProjectsPage() {
               return (
                 <div
                   key={project.id}
-                  className="bg-white rounded-md shadow-sm border border-neutral-200 p-6 hover:shadow transition-shadow flex flex-col"
+                  className="bg-white dark:bg-neutral-900 rounded-md shadow-sm border border-neutral-200 dark:border-neutral-700 p-6 hover:shadow dark:hover:border-neutral-600 transition-shadow flex flex-col"
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <DocumentTextIcon className="w-8 h-8 text-neutral-900 flex-shrink-0" />
+                    <DocumentTextIcon className="w-8 h-8 text-neutral-900 dark:text-neutral-100 flex-shrink-0" />
                     <div className="flex items-center gap-2">
                       {isShared && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-600 border border-indigo-200">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700">
                           <ShareIcon className="w-3 h-3" />
                           Shared
                         </span>
@@ -206,11 +206,11 @@ export default function ProjectsPage() {
                     </div>
                   </div>
 
-                  <h3 className="text-lg font-semibold text-neutral-900 mb-2 line-clamp-2">
+                  <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-2 line-clamp-2">
                     {project.document_filename || "Untitled Project"}
                   </h3>
 
-                  <div className="flex items-center gap-2 text-sm text-neutral-500 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400 mb-4">
                     <ClockIcon className="w-4 h-4 flex-shrink-0" />
                     <span className="truncate">{formatDate(project.created_at)}</span>
                   </div>
@@ -220,8 +220,8 @@ export default function ProjectsPage() {
                       onClick={() => handleOpenProject(project.id)}
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors text-sm font-medium ${
                         isViewer || (isShared && !isOwned)
-                          ? "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
-                          : "bg-neutral-900 text-white hover:bg-neutral-800"
+                          ? "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                          : "bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
                       }`}
                     >
                       {isViewer ? (
@@ -239,7 +239,7 @@ export default function ProjectsPage() {
                     {isOwned && !isViewer && (
                       <button
                         onClick={() => handleDeleteProject(project.id)}
-                        className="flex items-center justify-center p-2 border border-red-200 text-red-600 rounded-md hover:bg-red-50 transition-colors"
+                        className="flex items-center justify-center p-2 border border-red-200 text-red-600 rounded-md hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
                       >
                         <TrashIcon className="w-5 h-5" />
                       </button>

@@ -8,7 +8,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-neutral-50">
+    <div className="flex h-screen w-screen overflow-hidden bg-neutral-50 dark:bg-[#060606] transition-colors">
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <div

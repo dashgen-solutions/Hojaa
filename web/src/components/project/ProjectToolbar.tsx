@@ -112,7 +112,7 @@ export default function ProjectToolbar({ onInputAdded, onSelectInput }: ProjectT
   ];
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-100 flex-shrink-0">
+    <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-100 dark:border-neutral-700 flex-shrink-0">
       {/* Left: Project Name */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
         {isEditing ? (
@@ -124,7 +124,7 @@ export default function ProjectToolbar({ onInputAdded, onSelectInput }: ProjectT
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleSaveName}
               onKeyDown={handleKeyDown}
-              className="text-base font-bold text-neutral-900 bg-white border border-neutral-300 rounded-md px-2.5 py-1 focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-200 w-72"
+              className="text-base font-bold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-md px-2.5 py-1 focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-200 dark:focus:ring-neutral-700 w-72"
             />
             <button
               onClick={handleSaveName}
@@ -145,7 +145,7 @@ export default function ProjectToolbar({ onInputAdded, onSelectInput }: ProjectT
             className="flex items-center gap-1.5 group min-w-0"
             title={readOnly ? projectName : "Click to rename"}
           >
-            <h1 className="text-base font-bold text-neutral-900 truncate">
+            <h1 className="text-base font-bold text-neutral-900 dark:text-neutral-100 truncate">
               {projectName}
             </h1>
             {!readOnly && (
@@ -184,7 +184,7 @@ export default function ProjectToolbar({ onInputAdded, onSelectInput }: ProjectT
         {/* Share / Add Members button */}
         {isAuthenticated && !readOnly && (
           <button
-            className="p-1.5 rounded-md hover:bg-neutral-100 transition-colors text-neutral-500 hover:text-neutral-700"
+            className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
             title="Share project"
             onClick={() => {
               // For now, link to settings or show a share modal
@@ -196,7 +196,7 @@ export default function ProjectToolbar({ onInputAdded, onSelectInput }: ProjectT
           </button>
         )}
 
-        <div className="w-px h-5 bg-neutral-200" />
+        <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700" />
 
         {/* New Input + Inputs List */}
         {!readOnly && (
@@ -218,14 +218,14 @@ export default function ProjectToolbar({ onInputAdded, onSelectInput }: ProjectT
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-1.5 rounded-md hover:bg-neutral-100 transition-colors text-neutral-500 hover:text-neutral-700"
+              className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
               title="More options"
             >
               <EllipsisHorizontalIcon className="w-4 h-4" />
             </button>
 
             {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-md shadow-lg border border-neutral-200 py-1 z-50">
+              <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-neutral-800 rounded-md shadow-lg border border-neutral-200 dark:border-neutral-700 py-1 z-50">
                 <button
                   onClick={() => { setShowMenu(false); handleDelete(); }}
                   disabled={isDeleting}

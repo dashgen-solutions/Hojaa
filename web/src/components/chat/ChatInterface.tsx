@@ -246,15 +246,15 @@ export default function ChatInterface({
 
   if (!selectedNodeId) {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
+      <div className="h-full flex items-center justify-center bg-white dark:bg-neutral-900">
         <div className="text-center max-w-md px-6 animate-fade-in">
-          <div className="w-16 h-16 bg-neutral-100 rounded-md flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-md flex items-center justify-center mx-auto mb-4">
             <SparklesIcon className="w-8 h-8 text-neutral-400" />
           </div>
-          <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+          <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
             Select a feature to expand
           </h3>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
             Click the + button on any feature node in the tree to start
             exploring it in detail through AI-powered conversation.
           </p>
@@ -264,27 +264,27 @@ export default function ChatInterface({
   }
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-neutral-900 overflow-hidden">
       {/* Chat Header */}
-      <div className="flex-shrink-0 border-b border-neutral-200/60 p-4 bg-white relative z-10">
-        <div className="bg-warning-50 border border-warning-200 rounded-md p-3">
+      <div className="flex-shrink-0 border-b border-neutral-200/60 dark:border-neutral-700 p-4 bg-white dark:bg-neutral-900 relative z-10">
+        <div className="bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-700 rounded-md p-3">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2 text-warning-700 min-w-0 flex-1">
-              <div className="w-8 h-8 rounded-md bg-warning-100 flex items-center justify-center flex-shrink-0">
+            <div className="flex items-center gap-2 text-warning-700 dark:text-warning-400 min-w-0 flex-1">
+              <div className="w-8 h-8 rounded-md bg-warning-100 dark:bg-warning-800/30 flex items-center justify-center flex-shrink-0">
                 <SparklesIcon className="w-4 h-4" />
               </div>
               <span className="text-sm font-semibold truncate">
                 Feature Exploration Active
               </span>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               {messages.length > 2 && !readOnly && (
                 <button
                   onClick={handleConfirmRequirements}
                   disabled={isLoading}
-                  className="btn bg-success-600 hover:bg-success-700 text-white text-xs py-2 px-3 disabled:opacity-50"
+                  className="btn bg-brand-lime text-brand-dark hover:bg-brand-lime/90 text-xs py-1.5 px-2.5 disabled:opacity-50 shadow-sm"
                 >
-                  <CheckIcon className="w-4 h-4" />
+                  <CheckIcon className="w-3.5 h-3.5" />
                   <span className="hidden md:inline">Confirm & Add</span>
                   <span className="md:hidden">Add</span>
                 </button>
@@ -292,7 +292,7 @@ export default function ChatInterface({
               {onClose && (
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-danger-50 text-neutral-500 hover:text-danger-600 rounded-md transition-all border border-transparent hover:border-danger-200"
+                  className="p-1.5 hover:bg-danger-50 dark:hover:bg-danger-900/20 text-neutral-500 dark:text-neutral-400 hover:text-danger-600 dark:hover:text-danger-400 rounded-md transition-all border border-transparent hover:border-danger-200 dark:hover:border-danger-700"
                   title="Close chat"
                 >
                   <XMarkIcon className="w-5 h-5" />
@@ -304,7 +304,7 @@ export default function ChatInterface({
 
         {/* Error Message */}
         {error && (
-          <div className="mt-3 p-3 bg-danger-50 border border-danger-200 rounded-md text-danger-700 text-sm animate-fade-in">
+          <div className="mt-3 p-3 bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 rounded-md text-danger-700 dark:text-danger-400 text-sm animate-fade-in">
             {error}
           </div>
         )}
@@ -319,11 +319,11 @@ export default function ChatInterface({
 
           {isLoading && (
             <div className="flex items-start gap-3 animate-fade-in">
-              <div className="flex-none w-9 h-9 rounded-md bg-neutral-50 flex items-center justify-center">
-                <span className="text-neutral-900 font-bold text-xs">M</span>
+              <div className="flex-none w-9 h-9 rounded-md bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center">
+                <span className="text-neutral-900 dark:text-neutral-100 font-bold text-xs">M</span>
               </div>
               <div className="flex-1 max-w-[75%]">
-                <div className="inline-block bg-neutral-100 px-4 py-3 rounded-md border border-neutral-200">
+                <div className="inline-block bg-neutral-100 dark:bg-neutral-800 px-4 py-3 rounded-md border border-neutral-200 dark:border-neutral-700">
                   <LoadingDots />
                 </div>
               </div>
@@ -336,8 +336,8 @@ export default function ChatInterface({
 
       {/* Suggestions */}
       {!isLoading && suggestions.length > 0 && (
-        <div className="flex-none bg-neutral-50 border-t border-neutral-200/60 px-4 py-3">
-          <div className="text-xs font-medium text-neutral-500 mb-2">
+        <div className="flex-none bg-neutral-50 dark:bg-[#0a0a0a] border-t border-neutral-200/60 dark:border-neutral-700 px-4 py-3">
+          <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
             Quick suggestions:
           </div>
           <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
@@ -345,10 +345,10 @@ export default function ChatInterface({
               <button
                 key={index}
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="inline-flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-md bg-white hover:bg-neutral-100 border border-neutral-200 hover:border-neutral-200 transition-all duration-200"
+                className="inline-flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-md bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-200 dark:hover:border-neutral-600 transition-all duration-200"
               >
-                <SparklesIcon className="w-3.5 h-3.5 text-primary-500" />
-                <span className="text-neutral-700">{suggestion}</span>
+                <SparklesIcon className="w-3.5 h-3.5 text-primary-600" />
+                <span className="text-neutral-700 dark:text-neutral-300">{suggestion}</span>
               </button>
             ))}
           </div>
@@ -357,7 +357,7 @@ export default function ChatInterface({
 
       {/* Input Area */}
       {readOnly ? (
-        <div className="flex-none bg-neutral-50 border-t border-neutral-200/60 px-4 py-3">
+        <div className="flex-none bg-neutral-50 dark:bg-[#0a0a0a] border-t border-neutral-200/60 dark:border-neutral-700 px-4 py-3">
           <div className="flex items-center gap-2 text-neutral-400 text-sm justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
@@ -367,7 +367,7 @@ export default function ChatInterface({
           </div>
         </div>
       ) : (
-      <div className="flex-none bg-white border-t border-neutral-200/60 px-4 py-4">
+      <div className="flex-none bg-white dark:bg-neutral-900 border-t border-neutral-200/60 dark:border-neutral-700 px-4 py-4">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -375,14 +375,14 @@ export default function ChatInterface({
           }}
           className="w-full"
         >
-          <div className="flex items-end gap-2 bg-neutral-50 rounded-md border border-neutral-200 p-3 focus-within:border-neutral-400 focus-within:ring-2 focus-within:ring-neutral-100 transition-all">
+          <div className="flex items-end gap-2 bg-neutral-50 dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700 p-3 focus-within:border-neutral-400 dark:focus-within:border-neutral-500 focus-within:ring-2 focus-within:ring-neutral-100 dark:focus-within:ring-neutral-700 transition-all">
             <textarea
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type your answer here... (Enter to send)"
               disabled={isLoading || isTranscribing}
-              className="flex-1 bg-transparent text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none resize-none min-h-[44px] max-h-[120px]"
+              className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none resize-none min-h-[44px] max-h-[120px]"
               rows={2}
             />
             <button
@@ -392,7 +392,7 @@ export default function ChatInterface({
               className={`flex-shrink-0 w-10 h-10 rounded-md border-2 transition-all duration-200 flex items-center justify-center ${
                 isRecording
                   ? "bg-danger-500 border-danger-600 text-white animate-pulse"
-                  : "bg-white border-neutral-200 text-neutral-500 hover:border-neutral-200 hover:text-neutral-900"
+                  : "bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-200 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-neutral-100"
               } disabled:opacity-40 disabled:cursor-not-allowed`}
               title={isRecording ? "Stop recording" : "Start voice recording"}
             >
@@ -405,7 +405,7 @@ export default function ChatInterface({
             <button
               type="submit"
               disabled={!inputMessage.trim() || isLoading || isTranscribing}
-              className="flex-shrink-0 w-10 h-10 bg-neutral-900 text-white rounded-md hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow"
+              className="flex-shrink-0 w-10 h-10 bg-brand-lime text-brand-dark rounded-md hover:bg-brand-lime/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-[0_0_12px_-4px_rgba(228,255,26,0.4)]"
               title="Send message"
             >
               <PaperAirplaneIcon className="w-5 h-5" />
@@ -416,20 +416,20 @@ export default function ChatInterface({
           {(isRecording || isProcessing || isTranscribing) && (
             <div className="flex items-center gap-2 mt-2 px-1">
               {isRecording && (
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-danger-50 border border-danger-200 rounded-md text-danger-700 text-xs font-medium">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 rounded-md text-danger-700 dark:text-danger-400 text-xs font-medium">
                   <span className="w-2 h-2 bg-danger-500 rounded-full animate-pulse"></span>
                   Recording... Speak now
                 </span>
               )}
               {isProcessing && (
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-md text-neutral-700 text-xs font-medium">
-                  <div className="w-3 h-3 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></div>
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-neutral-700 dark:text-neutral-200 text-xs font-medium">
+                  <div className="w-3 h-3 border-2 border-neutral-900 dark:border-neutral-100 border-t-transparent rounded-full animate-spin"></div>
                   Processing audio...
                 </span>
               )}
               {isTranscribing && (
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-md text-neutral-700 text-xs font-medium">
-                  <div className="w-3 h-3 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></div>
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-neutral-700 dark:text-neutral-200 text-xs font-medium">
+                  <div className="w-3 h-3 border-2 border-neutral-900 dark:border-neutral-100 border-t-transparent rounded-full animate-spin"></div>
                   Transcribing...
                 </span>
               )}
@@ -438,12 +438,12 @@ export default function ChatInterface({
 
           {/* Audio Error */}
           {audioError && (
-            <div className="mt-2 p-3 bg-danger-50 border border-danger-200 rounded-md">
-              <p className="text-xs text-danger-700 font-medium mb-1">
+            <div className="mt-2 p-3 bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 rounded-md">
+              <p className="text-xs text-danger-700 dark:text-danger-400 font-medium mb-1">
                 Recording Error
               </p>
-              <p className="text-xs text-danger-600">{audioError}</p>
-              <p className="text-xs text-danger-500 mt-1">
+              <p className="text-xs text-danger-600 dark:text-danger-400">{audioError}</p>
+              <p className="text-xs text-danger-500 dark:text-danger-400 mt-1">
                 Make sure you've allowed microphone access in your browser.
               </p>
             </div>

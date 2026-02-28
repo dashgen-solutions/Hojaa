@@ -10,8 +10,8 @@ export default function PlanningPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full bg-neutral-50">
-        <div className="w-8 h-8 border-3 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" />
+      <div className="flex items-center justify-center h-full bg-neutral-50 dark:bg-[#060606]">
+        <div className="w-8 h-8 border-3 border-neutral-200 dark:border-neutral-700 border-t-neutral-600 rounded-full animate-spin" />
       </div>
     );
   }

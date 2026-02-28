@@ -1,4 +1,4 @@
-# MoMetric: Way Forward
+# Hojaa: Way Forward
 
 **Version:** 1.0
 **Date:** January 28, 2026
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-MoMetric is evolving from a **requirements discovery tool** into a **scope lifecycle management platform**. The core insight: projects fail not because requirements weren't gathered, but because scope changes happen invisibly, meeting notes scatter across tools, and there's no single source of truth connecting what was agreed → what changed → what's being built.
+Hojaa is evolving from a **requirements discovery tool** into a **scope lifecycle management platform**. The core insight: projects fail not because requirements weren't gathered, but because scope changes happen invisibly, meeting notes scatter across tools, and there's no single source of truth connecting what was agreed → what changed → what's being built.
 
 **The Vision:** One living knowledge graph that serves as the project's single source of truth — from first discovery conversation through final delivery.
 
@@ -698,7 +698,7 @@ graph_diff_agent = Agent(
 
 ```typescript
 // Zustand store structure for new features
-interface MoMetricStore {
+interface HojaaStore {
   // Existing
   session: Session | null;
   nodes: Node[];
@@ -797,7 +797,7 @@ interface PaginatedResponse<T> extends ApiResponse<T[]> {
 | Users don't add meeting notes | High | Medium | Make it dead simple; show value immediately |
 | Performance degrades with large graphs | Medium | Low | Pagination, lazy loading, database indexing |
 | LLM costs spike | Medium | Medium | Use cheaper models for simple tasks; cache responses |
-| Scope of MoMetric itself creeps | High | High | Stick to phases; get user feedback before expanding |
+| Scope of Hojaa itself creeps | High | High | Stick to phases; get user feedback before expanding |
 
 ---
 
@@ -827,7 +827,7 @@ interface PaginatedResponse<T> extends ApiResponse<T[]> {
 ## Appendix A: File Structure (Target)
 
 ```
-mometric/
+hojaa/
 ├── backend/
 │   ├── app/
 │   │   ├── api/

@@ -200,7 +200,7 @@ async def test_integration(
     elif int_type == IntegrationType.SLACK:
         result = await integration_service.slack_send_message(
             db, integ,
-            text="🔔 MoMetric integration test — connection successful!",
+            text="🔔 Hojaa integration test — connection successful!",
         )
         return {"status": "ok" if result else "error"}
 

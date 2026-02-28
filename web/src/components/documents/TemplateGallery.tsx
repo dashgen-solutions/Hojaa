@@ -28,11 +28,11 @@ const CATEGORY_BADGE: Record<string, { bg: string; text: string }> = {
 
 function SkeletonTemplateCard() {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5 animate-pulse">
-      <div className="h-5 w-2/3 bg-neutral-200 rounded mb-2" />
-      <div className="h-4 w-full bg-neutral-100 rounded mb-1" />
-      <div className="h-4 w-1/2 bg-neutral-100 rounded mb-4" />
-      <div className="h-3 w-16 bg-neutral-100 rounded" />
+    <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-5 animate-pulse">
+      <div className="h-5 w-2/3 bg-neutral-200 dark:bg-neutral-700 rounded mb-2" />
+      <div className="h-4 w-full bg-neutral-100 dark:bg-neutral-800 rounded mb-1" />
+      <div className="h-4 w-1/2 bg-neutral-100 dark:bg-neutral-800 rounded mb-4" />
+      <div className="h-3 w-16 bg-neutral-100 dark:bg-neutral-800 rounded" />
     </div>
   );
 }
@@ -75,33 +75,33 @@ export default function TemplateGallery({ isOpen, onClose, onSelect }: TemplateG
       />
 
       {/* Modal */}
-      <div className="relative z-10 w-full max-w-3xl max-h-[80vh] rounded-xl border border-neutral-200 bg-white shadow-2xl flex flex-col mx-4">
+      <div className="relative z-10 w-full max-w-3xl max-h-[80vh] rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-2xl flex flex-col mx-4">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
           <div>
-            <h2 className="text-lg font-semibold text-neutral-900">Template Gallery</h2>
+            <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Template Gallery</h2>
             <p className="text-sm text-neutral-500 mt-0.5">
               Choose a template to get started quickly
             </p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-md p-1.5 hover:bg-neutral-100 transition-colors"
+            className="rounded-md p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
           >
             <XMarkIcon className="h-5 w-5 text-neutral-500" />
           </button>
         </div>
 
         {/* Category Tabs */}
-        <div className="flex items-center gap-1 px-6 pt-4 pb-2 border-b border-neutral-100">
+        <div className="flex items-center gap-1 px-6 pt-4 pb-2 border-b border-neutral-100 dark:border-neutral-800">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 activeCategory === cat
-                  ? 'bg-neutral-900 text-white'
-                  : 'text-neutral-600 hover:bg-neutral-100'
+                  ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
               }`}
             >
               {cat}
@@ -131,7 +131,7 @@ export default function TemplateGallery({ isOpen, onClose, onSelect }: TemplateG
           {!loading && !error && filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <DocumentTextIcon className="h-10 w-10 text-neutral-300 mb-3" />
-              <p className="text-sm font-medium text-neutral-900 mb-1">No templates found</p>
+              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1">No templates found</p>
               <p className="text-sm text-neutral-500">
                 {activeCategory !== 'All'
                   ? `No templates in the "${activeCategory}" category.`
@@ -153,12 +153,12 @@ export default function TemplateGallery({ isOpen, onClose, onSelect }: TemplateG
                 return (
                   <div
                     key={template.id}
-                    className="rounded-lg border border-neutral-200 bg-white p-5 hover:border-neutral-300 hover:shadow-sm transition-all"
+                    className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-5 hover:border-neutral-300 dark:hover:border-neutral-600 hover:shadow-sm transition-all"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <SparklesIcon className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                        <h3 className="text-sm font-medium text-neutral-900">
+                        <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                           {template.name}
                         </h3>
                       </div>
@@ -185,7 +185,7 @@ export default function TemplateGallery({ isOpen, onClose, onSelect }: TemplateG
 
                     <button
                       onClick={() => onSelect(template.id)}
-                      className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+                      className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                     >
                       Use Template
                     </button>

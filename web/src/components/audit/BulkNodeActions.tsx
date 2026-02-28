@@ -132,10 +132,10 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
   return (
     <div className="space-y-4">
       {/* Filter bar */}
-      <div className="bg-white rounded-md border border-neutral-200 p-4">
+      <div className="bg-white dark:bg-neutral-900 rounded-md border border-neutral-200 dark:border-neutral-700 p-4">
         <div className="flex items-center gap-2 mb-3">
           <FunnelIcon className="w-4 h-4 text-neutral-500" />
-          <h3 className="text-sm font-semibold text-neutral-800">Filter Nodes</h3>
+          <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Filter Nodes</h3>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -143,7 +143,7 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
-            className="px-3 py-1.5 rounded-md border border-neutral-300 text-sm focus:border-neutral-400 outline-none"
+            className="px-3 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm bg-white dark:bg-neutral-800 dark:text-neutral-300 focus:border-neutral-400 outline-none"
           >
             <option value="">All statuses</option>
             {STATUS_OPTIONS.map((option) => (
@@ -155,7 +155,7 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
           <select
             value={nodeTypeFilter}
             onChange={(event) => setNodeTypeFilter(event.target.value)}
-            className="px-3 py-1.5 rounded-md border border-neutral-300 text-sm focus:border-neutral-400 outline-none"
+            className="px-3 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm bg-white dark:bg-neutral-800 dark:text-neutral-300 focus:border-neutral-400 outline-none"
           >
             <option value="">All types</option>
             <option value="root">Root</option>
@@ -170,7 +170,7 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
               type="date"
               value={dateFrom}
               onChange={(event) => setDateFrom(event.target.value)}
-              className="w-full pl-8 pr-2 py-1.5 rounded-md border border-neutral-300 text-sm focus:border-neutral-400 outline-none"
+              className="w-full pl-8 pr-2 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm bg-white dark:bg-neutral-800 dark:text-neutral-300 focus:border-neutral-400 outline-none"
               placeholder="From date"
             />
           </div>
@@ -182,7 +182,7 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
               type="date"
               value={dateTo}
               onChange={(event) => setDateTo(event.target.value)}
-              className="w-full pl-8 pr-2 py-1.5 rounded-md border border-neutral-300 text-sm focus:border-neutral-400 outline-none"
+              className="w-full pl-8 pr-2 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm bg-white dark:bg-neutral-800 dark:text-neutral-300 focus:border-neutral-400 outline-none"
               placeholder="To date"
             />
           </div>
@@ -191,7 +191,7 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
           <select
             value={sourceIdFilter}
             onChange={(event) => setSourceIdFilter(event.target.value)}
-            className="px-3 py-1.5 rounded-md border border-neutral-300 text-sm focus:border-neutral-400 outline-none"
+            className="px-3 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm bg-white dark:bg-neutral-800 dark:text-neutral-300 focus:border-neutral-400 outline-none"
           >
             <option value="">All sources</option>
             {sources.map((source) => (
@@ -232,9 +232,9 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
 
       {/* Selection bar + bulk actions */}
       {filteredNodes.length > 0 && (
-        <div className="bg-white rounded-md border border-neutral-200 overflow-hidden">
+        <div className="bg-white dark:bg-neutral-900 rounded-md border border-neutral-200 dark:border-neutral-700 overflow-hidden">
           {/* Toolbar */}
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-100 bg-neutral-50">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -243,7 +243,7 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
                   onChange={toggleSelectAll}
                   className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-400"
                 />
-                <span className="text-xs text-neutral-600">
+                <span className="text-xs text-neutral-600 dark:text-neutral-400">
                   {selectedNodeIds.size > 0
                     ? `${selectedNodeIds.size} selected`
                     : 'Select all'}
@@ -264,13 +264,13 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
 
           {/* Bulk action panel */}
           {showBulkPanel && selectedNodeIds.size > 0 && (
-            <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200 flex items-end gap-3">
+            <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 flex items-end gap-3">
               <div className="flex-1">
-                <label className="block text-xs font-medium text-neutral-700 mb-1">New Status</label>
+                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">New Status</label>
                 <select
                   value={bulkStatus}
                   onChange={(event) => setBulkStatus(event.target.value)}
-                  className="w-full px-3 py-1.5 rounded-md border border-neutral-300 text-sm focus:border-neutral-400 outline-none"
+                  className="w-full px-3 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm bg-white dark:bg-neutral-800 dark:text-neutral-300 focus:border-neutral-400 outline-none"
                 >
                   <option value="">Select status...</option>
                   {STATUS_OPTIONS.map((option) => (
@@ -279,12 +279,12 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
                 </select>
               </div>
               <div className="flex-1">
-                <label className="block text-xs font-medium text-neutral-700 mb-1">Reason (optional)</label>
+                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">Reason (optional)</label>
                 <input
                   type="text"
                   value={bulkReason}
                   onChange={(event) => setBulkReason(event.target.value)}
-                  className="w-full px-3 py-1.5 rounded-md border border-neutral-300 text-sm focus:border-neutral-400 outline-none"
+                  className="w-full px-3 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm bg-white dark:bg-neutral-800 dark:text-neutral-300 focus:border-neutral-400 outline-none"
                   placeholder="Why are you changing these?"
                 />
               </div>
@@ -300,7 +300,7 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
           )}
 
           {/* Node list */}
-          <div className="max-h-80 overflow-y-auto divide-y divide-neutral-100">
+          <div className="max-h-80 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
             {filteredNodes.map((node) => {
               const isSelected = selectedNodeIds.has(node.id);
               const statusConfig = STATUS_OPTIONS.find((option) => option.value === node.status);
@@ -308,8 +308,8 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
               return (
                 <div
                   key={node.id}
-                  className={`flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 transition-colors ${
-                    isSelected ? 'bg-neutral-50/50' : ''
+                  className={`flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors ${
+                    isSelected ? 'bg-neutral-50/50 dark:bg-neutral-800/50' : ''
                   }`}
                 >
                   <input
@@ -319,9 +319,9 @@ export default function BulkNodeActions({ sessionId }: BulkNodeActionsProps) {
                     className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-400"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-neutral-800 truncate">{node.question}</p>
+                    <p className="text-sm text-neutral-800 dark:text-neutral-200 truncate">{node.question}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
                         {node.node_type}
                       </span>
                       {statusConfig && (

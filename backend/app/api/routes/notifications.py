@@ -126,7 +126,7 @@ async def send_test_notification(
     """Send a test notification email to the current user via SMTP."""
     try:
         success = notification_service.send_email(
-            subject="[MoMetric] Test Notification",
+            subject="[Hojaa] Test Notification",
             html_content="""
             <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
                         background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
@@ -135,11 +135,11 @@ async def send_test_notification(
                 </div>
                 <div style="padding:24px 28px;">
                     <p style="margin:0 0 8px;color:#374151;font-size:14px;">
-                        If you're reading this, your MoMetric email notifications are working correctly!
+                        If you're reading this, your Hojaa email notifications are working correctly!
                     </p>
                 </div>
                 <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
-                    <p style="margin:0;font-size:12px;color:#9CA3AF;">Sent from MoMetric via SMTP.</p>
+                    <p style="margin:0;font-size:12px;color:#9CA3AF;">Sent from Hojaa via SMTP.</p>
                 </div>
             </div>
             """,

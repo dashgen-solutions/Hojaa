@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: mometric_db
+      POSTGRES_DB: hojaa_db
     ports:
       - "5432:5432"
     volumes:
@@ -22,7 +22,7 @@ services:
     ports:
       - "8001:8000"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/mometric_db
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/hojaa_db
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
@@ -37,7 +37,7 @@ services:
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
-      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-MoMetric}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Hojaa}
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       # Mailchimp (legacy — kept for reference)
       MAILCHIMP_ENABLED: ${MAILCHIMP_ENABLED:-false}
@@ -47,7 +47,7 @@ services:
       MAILCHIMP_FROM_EMAIL: ${MAILCHIMP_FROM_EMAIL:-}
       MAILCHIMP_FROM_NAME: ${MAILCHIMP_FROM_NAME:-}
       # Platform admin (metrics dashboard)
-      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-admin@mometric.app}
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-admin@hojaa.com}
       PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-}
     depends_on:
       db:

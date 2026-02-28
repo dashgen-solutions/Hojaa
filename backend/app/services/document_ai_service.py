@@ -273,7 +273,7 @@ PLANNING CARDS ({len(cards)} cards):
 
 # ── System Prompt ──────────────────────────────────────────────
 
-SYSTEM_PROMPT_TEMPLATE = """You are an AI document assistant for MoMetric, a project management platform. You help users generate professional business documents: proposals, statements of work (SOW), contracts, NDAs, invoices, and scope documents.
+SYSTEM_PROMPT_TEMPLATE = """You are an AI document assistant for Hojaa, a project management platform. You help users generate professional business documents: proposals, statements of work (SOW), contracts, NDAs, invoices, and scope documents.
 
 You have access to the following project context:
 

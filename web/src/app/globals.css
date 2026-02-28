@@ -2,10 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Inter Font */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* CSS Custom Properties — Theme System */
+:root {
+  --color-primary: #E4FF1A;
+  --color-primary-dark: #c8e600;
+  --color-bg: #f5f5ef;
+  --color-surface: #ffffff;
+  --color-text: #171717;
+  --color-text-muted: #525252;
+  --color-border: #e2e2e2;
+  --color-focus: #E4FF1A;
+}
 
-/* Base Styles — ERPNext / Frappe Design System */
+.dark {
+  --color-bg: #060606;
+  --color-surface: #111111;
+  --color-text: #f5f5ef;
+  --color-text-muted: #a3a3a3;
+  --color-border: #262626;
+}
+
+/* Base Styles — Hojaa Design System */
 html,
 body {
   height: 100%;
@@ -13,18 +30,19 @@ body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 body {
-  @apply antialiased text-neutral-600;
-  background-color: #f8f8f8;
+  @apply antialiased;
+  color: var(--color-text-muted);
+  background-color: var(--color-bg);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 13px;
   line-height: 1.5;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 /* Root container */
@@ -61,12 +79,26 @@ body {
   scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
 }
 
+.dark * {
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    &:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+  }
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
 /* ==================== Component Layer — ERPNext ==================== */
 @layer components {
   /* Card — flat, #e2e2e2 border, 8px radius */
   .card {
     @apply bg-white rounded-md border border-neutral-200;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+  .dark .card {
+    @apply bg-neutral-900 border-neutral-700;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 
   .card-hover {
@@ -89,7 +121,14 @@ body {
     background-color: #262626;
   }
   .btn-primary:focus-visible {
-    box-shadow: 0 0 0 2px #0289f7;
+    box-shadow: 0 0 0 2px var(--color-focus);
+  }
+  .dark .btn-primary {
+    @apply text-neutral-900;
+    background-color: #E4FF1A;
+  }
+  .dark .btn-primary:hover {
+    background-color: #c8e600;
   }
 
   /* Secondary Button — white with border */
@@ -99,6 +138,12 @@ body {
   .btn-secondary:hover {
     @apply bg-neutral-50 border-neutral-300;
   }
+  .dark .btn-secondary {
+    @apply bg-neutral-800 text-neutral-200 border-neutral-600;
+  }
+  .dark .btn-secondary:hover {
+    @apply bg-neutral-700 border-neutral-500;
+  }
 
   /* Ghost Button — no border */
   .btn-ghost {
@@ -106,6 +151,12 @@ body {
   }
   .btn-ghost:hover {
     @apply bg-neutral-100;
+  }
+  .dark .btn-ghost {
+    @apply text-neutral-300;
+  }
+  .dark .btn-ghost:hover {
+    @apply bg-neutral-800;
   }
 
   /* Input — 28px height, #f3f3f3 bg, 6px radius */
@@ -115,11 +166,19 @@ body {
     background-color: #f3f3f3;
     border-radius: 6px;
     transition: border-color 0.15s, box-shadow 0.15s;
+    color: var(--color-text);
   }
   .input:focus {
-    border-color: #0289f7;
-    box-shadow: 0 0 0 2px rgba(2, 137, 247, 0.15);
+    border-color: var(--color-focus);
+    box-shadow: 0 0 0 2px rgba(228, 255, 26, 0.15);
     background-color: #fff;
+  }
+  .dark .input {
+    background-color: #1a1a1a;
+    @apply border-neutral-700 placeholder:text-neutral-500;
+  }
+  .dark .input:focus {
+    background-color: #111;
   }
 
   .input-error {
@@ -138,8 +197,8 @@ body {
 
   .badge-primary {
     @apply badge;
-    background-color: #eff8ff;
-    color: #0289f7;
+    background-color: #f8ffe0;
+    color: #7a8a00;
   }
 
   .badge-success {
@@ -166,10 +225,16 @@ body {
     color: #525252;
   }
 
+  .dark .badge-primary { background-color: #292e00; color: #E4FF1A; }
+  .dark .badge-success { background-color: #0d2b12; color: #4ade80; }
+  .dark .badge-warning { background-color: #2b1f00; color: #fbbf24; }
+  .dark .badge-danger { background-color: #2b0d0d; color: #f87171; }
+  .dark .badge-neutral { background-color: #262626; color: #a3a3a3; }
+
   /* Divider — subtle */
   .divider {
     @apply h-px;
-    background-color: #e2e2e2;
+    background-color: var(--color-border);
   }
 
   /* Section Header — 11px uppercase, ERPNext style */
@@ -178,14 +243,23 @@ body {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #7c7c7c;
+    color: var(--color-text-muted);
+  }
+
+  /* ==================== Dark Mode Overrides ==================== */
+  /* Skeleton */
+  .dark .skeleton {
+    background-color: #262626;
+  }
+  .dark .skeleton::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
   }
 }
 
 /* ==================== Utilities Layer ==================== */
 @layer utilities {
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-primary-600;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-primary-500;
   }
 
   /* Hide scrollbar but keep functionality */
@@ -202,7 +276,7 @@ body {
     @apply focus:outline-none;
   }
   .focus-ring:focus-visible {
-    box-shadow: 0 0 0 2px #0289f7;
+    box-shadow: 0 0 0 2px var(--color-focus);
   }
 
   /* Line clamp utilities */
@@ -285,14 +359,14 @@ body {
 
 /* ==================== Selection ==================== */
 ::selection {
-  background-color: rgba(2, 137, 247, 0.15);
-  color: #171717;
+  background-color: rgba(228, 255, 26, 0.15);
+  color: var(--color-text);
 }
 
 /* ==================== Focus Visible ==================== */
 :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px #0289f7;
+  box-shadow: 0 0 0 2px var(--color-focus);
 }
 
 /* ==================== Reduce Motion ==================== */

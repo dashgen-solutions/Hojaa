@@ -335,7 +335,7 @@ CardVersion {
 
 ### Flow 1: Project Kickoff
 
-1. PM logs into MoMetric
+1. PM logs into Hojaa
 2. Navigate to "Projects" module
 3. Click "New Project"
 4. Fill in: Project Name, Client, Team Members
@@ -512,7 +512,7 @@ CardVersion {
 3. **Effort Estimation**: AI suggests complexity/hours per card
 4. **Multi-Project View**: See scope patterns across all projects
 5. **Template Library**: Pre-built canvases for "Chatbot Project", "Data Pipeline", etc.
-6. **Integration with MoMetric Core**: Cards become "use cases" in KPI mapping module
+6. **Integration with Hojaa Core**: Cards become "use cases" in KPI mapping module
 7. **Client Portal**: Dedicated client login with all their projects
 8. **Mobile App**: Client can review canvas on phone
 9. **Slack/Teams Integration**: Notifications when canvas updates

@@ -150,15 +150,15 @@ export default function DocumentShareModal({
 
       {/* Share Link Section */}
       <div>
-        <h4 className="text-sm font-semibold text-neutral-900 mb-2">Share Link</h4>
+        <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Share Link</h4>
         {shareUrl ? (
           <div className="flex items-center gap-2">
-            <div className="flex-1 min-w-0 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700 truncate">
+            <div className="flex-1 min-w-0 rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-2 text-xs text-neutral-700 dark:text-neutral-300 truncate">
               {shareUrl}
             </div>
             <button
               onClick={handleCopyLink}
-              className="flex-shrink-0 rounded-md border border-neutral-200 bg-white p-2 hover:bg-neutral-50 transition-colors"
+              className="flex-shrink-0 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
               title="Copy link"
             >
               {copied ? (
@@ -172,7 +172,7 @@ export default function DocumentShareModal({
           <button
             onClick={handleGenerateLink}
             disabled={generating}
-            className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
           >
             <LinkIcon className="h-4 w-4" />
             {generating ? 'Generating...' : 'Generate Link'}
@@ -182,7 +182,7 @@ export default function DocumentShareModal({
 
       {/* Add Recipient */}
       <div>
-        <h4 className="text-sm font-semibold text-neutral-900 mb-2">Add Recipient</h4>
+        <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Add Recipient</h4>
         <div className="space-y-2">
           <div className="relative">
             <UserIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
@@ -191,7 +191,7 @@ export default function DocumentShareModal({
               placeholder="Name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="w-full rounded-md border border-neutral-200 bg-white py-1.5 pl-8 pr-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+              className="w-full rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1.5 pl-8 pr-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
             />
           </div>
           <div className="relative">
@@ -201,14 +201,14 @@ export default function DocumentShareModal({
               placeholder="Email"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
-              className="w-full rounded-md border border-neutral-200 bg-white py-1.5 pl-8 pr-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+              className="w-full rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1.5 pl-8 pr-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
             />
           </div>
           <div className="flex items-center gap-2">
             <select
               value={newRole}
               onChange={(e) => setNewRole(e.target.value as 'viewer' | 'approver')}
-              className="flex-1 rounded-md border border-neutral-200 bg-white py-1.5 px-2.5 text-sm text-neutral-700 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+              className="flex-1 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1.5 px-2.5 text-sm text-neutral-700 dark:text-neutral-300 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
             >
               <option value="viewer">Viewer</option>
               <option value="approver">Approver</option>
@@ -227,14 +227,14 @@ export default function DocumentShareModal({
 
       {/* Recipients List */}
       <div>
-        <h4 className="text-sm font-semibold text-neutral-900 mb-2">
+        <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
           Recipients ({recipients.length})
         </h4>
 
         {loading && (
           <div className="space-y-2">
             {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} className="animate-pulse h-12 bg-neutral-100 rounded-md" />
+              <div key={i} className="animate-pulse h-12 bg-neutral-100 dark:bg-neutral-800 rounded-md" />
             ))}
           </div>
         )}
@@ -254,14 +254,14 @@ export default function DocumentShareModal({
               return (
                 <div
                   key={r.id}
-                  className="flex items-center gap-3 rounded-md border border-neutral-200 bg-white px-3 py-2.5"
+                  className="flex items-center gap-3 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2.5"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-neutral-900 truncate">
+                      <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">
                         {r.name}
                       </p>
-                      <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-600 capitalize">
+                      <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 capitalize">
                         {r.role}
                       </span>
                     </div>

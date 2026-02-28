@@ -32,7 +32,7 @@ export default function NodeDetailsModal({
           gradient: "bg-neutral-900",
           icon: CubeIcon,
           iconColor: "text-neutral-900",
-          iconBg: "bg-neutral-100",
+          iconBg: "bg-neutral-100 dark:bg-neutral-800",
           badge: "Project Root",
           badgeColor: "bg-neutral-900 text-white",
         };
@@ -41,7 +41,7 @@ export default function NodeDetailsModal({
           gradient: "bg-warning-600",
           icon: SparklesIcon,
           iconColor: "text-warning-600",
-          iconBg: "bg-warning-100",
+          iconBg: "bg-warning-100 dark:bg-warning-900/30",
           badge: "Feature",
           badgeColor: "bg-warning-600 text-white",
         };
@@ -50,7 +50,7 @@ export default function NodeDetailsModal({
           gradient: "bg-success-600",
           icon: DocumentCheckIcon,
           iconColor: "text-success-600",
-          iconBg: "bg-success-100",
+          iconBg: "bg-success-100 dark:bg-success-900/30",
           badge: "Requirement",
           badgeColor: "bg-success-600 text-white",
         };
@@ -59,7 +59,7 @@ export default function NodeDetailsModal({
           gradient: "bg-neutral-600",
           icon: DocumentCheckIcon,
           iconColor: "text-neutral-600",
-          iconBg: "bg-neutral-100",
+          iconBg: "bg-neutral-100 dark:bg-neutral-800",
           badge: "Item",
           badgeColor: "bg-neutral-600 text-white",
         };
@@ -73,14 +73,14 @@ export default function NodeDetailsModal({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-neutral-900/50 z-40 animate-fade-in"
+        className="fixed inset-0 bg-neutral-900/50 dark:bg-black/70 z-40 animate-fade-in"
         onClick={onClose}
       />
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="bg-white rounded-md shadow max-w-2xl w-full max-h-[80vh] overflow-hidden animate-scale-in"
+          className="bg-white dark:bg-neutral-900 rounded-md shadow max-w-2xl w-full max-h-[80vh] overflow-hidden animate-scale-in"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header gradient */}
@@ -104,7 +104,7 @@ export default function NodeDetailsModal({
                   >
                     {style.badge}
                   </span>
-                  <h2 className="text-xl font-bold text-neutral-900 leading-tight">
+                  <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 leading-tight">
                     {node.question}
                   </h2>
                 </div>
@@ -113,10 +113,10 @@ export default function NodeDetailsModal({
               {/* Close button */}
               <button
                 onClick={onClose}
-                className="flex-shrink-0 p-2 hover:bg-neutral-100 rounded-md transition-colors"
+                className="flex-shrink-0 p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors"
                 aria-label="Close"
               >
-                <XMarkIcon className="w-5 h-5 text-neutral-500" />
+                <XMarkIcon className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
               </button>
             </div>
 
@@ -125,18 +125,18 @@ export default function NodeDetailsModal({
               {node.answer ? (
                 <div>
                   <h3 className="section-title mb-3">Description</h3>
-                  <div className="bg-neutral-50 rounded-md p-4 border border-neutral-100">
-                    <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">
+                  <div className="bg-neutral-50 dark:bg-neutral-800 rounded-md p-4 border border-neutral-100 dark:border-neutral-700">
+                    <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap">
                       {node.answer}
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-md bg-neutral-100 mb-4">
-                    <DocumentCheckIcon className="w-7 h-7 text-neutral-400" />
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-md bg-neutral-100 dark:bg-neutral-800 mb-4">
+                    <DocumentCheckIcon className="w-7 h-7 text-neutral-400 dark:text-neutral-500" />
                   </div>
-                  <p className="text-neutral-500 text-sm">
+                  <p className="text-neutral-500 dark:text-neutral-400 text-sm">
                     No additional details available
                   </p>
                 </div>
@@ -144,7 +144,7 @@ export default function NodeDetailsModal({
             </div>
 
             {/* Footer */}
-            <div className="mt-6 pt-6 border-t border-neutral-100 flex justify-end">
+            <div className="mt-6 pt-6 border-t border-neutral-100 dark:border-neutral-700 flex justify-end">
               <button onClick={onClose} className="btn-secondary">
                 Close
               </button>

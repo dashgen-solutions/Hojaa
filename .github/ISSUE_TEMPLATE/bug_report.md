@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a bug to help us improve MoMetric
+about: Report a bug to help us improve Hojaa
 title: "[Bug] "
 labels: bug
 assignees: ""
@@ -24,7 +24,7 @@ What actually happened.
 - OS: [e.g., macOS 14, Ubuntu 22.04]
 - Browser: [e.g., Chrome 120]
 - Docker version: [e.g., 24.0.7]
-- MoMetric version: [e.g., 1.0.0]
+- Hojaa version: [e.g., 1.0.0]
 
 ## Logs
 ```

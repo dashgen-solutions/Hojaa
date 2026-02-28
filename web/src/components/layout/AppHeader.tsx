@@ -62,7 +62,7 @@ export default function AppHeader({ onToggleSidebar }: AppHeaderProps) {
 
   return (
     <header
-      className="bg-white border-b border-neutral-200 flex-shrink-0 relative z-40"
+      className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 flex-shrink-0 relative z-40 transition-colors"
       style={{ height: "48px" }}
     >
       <div className="flex items-center justify-between px-4 h-full">
@@ -70,9 +70,9 @@ export default function AppHeader({ onToggleSidebar }: AppHeaderProps) {
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
-              className="md:hidden p-1.5 rounded hover:bg-neutral-100 transition-colors mr-1"
+              className="md:hidden p-1.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors mr-1"
             >
-              <Bars3Icon className="w-5 h-5 text-neutral-600" />
+              <Bars3Icon className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
             </button>
           )}
 
@@ -87,12 +87,12 @@ export default function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                   {crumb.href && !isLast ? (
                     <Link
                       href={crumb.href}
-                      className="text-neutral-500 hover:text-neutral-900 transition-colors truncate"
+                      className="text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors truncate"
                     >
                       {crumb.label}
                     </Link>
                   ) : (
-                    <span className="text-neutral-900 font-medium truncate">
+                    <span className="text-neutral-900 dark:text-neutral-100 font-medium truncate">
                       {crumb.label}
                     </span>
                   )}

@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="assets/logo.svg" alt="MoMetric" width="180" />
+  <img src="assets/logo.svg" alt="Hojaa" width="180" />
 
-  <h1>MoMetric</h1>
+  <h1>Hojaa</h1>
 
   <p><strong>AI-powered requirements discovery & scope management for teams that move fast</strong></p>
 
@@ -18,7 +18,7 @@
 
   <p>
     <a href="#-quick-start">Quick Start</a> &bull;
-    <a href="#-why-mometric">Why MoMetric</a> &bull;
+    <a href="#-why-hojaa">Why Hojaa</a> &bull;
     <a href="#-features">Features</a> &bull;
     <a href="#-architecture">Architecture</a> &bull;
     <a href="docs/">Documentation</a>
@@ -29,7 +29,7 @@
 
 <!-- Replace with your own demo GIF or screenshot -->
 <div align="center">
-  <img src="assets/demo-placeholder.png" alt="MoMetric Demo" width="800" />
+  <img src="assets/demo-placeholder.png" alt="Hojaa Demo" width="800" />
   <br/><em>Upload a document &rarr; Answer AI-generated questions &rarr; Explore your requirement tree</em>
 </div>
 
@@ -38,7 +38,7 @@
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_ORG/mometric.git && cd mometric
+git clone https://github.com/YOUR_ORG/hojaa.git && cd hojaa
 cp .env.example .env          # Add your OpenAI or Anthropic API key
 make up                        # Starts PostgreSQL + API + Web UI
 ```
@@ -49,11 +49,11 @@ Open **http://localhost:3000** — that's it.
 
 ---
 
-## Why MoMetric?
+## Why Hojaa?
 
-AI project cycles are chaotic. A meeting changes priorities. An email redefines scope. Traditional PM tools track *tasks* — MoMetric tracks **decisions and their context**.
+AI project cycles are chaotic. A meeting changes priorities. An email redefines scope. Traditional PM tools track *tasks* — Hojaa tracks **decisions and their context**.
 
-| Capability | Jira | ClickUp | Notion | Linear | **MoMetric** |
+| Capability | Jira | ClickUp | Notion | Linear | **Hojaa** |
 |:---|:---:|:---:|:---:|:---:|:---:|
 | AI requirement extraction from documents | — | — | — | — | **Yes** |
 | Progressive questioning (10 targeted Qs) | — | — | — | — | **Yes** |
@@ -74,7 +74,7 @@ AI project cycles are chaotic. A meeting changes priorities. An email redefines 
 <details>
 <summary><strong>Document Upload & AI Analysis</strong></summary>
 
-Upload PDF, DOCX, or TXT documents. MoMetric extracts context and generates **10 targeted questions** tailored to your project type — technical and non-technical variants included.
+Upload PDF, DOCX, or TXT documents. Hojaa extracts context and generates **10 targeted questions** tailored to your project type — technical and non-technical variants included.
 
 </details>
 
@@ -88,7 +88,7 @@ Requirements are organized in a hierarchical tree powered by React Flow. Click *
 <details>
 <summary><strong>Multi-Source Ingestion</strong></summary>
 
-Feed meeting notes, Slack threads, emails, or additional documents into your session. MoMetric's AI detects scope changes, suggests tree modifications, and attributes every change to its source. Nothing is lost.
+Feed meeting notes, Slack threads, emails, or additional documents into your session. Hojaa's AI detects scope changes, suggests tree modifications, and attributes every change to its source. Nothing is lost.
 
 </details>
 
@@ -188,7 +188,7 @@ graph TB
 
 ## LLM Providers
 
-MoMetric supports multiple AI providers with **per-task model routing** and **cost-tier optimization**.
+Hojaa supports multiple AI providers with **per-task model routing** and **cost-tier optimization**.
 
 | Provider | Config | Best For |
 |:---|:---|:---|
@@ -216,7 +216,7 @@ Set `LLM_PROVIDER` in `.env` to your preferred default. Individual tasks can be 
 | `AZURE_OPENAI_DEPLOYMENT` | — | Azure deployment name |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
 | `OLLAMA_MODEL` | `llama3` | Ollama model name |
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/mometric_db` | PostgreSQL connection |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/hojaa_db` | PostgreSQL connection |
 | `SECRET_KEY` | — | JWT signing key (change in production) |
 | `CORS_ORIGINS` | `["http://localhost:3000"]` | Allowed frontend origins |
 | `SMTP_ENABLED` | `false` | Enable email notifications |
@@ -294,7 +294,7 @@ python -m pytest tests/ -v
 ## Project Structure
 
 ```
-mometric/
+hojaa/
 ├── backend/                   Python FastAPI API
 │   ├── app/
 │   │   ├── api/routes/        21 API endpoint modules
@@ -328,11 +328,11 @@ mometric/
 
 ## Deployment
 
-MoMetric is designed to run on affordable infrastructure. A **$10-20/month VM** (1 vCPU, 2GB RAM) handles small teams comfortably.
+Hojaa is designed to run on affordable infrastructure. A **$10-20/month VM** (1 vCPU, 2GB RAM) handles small teams comfortably.
 
 ```bash
 # On your VM:
-git clone https://github.com/YOUR_ORG/mometric.git && cd mometric
+git clone https://github.com/YOUR_ORG/hojaa.git && cd hojaa
 cp .env.example .env           # Configure production values
 docker compose up -d           # Detached mode
 ```
@@ -373,5 +373,5 @@ See [SECURITY.md](SECURITY.md) for our security policy and responsible disclosur
 ---
 
 <div align="center">
-  <sub>Built with FastAPI, Next.js, and a lot of AI &mdash; by the MoMetric team at DashGen Solutions</sub>
+  <sub>Built with FastAPI, Next.js, and a lot of AI &mdash; by the Hojaa team at DashGen Solutions</sub>
 </div>

@@ -25,8 +25,8 @@ export default function AuditPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full bg-neutral-50">
-        <div className="w-8 h-8 border-3 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" />
+      <div className="flex items-center justify-center h-full bg-neutral-50 dark:bg-[#060606]">
+        <div className="w-8 h-8 border-3 border-neutral-200 dark:border-neutral-700 border-t-neutral-600 rounded-full animate-spin" />
       </div>
     );
   }
@@ -35,7 +35,7 @@ export default function AuditPage() {
     <div className="h-full flex flex-col overflow-hidden">
       {/* Tab bar */}
       <div className="px-6 pt-4 flex-shrink-0">
-        <div className="flex gap-1 bg-neutral-200/60 rounded-md p-0.5 w-fit">
+        <div className="flex gap-1 bg-neutral-200/60 dark:bg-neutral-800 rounded-md p-0.5 w-fit">
           {(["timeline", "nodes", "timetravel", "notifications"] as const).map((tab) => {
             const labels = {
               timeline: "Change History",
@@ -49,8 +49,8 @@ export default function AuditPage() {
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   activeTab === tab
-                    ? "bg-white text-neutral-900 shadow-sm"
-                    : "text-neutral-600 hover:text-neutral-800"
+                    ? "bg-brand-lime text-brand-dark shadow-sm"
+                    : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
                 }`}
               >
                 {labels[tab]}

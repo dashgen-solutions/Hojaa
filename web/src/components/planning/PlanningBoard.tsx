@@ -13,11 +13,11 @@ interface PlanningBoardProps {
 }
 
 const BOARD_COLUMNS = [
-  { key: 'backlog', label: 'Backlog', color: 'border-neutral-300', bgColor: 'bg-neutral-50' },
-  { key: 'todo', label: 'To Do', color: 'border-blue-300', bgColor: 'bg-blue-50' },
-  { key: 'in_progress', label: 'In Progress', color: 'border-amber-300', bgColor: 'bg-amber-50' },
-  { key: 'review', label: 'Review', color: 'border-purple-300', bgColor: 'bg-purple-50' },
-  { key: 'done', label: 'Done', color: 'border-green-300', bgColor: 'bg-green-50' },
+  { key: 'backlog', label: 'Backlog', color: 'border-neutral-300 dark:border-neutral-600', bgColor: 'bg-neutral-50 dark:bg-neutral-800' },
+  { key: 'todo', label: 'To Do', color: 'border-blue-300 dark:border-blue-700', bgColor: 'bg-blue-50 dark:bg-blue-950' },
+  { key: 'in_progress', label: 'In Progress', color: 'border-amber-300 dark:border-amber-700', bgColor: 'bg-amber-50 dark:bg-amber-950' },
+  { key: 'review', label: 'Review', color: 'border-purple-300 dark:border-purple-700', bgColor: 'bg-purple-50 dark:bg-purple-950' },
+  { key: 'done', label: 'Done', color: 'border-green-300 dark:border-green-700', bgColor: 'bg-green-50 dark:bg-green-950' },
 ];
 
 export default function PlanningBoard({ sessionId, readOnly = false }: PlanningBoardProps) {
@@ -106,17 +106,17 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
   return (
     <div className="h-full flex flex-col">
       {/* Board Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 bg-white">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
         <div>
-          <h2 className="text-lg font-semibold text-neutral-900">Planning Board</h2>
+          <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Planning Board</h2>
           <div className="flex items-center gap-4 mt-1">
-            <span className="text-sm text-neutral-500">{totalCards} cards</span>
+            <span className="text-sm text-neutral-500 dark:text-neutral-400">{totalCards} cards</span>
             {totalCards > 0 && (
               <div className="flex items-center gap-2">
-                <div className="w-24 h-1.5 rounded-full bg-neutral-200 overflow-hidden">
+                <div className="w-24 h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden">
                   <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${progressPercentage}%` }} />
                 </div>
-                <span className="text-xs text-neutral-500">{progressPercentage}% done</span>
+                <span className="text-xs text-neutral-500 dark:text-neutral-400">{progressPercentage}% done</span>
               </div>
             )}
           </div>
@@ -129,7 +129,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
             <select
               value={assigneeFilter}
               onChange={(e) => setAssigneeFilter(e.target.value)}
-              className="text-sm border border-neutral-200 rounded-md px-2 py-1.5 bg-white"
+              className="text-sm border border-neutral-200 dark:border-neutral-700 rounded-md px-2 py-1.5 bg-white dark:bg-neutral-800 dark:text-neutral-300"
             >
               <option value="">All Members</option>
               {teamMembers.map((m) => (
@@ -144,7 +144,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
             className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
               hideDeferred
                 ? 'bg-neutral-700 text-white border-neutral-700'
-                : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
+                : 'bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700'
             }`}
           >
             <ClockIcon className="w-3.5 h-3.5" />
@@ -152,11 +152,11 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
           </button>
 
           {/* View Toggles */}
-          <div className="flex bg-neutral-100 rounded-md p-0.5">
+          <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-md p-0.5">
             <button
               onClick={() => setActiveView('board')}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                activeView === 'board' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'
+                activeView === 'board' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
               }`}
             >
               Board
@@ -164,7 +164,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
             <button
               onClick={handleShowWorkload}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                activeView === 'workload' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'
+                activeView === 'workload' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
               }`}
             >
               <ChartBarIcon className="w-3.5 h-3.5 inline mr-1" />
@@ -173,7 +173,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
             <button
               onClick={() => { fetchWorkload(sessionId); setActiveView('dashboard'); }}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                activeView === 'dashboard' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'
+                activeView === 'dashboard' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
               }`}
             >
               Dashboard
@@ -183,7 +183,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
           <button
             onClick={() => setShowTeamManager(!showTeamManager)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium
-                       bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors"
+                       bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
           >
             <UsersIcon className="w-4 h-4" />
             Team ({teamMembers.length})
@@ -194,7 +194,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
               <button
                 onClick={() => setShowNewCard(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium
-                           bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors"
+                           bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               >
                 <PlusIcon className="w-4 h-4" />
                 New Card
@@ -215,7 +215,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
 
       {/* Manual Card Creation Dialog */}
       {showNewCard && !readOnly && (
-        <div className="px-6 py-3 border-b border-neutral-200 bg-blue-50/50">
+        <div className="px-6 py-3 border-b border-neutral-200 dark:border-neutral-700 bg-blue-50/50 dark:bg-neutral-800/50">
           <div className="flex items-start gap-3">
             <div className="flex-1 space-y-2">
               <input
@@ -223,16 +223,16 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
                 placeholder="Card title..."
                 value={newCardTitle}
                 onChange={(e) => setNewCardTitle(e.target.value)}
-                className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-md focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
+                className="w-full px-3 py-1.5 text-sm border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 dark:text-neutral-100 focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
               />
               <textarea
                 placeholder="Description (optional)..."
                 value={newCardDesc}
                 onChange={(e) => setNewCardDesc(e.target.value)}
                 rows={2}
-                className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-md focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
+                className="w-full px-3 py-1.5 text-sm border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 dark:text-neutral-100 focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
               />
-              <label className="flex items-center gap-2 text-sm text-neutral-600">
+              <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
                 <input
                   type="checkbox"
                   checked={newCardIsOOS}
@@ -242,7 +242,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
                 Mark as out-of-scope
               </label>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-neutral-600">Estimated hours:</label>
+                <label className="text-sm text-neutral-600 dark:text-neutral-400">Estimated hours:</label>
                 <input
                   type="number"
                   step="0.5"
@@ -250,7 +250,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
                   placeholder="0"
                   value={newCardEstHours}
                   onChange={(e) => setNewCardEstHours(e.target.value)}
-                  className="w-20 px-2 py-1 text-sm border border-neutral-300 rounded-md focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
+                  className="w-20 px-2 py-1 text-sm border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 dark:text-neutral-100 focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
                 />
               </div>
               {!newCardIsOOS && (
@@ -267,7 +267,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
               </button>
               <button
                 onClick={() => setShowNewCard(false)}
-                className="px-3 py-1.5 text-sm text-neutral-600 hover:text-neutral-800"
+                className="px-3 py-1.5 text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
               >
                 <XMarkIcon className="w-4 h-4" />
               </button>
@@ -290,25 +290,25 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
       {/* Workload View */}
       {activeView === 'workload' && (
         <div className="flex-1 overflow-auto p-6">
-          <h3 className="text-md font-semibold text-neutral-800 mb-4">Team Workload</h3>
+          <h3 className="text-md font-semibold text-neutral-800 dark:text-neutral-100 mb-4">Team Workload</h3>
           {workload.length === 0 ? (
-            <p className="text-sm text-neutral-500">No team members or assignments yet.</p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">No team members or assignments yet.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {workload.map((w: WorkloadEntry) => {
                 const pct = w.progress_percentage ?? (w.total_cards > 0 ? Math.round((w.completed_cards / w.total_cards) * 100) : 0);
                 return (
-                  <div key={w.team_member_id} className="rounded-md border border-neutral-200 bg-white p-4">
+                  <div key={w.team_member_id} className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 rounded-full bg-neutral-50 flex items-center justify-center text-sm font-bold text-neutral-900">
+                      <div className="w-8 h-8 rounded-full bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center text-sm font-bold text-neutral-900 dark:text-neutral-100">
                         {w.team_member_name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-neutral-900">{w.team_member_name}</p>
-                        {w.role && <p className="text-xs text-neutral-500">{w.role}</p>}
+                        <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{w.team_member_name}</p>
+                        {w.role && <p className="text-xs text-neutral-500 dark:text-neutral-400">{w.role}</p>}
                       </div>
                     </div>
-                    <div className="space-y-2 text-xs text-neutral-600">
+                    <div className="space-y-2 text-xs text-neutral-600 dark:text-neutral-400">
                       <div className="flex justify-between">
                         <span>Total Cards</span><span className="font-medium">{w.total_cards}</span>
                       </div>
@@ -325,7 +325,7 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
                         <span>Actual Hours</span><span className="font-medium">{w.actual_hours}h</span>
                       </div>
                       <div className="mt-2">
-                        <div className="w-full h-1.5 rounded-full bg-neutral-200 overflow-hidden">
+                        <div className="w-full h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden">
                           <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
                         </div>
                         <span className="text-xs text-neutral-400 mt-0.5">{pct}% complete</span>
@@ -359,15 +359,15 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
               return (
                 <div
                   key={column.key}
-                  className="w-72 flex flex-col rounded-md bg-neutral-50 border border-neutral-200"
+                  className="w-72 flex flex-col rounded-md bg-neutral-50 dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-700"
                   onDragOver={readOnly ? undefined : handleDragOver}
                   onDrop={readOnly ? undefined : () => handleDrop(column.key)}
                 >
                   {/* Column Header */}
                   <div className={`px-4 py-3 border-b-2 ${column.color} rounded-t-md ${column.bgColor}`}>
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-neutral-800">{column.label}</h3>
-                      <span className="text-xs font-medium text-neutral-500 bg-white px-2 py-0.5 rounded-full">
+                      <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">{column.label}</h3>
+                      <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 px-2 py-0.5 rounded-full">
                         {columnCards.length}
                       </span>
                     </div>

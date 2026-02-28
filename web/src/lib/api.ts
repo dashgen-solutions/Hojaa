@@ -1258,7 +1258,7 @@ export const createDocumentVersion = async (
 
 export const resolveDocumentVariables = async (documentId: string): Promise<ResolvedVariables> => {
   const response = await api.get(`/api/documents/${documentId}/variables`);
-  return response.data;
+  return response.data.variables || response.data;
 };
 
 export const getScopeDataForDocument = async (

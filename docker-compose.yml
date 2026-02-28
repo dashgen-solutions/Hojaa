@@ -1,14 +1,14 @@
-name: mometric
+name: hojaa
 
 services:
   # PostgreSQL Database
   db:
     image: postgres:14-alpine
-    container_name: mometric-db
+    container_name: hojaa-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-mometric_db}
+      POSTGRES_DB: ${POSTGRES_DB:-hojaa_db}
     ports:
       - "${DB_PORT:-5434}:5432"
     volumes:
@@ -19,7 +19,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - mometric_network
+      - hojaa_network
     restart: unless-stopped
 
   # FastAPI Backend
@@ -27,11 +27,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: mometric-api
+    container_name: hojaa-api
     ports:
       - "${API_PORT:-8000}:8000"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-mometric_db}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-hojaa_db}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
@@ -51,8 +51,8 @@ services:
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
-      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-MoMetric}
-      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-admin@mometric.app}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Hojaa}
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-admin@hojaa.com}
       PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-}
     depends_on:
       db:
@@ -68,7 +68,7 @@ services:
       - ./backend/alembic:/app/alembic
       - ./backend/alembic.ini:/app/alembic.ini
     networks:
-      - mometric_network
+      - hojaa_network
     restart: unless-stopped
 
   # Next.js Web UI
@@ -78,7 +78,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-8000}
-    container_name: mometric-web
+    container_name: hojaa-web
     ports:
       - "${WEB_PORT:-3002}:3000"
     environment:
@@ -87,11 +87,11 @@ services:
       api:
         condition: service_healthy
     networks:
-      - mometric_network
+      - hojaa_network
     restart: unless-stopped
 
 networks:
-  mometric_network:
+  hojaa_network:
     driver: bridge
 
 volumes:

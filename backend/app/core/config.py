@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
     # Application
-    app_name: str = Field(default="MoMetric Requirements Discovery API", alias="APP_NAME")
+    app_name: str = Field(default="Hojaa API", alias="APP_NAME")
     app_version: str = Field(default="1.0.0", alias="APP_VERSION")
     environment: str = Field(default="development", alias="ENVIRONMENT")
     debug: bool = Field(default=True, alias="DEBUG")
@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     
     # Database
     # Defaults to a local sqlite DB so dev can start without external services.
-    database_url: str = Field(default="sqlite:///./mometric.db", alias="DATABASE_URL")
+    database_url: str = Field(default="sqlite:///./hojaa.db", alias="DATABASE_URL")
     database_pool_size: int = Field(default=10, alias="DATABASE_POOL_SIZE")
     database_max_overflow: int = Field(default=20, alias="DATABASE_MAX_OVERFLOW")
     
@@ -104,7 +104,7 @@ class Settings(BaseSettings):
 
     # ── Response caching (AI-4.5) ──
     cache_ttl_seconds: int = Field(default=3600, alias="CACHE_TTL_SECONDS")
-    cache_prefix: str = Field(default="mometric:", alias="CACHE_PREFIX")
+    cache_prefix: str = Field(default="hojaa:", alias="CACHE_PREFIX")
 
     # ── Timeout enforcement (PERF-1.2 / 1.3) ──
     ai_timeout_seconds: float = Field(default=30.0, alias="AI_TIMEOUT_SECONDS")
@@ -140,7 +140,7 @@ class Settings(BaseSettings):
     smtp_username: str = Field(default="", alias="SMTP_USERNAME")
     smtp_password: str = Field(default="", alias="SMTP_PASSWORD")  # Gmail App Password
     smtp_from_email: str = Field(default="", alias="SMTP_FROM_EMAIL")
-    smtp_from_name: str = Field(default="MoMetric", alias="SMTP_FROM_NAME")
+    smtp_from_name: str = Field(default="Hojaa", alias="SMTP_FROM_NAME")
     smtp_use_tls: bool = Field(default=True, alias="SMTP_USE_TLS")
 
     # Mailchimp (legacy — kept for reference, SMTP is now preferred)
@@ -148,7 +148,7 @@ class Settings(BaseSettings):
     mailchimp_server_prefix: str = Field(default="", alias="MAILCHIMP_SERVER_PREFIX")
     mailchimp_audience_id: str = Field(default="", alias="MAILCHIMP_AUDIENCE_ID")
     mailchimp_from_email: str = Field(default="", alias="MAILCHIMP_FROM_EMAIL")
-    mailchimp_from_name: str = Field(default="MoMetric", alias="MAILCHIMP_FROM_NAME")
+    mailchimp_from_name: str = Field(default="Hojaa", alias="MAILCHIMP_FROM_NAME")
     mailchimp_enabled: bool = Field(default=False, alias="MAILCHIMP_ENABLED")
     
     # Security
@@ -157,7 +157,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     # ── Platform Admin (app developer super-admin, no signup required) ──
-    platform_admin_email: str = Field(default="admin@mometric.app", alias="PLATFORM_ADMIN_EMAIL")
+    platform_admin_email: str = Field(default="admin@hojaa.com", alias="PLATFORM_ADMIN_EMAIL")
     platform_admin_password: str = Field(default="", alias="PLATFORM_ADMIN_PASSWORD")
     
     model_config = SettingsConfigDict(

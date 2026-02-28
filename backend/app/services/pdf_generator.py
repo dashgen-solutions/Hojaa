@@ -89,7 +89,7 @@ class PDFGenerator:
 
     def _apply_brand(self, brand: dict):
         """Override palette & text from a BrandSettings-like dict."""
-        self.app_name = brand.get("app_name") or "MoMetric"
+        self.app_name = brand.get("app_name") or "Hojaa"
         self.pdf_header_text = brand.get("pdf_header_text")
         self.pdf_footer_text = brand.get("pdf_footer_text")
         self.brand_tagline = brand.get("tagline")

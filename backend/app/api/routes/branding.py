@@ -77,18 +77,18 @@ def _to_out(b: BrandSettings) -> BrandSettingsOut:
 
 
 def _defaults() -> BrandSettingsOut:
-    """Return MoMetric defaults when no brand settings exist."""
+    """Return Hojaa defaults when no brand settings exist."""
     return BrandSettingsOut(
-        app_name="MoMetric",
-        tagline="AI-Powered Requirements Discovery",
+        app_name="Hojaa",
+        tagline="Make it happen",
         logo_url=None,
         favicon_url=None,
-        primary_color="#6366f1",
-        secondary_color="#8b5cf6",
+        primary_color="#E4FF1A",
+        secondary_color="#c8e600",
         accent_color="#f59e0b",
         background_color="#ffffff",
         text_color="#111827",
-        font_family="Inter, system-ui, sans-serif",
+        font_family="Outfit, DM Sans, system-ui, sans-serif",
         pdf_header_text=None,
         pdf_footer_text=None,
         email_from_name=None,

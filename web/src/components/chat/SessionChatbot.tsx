@@ -168,8 +168,8 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
 
       {/* Chat panel */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-[420px] h-[600px] bg-white rounded-md shadow-lg
-                        border border-neutral-200 flex flex-col z-50 overflow-hidden
+        <div className="fixed bottom-6 right-6 w-[420px] h-[600px] bg-white dark:bg-neutral-900 rounded-md shadow-lg
+                        border border-neutral-200 dark:border-neutral-700 flex flex-col z-50 overflow-hidden
                         animate-in slide-in-from-bottom-4 duration-200">
           {/* Header */}
           <div className="bg-neutral-900 px-4 py-3 flex items-center gap-3">
@@ -206,11 +206,11 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
               </div>
             ) : messages.length === 0 ? (
               <div className="text-center py-6">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-3">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950 flex items-center justify-center mx-auto mb-3">
                   <CommandLineIcon className="w-6 h-6 text-indigo-500" />
                 </div>
-                <h4 className="text-sm font-semibold text-neutral-800 mb-1">Project Intelligence</h4>
-                <p className="text-xs text-neutral-500 mb-4 max-w-[280px] mx-auto">
+                <h4 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 mb-1">Project Intelligence</h4>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 max-w-[280px] mx-auto">
                   Ask me anything about this project — scope, team, progress, or tell me to make changes.
                 </p>
               </div>
@@ -224,9 +224,9 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
                   <button
                     key={action.label}
                     onClick={() => sendMessage(action.prompt)}
-                    className="w-full text-left px-3 py-2 rounded-md border border-neutral-200
-                               hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors
-                               text-xs text-neutral-700"
+                    className="w-full text-left px-3 py-2 rounded-md border border-neutral-200 dark:border-neutral-700
+                               hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-neutral-800 transition-colors
+                               text-xs text-neutral-700 dark:text-neutral-300"
                   >
                     {action.label}
                   </button>
@@ -243,8 +243,8 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
                 <div
                   className={`max-w-[85%] rounded-md px-3.5 py-2.5 text-sm leading-relaxed
                     ${msg.role === 'user'
-                      ? 'bg-neutral-900 text-white rounded-br-sm'
-                      : 'bg-neutral-100 text-neutral-800 rounded-bl-sm'
+                      ? 'bg-brand-lime text-brand-dark rounded-br-sm shadow-[0_2px_12px_-4px_rgba(228,255,26,0.3)]'
+                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-bl-sm'
                     }`}
                 >
                   {msg.role === 'assistant' ? (
@@ -262,7 +262,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
 
                   {/* Tool calls indicator */}
                   {msg.tool_calls && msg.tool_calls.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-neutral-200/50">
+                    <div className="mt-2 pt-2 border-t border-neutral-200/50 dark:border-neutral-700">
                       <p className="text-[10px] text-neutral-400 mb-1">
                         Used {msg.tool_calls.length} tool{msg.tool_calls.length > 1 ? 's' : ''}
                       </p>
@@ -271,7 +271,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
                           <span
                             key={i}
                             className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded
-                                       bg-neutral-200/70 text-[10px] text-neutral-600"
+                                       bg-neutral-200/70 dark:bg-neutral-700 text-[10px] text-neutral-600 dark:text-neutral-400"
                           >
                             <CommandLineIcon className="w-2.5 h-2.5" />
                             {tc.name.replace(/_/g, ' ')}
@@ -287,7 +287,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
             {/* Loading indicator */}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-neutral-100 rounded-md rounded-bl-sm px-4 py-3">
+                <div className="bg-neutral-100 dark:bg-neutral-800 rounded-md rounded-bl-sm px-4 py-3">
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -311,7 +311,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
           </div>
 
           {/* Input area */}
-          <div className="border-t border-neutral-200 px-3 py-2.5">
+          <div className="border-t border-neutral-200 dark:border-neutral-700 px-3 py-2.5">
             <div className="flex items-end gap-2">
               <textarea
                 ref={inputRef}
@@ -320,8 +320,9 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about scope, team, progress..."
                 rows={1}
-                className="flex-1 resize-none rounded-md border border-neutral-200 px-3 py-2 text-sm
-                           focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none
+                className="flex-1 resize-none rounded-md border border-neutral-200 dark:border-neutral-700 px-3 py-2 text-sm
+                           bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100
+                           focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none
                            placeholder:text-neutral-400 max-h-24 overflow-y-auto"
                 style={{ minHeight: '38px' }}
                 onInput={(e) => {
@@ -437,7 +438,7 @@ function MarkdownRenderer({ content }: { content: string }) {
               <thead>
                 <tr>
                   {tableRows[0].map((cell, ci) => (
-                    <th key={ci} className="border-b border-neutral-300 px-2 py-1 text-left font-semibold text-neutral-700 bg-neutral-50">
+                    <th key={ci} className="border-b border-neutral-300 dark:border-neutral-600 px-2 py-1 text-left font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800">
                       {cell}
                     </th>
                   ))}
@@ -446,9 +447,9 @@ function MarkdownRenderer({ content }: { content: string }) {
             )}
             <tbody>
               {tableRows.slice(1).map((row, ri) => (
-                <tr key={ri} className={ri % 2 === 0 ? '' : 'bg-neutral-50/50'}>
+                <tr key={ri} className={ri % 2 === 0 ? '' : 'bg-neutral-50/50 dark:bg-neutral-800/50'}>
                   {row.map((cell, ci) => (
-                    <td key={ci} className="border-b border-neutral-200 px-2 py-1 text-neutral-600">
+                    <td key={ci} className="border-b border-neutral-200 dark:border-neutral-700 px-2 py-1 text-neutral-600 dark:text-neutral-400">
                       {cell}
                     </td>
                   ))}
@@ -472,7 +473,7 @@ function MarkdownRenderer({ content }: { content: string }) {
     // Headers
     if (line.startsWith('### ')) {
       elements.push(
-        <h4 key={`h3-${i}`} className="font-semibold text-neutral-800 text-xs mt-2 mb-0.5">
+        <h4 key={`h3-${i}`} className="font-semibold text-neutral-800 dark:text-neutral-200 text-xs mt-2 mb-0.5">
           {processInline(line.slice(4))}
         </h4>
       );
@@ -480,7 +481,7 @@ function MarkdownRenderer({ content }: { content: string }) {
     }
     if (line.startsWith('## ')) {
       elements.push(
-        <h3 key={`h2-${i}`} className="font-bold text-neutral-900 text-sm mt-2 mb-0.5">
+        <h3 key={`h2-${i}`} className="font-bold text-neutral-900 dark:text-neutral-100 text-sm mt-2 mb-0.5">
           {processInline(line.slice(3))}
         </h3>
       );
@@ -488,7 +489,7 @@ function MarkdownRenderer({ content }: { content: string }) {
     }
     if (line.startsWith('# ')) {
       elements.push(
-        <h2 key={`h1-${i}`} className="font-bold text-neutral-900 text-base mt-2 mb-1">
+        <h2 key={`h1-${i}`} className="font-bold text-neutral-900 dark:text-neutral-100 text-base mt-2 mb-1">
           {processInline(line.slice(2))}
         </h2>
       );
@@ -522,7 +523,7 @@ function MarkdownRenderer({ content }: { content: string }) {
 
     // Horizontal rule
     if (line.trim() === '---' || line.trim() === '***') {
-      elements.push(<hr key={`hr-${i}`} className="border-neutral-200 my-2" />);
+      elements.push(<hr key={`hr-${i}`} className="border-neutral-200 dark:border-neutral-700 my-2" />);
       continue;
     }
 
@@ -542,7 +543,7 @@ function MarkdownRenderer({ content }: { content: string }) {
           <thead>
             <tr>
               {tableRows[0].map((cell, ci) => (
-                <th key={ci} className="border-b border-neutral-300 px-2 py-1 text-left font-semibold text-neutral-700 bg-neutral-50">
+                <th key={ci} className="border-b border-neutral-300 dark:border-neutral-600 px-2 py-1 text-left font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800">
                   {cell}
                 </th>
               ))}
@@ -552,7 +553,7 @@ function MarkdownRenderer({ content }: { content: string }) {
             {tableRows.slice(1).map((row, ri) => (
               <tr key={ri}>
                 {row.map((cell, ci) => (
-                  <td key={ci} className="border-b border-neutral-200 px-2 py-1 text-neutral-600">
+                  <td key={ci} className="border-b border-neutral-200 dark:border-neutral-700 px-2 py-1 text-neutral-600 dark:text-neutral-400">
                     {cell}
                   </td>
                 ))}

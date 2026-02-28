@@ -38,7 +38,7 @@ def _send_email_sync(
         return False
 
     from_email = settings.smtp_from_email or settings.smtp_username
-    from_name = settings.smtp_from_name or "MoMetric"
+    from_name = settings.smtp_from_name or "Hojaa"
 
     try:
         for email in to_emails:
@@ -232,6 +232,50 @@ class NotificationService:
             )
 
     # ------------------------------------------------------------------
+    # Hojaa-branded email wrapper
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _hojaa_email_wrap(title: str, body_html: str) -> str:
+        """
+        Wrap *body_html* in a consistent Hojaa-branded email shell.
+
+        Layout:
+          - Dark (#060606) header bar with lowercase "hojaa" in neon lime (#E4FF1A)
+          - A title banner row in neon lime with dark text
+          - White card body for the actual content
+          - Dark (#111111) footer with muted text
+        """
+        return f"""\
+<div style="font-family:'Segoe UI',Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F4F4F5;">
+  <!-- Header -->
+  <div style="background:#060606;padding:20px 28px;text-align:left;">
+    <span style="font-size:22px;font-weight:700;letter-spacing:1px;color:#E4FF1A;">hojaa</span>
+  </div>
+
+  <!-- Title banner -->
+  <div style="background:#E4FF1A;padding:18px 28px;">
+    <h2 style="margin:0;font-size:18px;font-weight:700;color:#060606;">{title}</h2>
+  </div>
+
+  <!-- Body card -->
+  <div style="background:#ffffff;padding:28px;border-left:1px solid #E5E7EB;border-right:1px solid #E5E7EB;">
+    {body_html}
+  </div>
+
+  <!-- Footer -->
+  <div style="background:#111111;padding:20px 28px;text-align:center;">
+    <p style="margin:0 0 4px;font-size:11px;color:#888888;">
+      You received this email because of your notification settings in
+      <span style="color:#E4FF1A;font-weight:600;">hojaa</span>.
+    </p>
+    <p style="margin:0;font-size:11px;color:#555555;">
+      &copy; {__import__('datetime').date.today().year} Hojaa &mdash; Requirements, reimagined.
+    </p>
+  </div>
+</div>"""
+
+    # ------------------------------------------------------------------
     # Sending emails
     # ------------------------------------------------------------------
 
@@ -273,37 +317,27 @@ class NotificationService:
             )
 
         detail_table = (
-            f'<table style="border-collapse:collapse;margin-top:12px;border:1px solid #E5E7EB;'
-            f'border-radius:6px;width:100%;">{"".join(rows)}</table>'
+            '<table style="border-collapse:collapse;margin-top:16px;width:100%;'
+            'border:1px solid #E5E7EB;border-radius:6px;overflow:hidden;">'
+            + ''.join(rows)
+            + '</table>'
             if rows else ""
         )
 
-        return f"""
-        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
-                    background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
-            <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:24px 28px;">
-                <h2 style="color:#ffffff;margin:0;font-size:20px;">{title}</h2>
-            </div>
-            <div style="padding:24px 28px;">
-                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                    <b style="color:#374151;">Session:</b> {session_name}
-                </p>
-                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                    <b style="color:#374151;">Requirement:</b> {node_question}
-                </p>
-                <p style="margin:0 0 16px;color:#6B7280;font-size:14px;">
-                    <b style="color:#374151;">Changed by:</b> {changed_by_name}
-                </p>
-                {detail_table}
-            </div>
-            <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
-                <p style="margin:0;font-size:12px;color:#9CA3AF;">
-                    You're receiving this because you have notifications enabled
-                    for this session in MoMetric.
-                </p>
-            </div>
-        </div>
-        """
+        body = f"""\
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Session:</b> {session_name}
+</p>
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Requirement:</b>
+  <span style="color:#E4FF1A;background:#060606;padding:2px 8px;border-radius:4px;font-weight:600;">{node_question}</span>
+</p>
+<p style="margin:0 0 16px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Changed by:</b> {changed_by_name}
+</p>
+{detail_table}"""
+
+        return self._hojaa_email_wrap(title, body)
 
     def send_email(
         self,
@@ -392,7 +426,7 @@ class NotificationService:
         changer = db.query(User).filter(User.id == changed_by).first() if changed_by else None
         changed_by_name = changer.username if changer else "System"
 
-        subject = f"[MoMetric] Requirement {change_type}: {node_question[:80]}"
+        subject = f"[Hojaa] Requirement {change_type}: {node_question[:80]}"
         html = self._build_change_html(
             change_type=change_type,
             node_question=node_question,
@@ -449,32 +483,19 @@ class NotificationService:
         session_obj = db.query(Session).filter(Session.id == session_id).first()
         session_name = session_obj.document_filename or "Untitled" if session_obj else "Unknown"
 
-        subject = f"[MoMetric] New source ingested: {source_name[:80]}"
-        html = f"""
-        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
-                    background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
-            <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:24px 28px;">
-                <h2 style="color:#ffffff;margin:0;font-size:20px;">New Source Ingested</h2>
-            </div>
-            <div style="padding:24px 28px;">
-                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                    <b style="color:#374151;">Session:</b> {session_name}
-                </p>
-                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                    <b style="color:#374151;">Source:</b> {source_name}
-                </p>
-                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                    <b style="color:#374151;">Suggestions generated:</b> {suggestions_count}
-                </p>
-            </div>
-            <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
-                <p style="margin:0;font-size:12px;color:#9CA3AF;">
-                    You're receiving this because you have notifications enabled
-                    for this session in MoMetric.
-                </p>
-            </div>
-        </div>
-        """
+        subject = f"[Hojaa] New source ingested: {source_name[:80]}"
+        body = f"""\
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Session:</b> {session_name}
+</p>
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Source:</b> {source_name}
+</p>
+<div style="margin:16px 0;padding:14px 18px;background:#F9FAFB;border-left:4px solid #E4FF1A;border-radius:4px;">
+  <span style="font-size:24px;font-weight:700;color:#060606;">{suggestions_count}</span>
+  <span style="font-size:13px;color:#6B7280;margin-left:8px;">suggestions generated</span>
+</div>"""
+        html = self._hojaa_email_wrap("New Source Ingested", body)
 
         success = self.send_email(subject, html, recipient_emails)
         return len(recipient_emails) if success else 0
@@ -535,37 +556,36 @@ class NotificationService:
             f"for card '{card_title[:50]}'"
         )
 
-        subject = f"[MoMetric] You were assigned: {card_title[:60]}"
-        html = f"""
-        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
-                    background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
-            <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:24px 28px;">
-                <h2 style="color:#ffffff;margin:0;font-size:20px;">Card Assignment</h2>
-            </div>
-            <div style="padding:24px 28px;">
-                <p style="margin:0 0 12px;color:#374151;font-size:15px;">
-                    Hi {team_member.name},
-                </p>
-                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                    <b style="color:#374151;">{assigner_name}</b> assigned you to a planning card.
-                </p>
-                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                    <b style="color:#374151;">Session:</b> {session_name}
-                </p>
-                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                    <b style="color:#374151;">Card:</b> {card_title}
-                </p>
-                <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                    <b style="color:#374151;">Role:</b> Assignee
-                </p>
-            </div>
-            <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
-                <p style="margin:0;font-size:12px;color:#9CA3AF;">
-                    You're receiving this because you were added to a card in MoMetric.
-                </p>
-            </div>
-        </div>
-        """
+        subject = f"[Hojaa] You were assigned: {card_title[:60]}"
+        body = f"""\
+<p style="margin:0 0 14px;color:#374151;font-size:15px;line-height:1.5;">
+  Hi <b>{team_member.name}</b>,
+</p>
+<p style="margin:0 0 18px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">{assigner_name}</b> assigned you to a planning card.
+</p>
+
+<!-- Card detail box -->
+<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;margin-bottom:8px;">
+  <div style="background:#060606;padding:14px 18px;">
+    <span style="color:#E4FF1A;font-size:15px;font-weight:700;">{card_title}</span>
+  </div>
+  <div style="padding:14px 18px;">
+    <table style="border-collapse:collapse;width:100%;font-size:14px;color:#374151;">
+      <tr>
+        <td style="padding:6px 0;font-weight:600;width:90px;color:#6B7280;">Session</td>
+        <td style="padding:6px 0;">{session_name}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;font-weight:600;width:90px;color:#6B7280;">Role</td>
+        <td style="padding:6px 0;">
+          <span style="background:#E4FF1A;color:#060606;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700;">Assignee</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>"""
+        html = self._hojaa_email_wrap("Card Assignment", body)
 
         success = self.send_email(subject, html, [team_member.email])
         if success:
@@ -624,64 +644,49 @@ class NotificationService:
             recipient_emails = [u.email for u in users]
 
             if recipient_emails:
-                subject = f"[MoMetric] New team member: {member_name}"
-                html = f"""
-                <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
-                            background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
-                    <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:24px 28px;">
-                        <h2 style="color:#ffffff;margin:0;font-size:20px;">New Team Member</h2>
-                    </div>
-                    <div style="padding:24px 28px;">
-                        <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                            <b style="color:#374151;">Session:</b> {session_name}
-                        </p>
-                        <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                            <b style="color:#374151;">Name:</b> {member_name}
-                        </p>
-                        <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                            <b style="color:#374151;">Role:</b> {member_role}
-                        </p>
-                        <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                            <b style="color:#374151;">Added by:</b> {adder_name}
-                        </p>
-                    </div>
-                    <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
-                        <p style="margin:0;font-size:12px;color:#9CA3AF;">
-                            You're receiving this because you have team notifications enabled
-                            for this session in MoMetric.
-                        </p>
-                    </div>
-                </div>
-                """
+                subject = f"[Hojaa] New team member: {member_name}"
+                team_body = f"""\
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Session:</b> {session_name}
+</p>
+<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:16px 18px;margin:12px 0;">
+  <table style="border-collapse:collapse;width:100%;font-size:14px;color:#374151;">
+    <tr>
+      <td style="padding:5px 0;font-weight:600;width:90px;color:#6B7280;">Name</td>
+      <td style="padding:5px 0;font-weight:700;">{member_name}</td>
+    </tr>
+    <tr>
+      <td style="padding:5px 0;font-weight:600;width:90px;color:#6B7280;">Role</td>
+      <td style="padding:5px 0;">
+        <span style="background:#E4FF1A;color:#060606;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700;">{member_role}</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:5px 0;font-weight:600;width:90px;color:#6B7280;">Added by</td>
+      <td style="padding:5px 0;">{adder_name}</td>
+    </tr>
+  </table>
+</div>"""
+                html = self._hojaa_email_wrap("New Team Member", team_body)
                 if self.send_email(subject, html, recipient_emails):
                     notified = len(recipient_emails)
 
         # 2. Send welcome email to the new team member (if they have an email)
         if member_email and member_email.strip():
-            welcome_subject = f"[MoMetric] Welcome to {session_name}"
-            welcome_html = f"""
-            <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
-                        background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
-                <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:24px 28px;">
-                    <h2 style="color:#ffffff;margin:0;font-size:20px;">Welcome to the Team!</h2>
-                </div>
-                <div style="padding:24px 28px;">
-                    <p style="margin:0 0 12px;color:#374151;font-size:15px;">
-                        Hi {member_name},
-                    </p>
-                    <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                        <b style="color:#374151;">{adder_name}</b> added you to the project
-                        <b style="color:#374151;">{session_name}</b> as <b style="color:#374151;">{member_role}</b>.
-                    </p>
-                    <p style="margin:0 0 8px;color:#6B7280;font-size:14px;">
-                        You may receive card assignment notifications when tasks are assigned to you.
-                    </p>
-                </div>
-                <div style="padding:16px 28px;border-top:1px solid #F3F4F6;background:#F9FAFB;">
-                    <p style="margin:0;font-size:12px;color:#9CA3AF;">Sent from MoMetric.</p>
-                </div>
-            </div>
-            """
+            welcome_subject = f"[Hojaa] Welcome to {session_name}"
+            welcome_body = f"""\
+<p style="margin:0 0 14px;color:#374151;font-size:15px;line-height:1.5;">
+  Hi <b>{member_name}</b>,
+</p>
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">{adder_name}</b> added you to the project
+  <b style="color:#374151;">{session_name}</b> as
+  <span style="background:#E4FF1A;color:#060606;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700;">{member_role}</span>.
+</p>
+<p style="margin:0;color:#6B7280;font-size:14px;line-height:1.6;">
+  You may receive card assignment notifications when tasks are assigned to you.
+</p>"""
+            welcome_html = self._hojaa_email_wrap("Welcome to the Team!", welcome_body)
             self.send_email(welcome_subject, welcome_html, [member_email.strip()])
 
         return notified

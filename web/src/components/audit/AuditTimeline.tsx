@@ -127,8 +127,8 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-neutral-900">Change History</h2>
-          <p className="text-sm text-neutral-500 mt-1">{auditTotalChanges} total changes recorded</p>
+          <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Change History</h2>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">{auditTotalChanges} total changes recorded</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -137,8 +137,8 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
               disabled={isExporting}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-neutral-300
-                         hover:bg-neutral-50 transition-colors text-sm text-neutral-700 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-lime text-brand-dark
+                         hover:bg-brand-lime/90 shadow-sm hover:shadow-[0_0_16px_-4px_rgba(228,255,26,0.4)] transition-colors text-sm font-medium disabled:opacity-50"
               title="Export audit report"
             >
               {isExporting ? (
@@ -150,20 +150,20 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
               <ChevronDownIcon className="w-3 h-3" />
             </button>
             {showExportMenu && (
-              <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-md shadow border
-                              border-neutral-200 py-1 z-20">
+              <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-neutral-800 rounded-md shadow border
+                              border-neutral-200 dark:border-neutral-700 py-1 z-20">
                 <button
                   onClick={() => handleExport('pdf')}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-neutral-700
-                             hover:bg-neutral-50 transition-colors"
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-neutral-700 dark:text-neutral-300
+                             hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
                 >
                   <DocumentArrowDownIcon className="w-4 h-4 text-red-500" />
                   Download PDF
                 </button>
                 <button
                   onClick={() => handleExport('markdown')}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-neutral-700
-                             hover:bg-neutral-50 transition-colors"
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-neutral-700 dark:text-neutral-300
+                             hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
                 >
                   <DocumentTextIcon className="w-4 h-4 text-blue-500" />
                   Download Markdown
@@ -178,7 +178,7 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
               <select
                 value={userFilter || ''}
                 onChange={(e) => setUserFilter(e.target.value || null)}
-                className="pl-8 pr-3 py-1.5 rounded-md border border-neutral-300 text-sm
+                className="pl-8 pr-3 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm bg-white dark:bg-neutral-800 dark:text-neutral-300
                            focus:border-neutral-400 outline-none appearance-none"
               >
                 <option value="">All users</option>
@@ -194,7 +194,7 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(Number(e.target.value))}
-            className="px-3 py-1.5 rounded-md border border-neutral-300 text-sm
+            className="px-3 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm bg-white dark:bg-neutral-800 dark:text-neutral-300
                        focus:border-neutral-400 outline-none"
           >
             {TIME_RANGE_OPTIONS.map((option) => (
@@ -207,8 +207,11 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
             <select
               value={changeTypeFilter || ''}
               onChange={(e) => setChangeTypeFilter(e.target.value || null)}
-              className="pl-8 pr-3 py-1.5 rounded-md border border-neutral-300 text-sm
-                         focus:border-neutral-400 outline-none appearance-none"
+              className={`pl-8 pr-3 py-1.5 rounded-md border text-sm outline-none appearance-none ${
+                changeTypeFilter
+                  ? 'border-[#E4FF1A] bg-brand-lime/10 text-brand-dark dark:text-[#E4FF1A]'
+                  : 'border-neutral-300 dark:border-neutral-600 focus:border-neutral-400'
+              }`}
             >
               <option value="">All changes</option>
               {Object.entries(CHANGE_TYPE_CONFIG).map(([key, config]) => (
@@ -233,9 +236,9 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
             <div key={dateLabel}>
               {/* Date header */}
               <div className="flex items-center gap-3 mb-3">
-                <div className="h-px flex-1 bg-neutral-200" />
-                <span className="text-xs font-medium text-neutral-500 whitespace-nowrap">{dateLabel}</span>
-                <div className="h-px flex-1 bg-neutral-200" />
+                <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
+                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 whitespace-nowrap">{dateLabel}</span>
+                <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
               </div>
 
               {/* Entries for this date */}
@@ -249,7 +252,7 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
                   return (
                     <div
                       key={entry.id}
-                      className="rounded-md hover:bg-neutral-50 transition-colors"
+                      className="rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                     >
                       {/* Collapsed row */}
                       <div
@@ -263,7 +266,7 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
 
                         {/* Compact content */}
                         <div className="flex-1 min-w-0 flex items-center gap-2">
-                          <span className="text-sm font-medium text-neutral-900 truncate">{entry.node_title}</span>
+                          <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{entry.node_title}</span>
                           <span className={`text-xs font-medium ${config.color}`}>{config.label}</span>
                         </div>
 
@@ -284,7 +287,7 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
                       {isExpanded && (
                         <div className="px-3 pb-3 ml-11 text-xs space-y-1.5 animate-fade-in">
                           {entry.field_changed && (
-                            <p className="text-neutral-600">
+                            <p className="text-neutral-600 dark:text-neutral-400">
                               <span className="font-medium">{entry.field_changed}</span>
                               {entry.old_value && entry.new_value && (
                                 <span>: <span className="text-red-500 line-through">{entry.old_value}</span> → <span className="text-green-600">{entry.new_value}</span></span>
@@ -310,7 +313,7 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
                                     window.location.hash = `source-${(entry as any).source_id}`;
                                   }
                                 }}
-                                className="text-primary-500 hover:underline font-medium"
+                                className="text-neutral-700 hover:underline hover:text-neutral-900 font-medium"
                               >
                                 from {entry.source_name}
                               </button>

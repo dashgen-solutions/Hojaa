@@ -136,7 +136,7 @@ async def shutdown_event():
 async def root():
     """Root endpoint."""
     return {
-        "message": "Welcome to MoMetric Requirements Discovery API",
+        "message": "Welcome to Hojaa API",
         "version": settings.app_version,
         "docs": "/api/docs"
     }

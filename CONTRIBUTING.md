@@ -1,6 +1,6 @@
-# Contributing to MoMetric
+# Contributing to Hojaa
 
-Thank you for your interest in contributing to MoMetric! This guide will help you get started.
+Thank you for your interest in contributing to Hojaa! This guide will help you get started.
 
 ## Reporting Bugs
 
@@ -20,8 +20,8 @@ Open an issue with:
 ## Development Setup
 
 ```bash
-git clone https://github.com/YOUR_ORG/mometric.git
-cd mometric
+git clone https://github.com/YOUR_ORG/hojaa.git
+cd hojaa
 cp .env.example .env           # Add your API keys
 make up                         # Start all services
 ```

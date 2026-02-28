@@ -72,7 +72,7 @@ export default function VariableInserter({ documentId, onInsert }: VariableInser
           ([key, value]) =>
             key.toLowerCase().includes(q) ||
             formatLabel(key).toLowerCase().includes(q) ||
-            value.toLowerCase().includes(q),
+            String(value ?? '').toLowerCase().includes(q),
         )
       : entries;
 
@@ -110,7 +110,7 @@ export default function VariableInserter({ documentId, onInsert }: VariableInser
   return (
     <div className="flex flex-col h-full">
       {/* Search */}
-      <div className="p-3 border-b border-neutral-200">
+      <div className="p-3 border-b border-neutral-200 dark:border-neutral-700">
         <div className="relative">
           <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
           <input
@@ -118,7 +118,7 @@ export default function VariableInserter({ documentId, onInsert }: VariableInser
             placeholder="Filter variables..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-md border border-neutral-200 bg-white py-1.5 pl-8 pr-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+            className="w-full rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1.5 pl-8 pr-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
           />
         </div>
       </div>
@@ -130,8 +130,8 @@ export default function VariableInserter({ documentId, onInsert }: VariableInser
           <div className="p-3 space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="animate-pulse">
-                <div className="h-3 w-20 bg-neutral-200 rounded mb-2" />
-                <div className="h-8 w-full bg-neutral-100 rounded" />
+                <div className="h-3 w-20 bg-neutral-200 dark:bg-neutral-700 rounded mb-2" />
+                <div className="h-8 w-full bg-neutral-100 dark:bg-neutral-800 rounded" />
               </div>
             ))}
           </div>
@@ -167,10 +167,10 @@ export default function VariableInserter({ documentId, onInsert }: VariableInser
                   {group.items.map((item) => (
                     <div
                       key={item.key}
-                      className="flex items-center gap-2 rounded-md border border-neutral-200 bg-white px-3 py-2 group hover:border-neutral-300 transition-colors"
+                      className="flex items-center gap-2 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 group hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-900 truncate">
+                        <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">
                           {item.label}
                         </p>
                         <p className="text-xs text-neutral-500 truncate" title={item.value}>
@@ -180,14 +180,14 @@ export default function VariableInserter({ documentId, onInsert }: VariableInser
                       <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleCopy(item.key)}
-                          className="rounded p-1 hover:bg-neutral-100"
+                          className="rounded p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                           title="Copy variable"
                         >
                           <ClipboardDocumentIcon className="h-3.5 w-3.5 text-neutral-500" />
                         </button>
                         <button
                           onClick={() => handleInsert(item.key)}
-                          className="rounded p-1 hover:bg-neutral-100"
+                          className="rounded p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                           title="Insert variable"
                         >
                           <PlusCircleIcon className="h-3.5 w-3.5 text-neutral-500" />

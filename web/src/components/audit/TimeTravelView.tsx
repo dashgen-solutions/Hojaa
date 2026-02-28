@@ -39,7 +39,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function NodeTypeBadge({ nodeType }: { nodeType: string }) {
   return (
-    <span className="text-[10px] font-medium text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded">
+    <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">
       {nodeType}
     </span>
   );
@@ -88,13 +88,13 @@ function SnapshotView({ sessionId }: { sessionId: string }) {
     return (
       <div key={node.id}>
         <div
-          className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-neutral-50"
+          className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800"
           style={{ paddingLeft: `${12 + indentLevel * 20}px` }}
         >
           {node.children.length > 0 && (
             <ChevronRightIcon className="w-3 h-3 text-neutral-400" />
           )}
-          <span className="text-sm text-neutral-800 flex-1 truncate">{node.title}</span>
+          <span className="text-sm text-neutral-800 dark:text-neutral-200 flex-1 truncate">{node.title}</span>
           <NodeTypeBadge nodeType={node.node_type} />
           <StatusBadge status={node.status} />
         </div>
@@ -106,17 +106,18 @@ function SnapshotView({ sessionId }: { sessionId: string }) {
   return (
     <div className="space-y-6">
       {/* Date picker and action */}
-      <div className="flex items-end gap-4 p-4 bg-white rounded-md border border-neutral-200">
+      <div className="flex items-end gap-4 p-4 bg-white dark:bg-neutral-900 rounded-md border border-neutral-200 dark:border-neutral-700">
         <div className="flex-1">
-          <label className="block text-xs font-medium text-neutral-600 mb-1">
+          <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
             View graph as of date
           </label>
           <input
             type="date"
             value={selectedDate}
             onChange={(event) => setSelectedDate(event.target.value)}
-            className="w-full px-3 py-2 rounded-md border border-neutral-300 text-sm
-                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none"
+            className="w-full px-3 py-2 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm
+                       bg-white dark:bg-neutral-800 dark:text-neutral-300
+                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none"
           />
         </div>
         <button
@@ -132,22 +133,22 @@ function SnapshotView({ sessionId }: { sessionId: string }) {
 
       {/* Snapshot Results */}
       {graphSnapshot && (
-        <div className="bg-white rounded-md border border-neutral-200 overflow-hidden">
+        <div className="bg-white dark:bg-neutral-900 rounded-md border border-neutral-200 dark:border-neutral-700 overflow-hidden">
           {/* Summary bar */}
-          <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200">
+          <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ClockIcon className="w-4 h-4 text-neutral-900" />
-                <span className="text-sm font-semibold text-neutral-900">
+                <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                   Graph Snapshot
                 </span>
-                <span className="text-xs text-neutral-500">
+                <span className="text-xs text-neutral-500 dark:text-neutral-400">
                   as of {new Date(graphSnapshot.as_of_date).toLocaleDateString('en-US', {
                     year: 'numeric', month: 'long', day: 'numeric',
                   })}
                 </span>
               </div>
-              <span className="text-xs font-medium text-neutral-600">
+              <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
                 {graphSnapshot.total_nodes} node{graphSnapshot.total_nodes !== 1 ? 's' : ''}
               </span>
             </div>
@@ -230,17 +231,17 @@ function ComparisonView({ sessionId }: { sessionId: string }) {
         </div>
 
         {/* Entries */}
-        <div className="divide-y divide-neutral-100">
+        <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
           {entries.map((entry, entryIndex) => (
-            <div key={`${entry.node_id}-${entryIndex}`} className="px-4 py-2.5 bg-white">
+            <div key={`${entry.node_id}-${entryIndex}`} className="px-4 py-2.5 bg-white dark:bg-neutral-900">
               <div className="flex items-start justify-between gap-2">
-                <span className="text-sm font-medium text-neutral-800">{entry.title}</span>
+                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{entry.title}</span>
                 {entry.node_type && <NodeTypeBadge nodeType={entry.node_type} />}
               </div>
 
               {/* Show field change detail for modifications */}
               {entry.field_changed && (
-                <p className="text-xs text-neutral-600 mt-1">
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
                   <span className="font-medium">{entry.field_changed}:</span>{' '}
                   {entry.old_value && (
                     <span className="line-through text-red-500 mr-1">{entry.old_value}</span>
@@ -253,7 +254,7 @@ function ComparisonView({ sessionId }: { sessionId: string }) {
 
               {/* Show status change for status entries */}
               {entry.old_value && entry.new_value && !entry.field_changed && (
-                <p className="text-xs text-neutral-600 mt-1">
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
                   <StatusBadge status={entry.old_value} />
                   <span className="mx-1.5 text-neutral-400">→</span>
                   <StatusBadge status={entry.new_value} />
@@ -281,25 +282,27 @@ function ComparisonView({ sessionId }: { sessionId: string }) {
   return (
     <div className="space-y-6">
       {/* Date range picker */}
-      <div className="flex items-end gap-4 p-4 bg-white rounded-md border border-neutral-200">
+      <div className="flex items-end gap-4 p-4 bg-white dark:bg-neutral-900 rounded-md border border-neutral-200 dark:border-neutral-700">
         <div className="flex-1">
-          <label className="block text-xs font-medium text-neutral-600 mb-1">From</label>
+          <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">From</label>
           <input
             type="date"
             value={dateFrom}
             onChange={(event) => setDateFrom(event.target.value)}
-            className="w-full px-3 py-2 rounded-md border border-neutral-300 text-sm
-                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none"
+            className="w-full px-3 py-2 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm
+                       bg-white dark:bg-neutral-800 dark:text-neutral-300
+                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none"
           />
         </div>
         <div className="flex-1">
-          <label className="block text-xs font-medium text-neutral-600 mb-1">To</label>
+          <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">To</label>
           <input
             type="date"
             value={dateTo}
             onChange={(event) => setDateTo(event.target.value)}
-            className="w-full px-3 py-2 rounded-md border border-neutral-300 text-sm
-                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 outline-none"
+            className="w-full px-3 py-2 rounded-md border border-neutral-300 dark:border-neutral-600 text-sm
+                       bg-white dark:bg-neutral-800 dark:text-neutral-300
+                       focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none"
           />
         </div>
         <button
@@ -367,20 +370,20 @@ export default function TimeTravelView({ sessionId }: TimeTravelViewProps) {
     <div className="max-w-3xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-neutral-900">Time Travel</h2>
-        <p className="text-sm text-neutral-500 mt-1">
+        <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Time Travel</h2>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
           View past states of the graph or compare changes between two dates.
         </p>
       </div>
 
       {/* Sub-tabs: Snapshot vs Compare */}
-      <div className="flex gap-1 bg-neutral-200/60 rounded-md p-0.5 w-fit mb-6">
+      <div className="flex gap-1 bg-neutral-200/60 dark:bg-neutral-800 rounded-md p-0.5 w-fit mb-6">
         <button
           onClick={() => handleTabChange('snapshot')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
             subTab === 'snapshot'
-              ? 'bg-white text-neutral-900 shadow-sm'
-              : 'text-neutral-600 hover:text-neutral-800'
+              ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm'
+              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
           }`}
         >
           <ClockIcon className="w-4 h-4" />
@@ -390,8 +393,8 @@ export default function TimeTravelView({ sessionId }: TimeTravelViewProps) {
           onClick={() => handleTabChange('compare')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
             subTab === 'compare'
-              ? 'bg-white text-neutral-900 shadow-sm'
-              : 'text-neutral-600 hover:text-neutral-800'
+              ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm'
+              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
           }`}
         >
           <ArrowsRightLeftIcon className="w-4 h-4" />

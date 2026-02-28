@@ -228,13 +228,13 @@ export default function TreeVisualization({
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center bg-neutral-50">
+      <div className="h-full flex items-center justify-center bg-neutral-50 dark:bg-[#060606]">
         <div className="text-center animate-fade-in">
           <div className="relative w-16 h-16 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-200 dark:border-neutral-700"></div>
             <div className="absolute inset-0 rounded-full border-4 border-neutral-900 border-t-transparent animate-spin"></div>
           </div>
-          <p className="text-neutral-600 font-medium">
+          <p className="text-neutral-600 dark:text-neutral-400 font-medium">
             Loading requirements map...
           </p>
         </div>
@@ -244,15 +244,15 @@ export default function TreeVisualization({
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center bg-neutral-50 p-8">
+      <div className="h-full flex items-center justify-center bg-neutral-50 dark:bg-[#060606] p-8">
         <div className="text-center max-w-md animate-fade-in">
           <div className="w-16 h-16 rounded-md bg-danger-100 flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl">⚠️</span>
           </div>
-          <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+          <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
             Failed to Load Map
           </h3>
-          <p className="text-neutral-500 mb-6">{error}</p>
+          <p className="text-neutral-500 dark:text-neutral-400 mb-6">{error}</p>
           <button onClick={() => fetchTree()} className="btn-primary">
             <ArrowPathIcon className="w-4 h-4" />
             Retry
@@ -264,14 +264,14 @@ export default function TreeVisualization({
 
   if (!treeData) {
     return (
-      <div className="h-full flex items-center justify-center bg-neutral-50">
+      <div className="h-full flex items-center justify-center bg-neutral-50 dark:bg-[#060606]">
         <div className="text-center">
           <div className="relative w-12 h-12 mx-auto mb-4">
-            <div className="absolute inset-0 rounded-full border-4 border-neutral-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-neutral-200 dark:border-neutral-700"></div>
             <div className="absolute inset-0 rounded-full border-4 border-neutral-900 border-t-transparent animate-spin"></div>
           </div>
-          <p className="text-neutral-500">Building requirements map…</p>
-          <p className="text-neutral-400 text-sm mt-1">Complete the questions first to generate the tree</p>
+          <p className="text-neutral-500 dark:text-neutral-400">Building requirements map...</p>
+          <p className="text-neutral-400 dark:text-neutral-500 text-sm mt-1">Complete the questions first to generate the tree</p>
         </div>
       </div>
     );
@@ -287,7 +287,7 @@ export default function TreeVisualization({
   ];
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-white dark:bg-neutral-900">
       <NodeDetailsModal
         node={selectedNodeForModal}
         isOpen={isModalOpen}
@@ -295,12 +295,12 @@ export default function TreeVisualization({
       />
 
       {/* Header with Zoom Controls */}
-      <div className="border-b border-neutral-200/60 bg-white flex-shrink-0">
+      <div className="border-b border-neutral-200/60 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex-shrink-0">
         <div className="p-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-md bg-neutral-50 flex items-center justify-center">
-                <DocumentTextIcon className="w-4 h-4 text-neutral-900" />
+            <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-md bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center">
+                <DocumentTextIcon className="w-4 h-4 text-neutral-900 dark:text-neutral-100" />
               </div>
               Requirements Map
             </h2>
@@ -312,35 +312,35 @@ export default function TreeVisualization({
           </div>
 
           {/* Zoom Controls */}
-          <div className="flex items-center gap-1 bg-neutral-100 rounded-md p-1">
+          <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-md p-1">
             <button
               onClick={handleFitToView}
-              className="p-2 hover:bg-white rounded-md transition-all duration-200 hover:shadow-sm"
+              className="p-2 hover:bg-white dark:hover:bg-neutral-700 rounded-md transition-all duration-200 hover:shadow-sm"
               title="Fit to view"
             >
-              <ArrowsPointingInIcon className="w-4 h-4 text-neutral-600" />
+              <ArrowsPointingInIcon className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
             </button>
-            <div className="w-px h-4 bg-neutral-300" />
+            <div className="w-px h-4 bg-neutral-300 dark:bg-neutral-600" />
             <button
               onClick={handleZoomOut}
-              className="p-2 hover:bg-white rounded-md transition-all duration-200 hover:shadow-sm"
+              className="p-2 hover:bg-white dark:hover:bg-neutral-700 rounded-md transition-all duration-200 hover:shadow-sm"
               title="Zoom out"
             >
-              <MagnifyingGlassMinusIcon className="w-4 h-4 text-neutral-600" />
+              <MagnifyingGlassMinusIcon className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
             </button>
             <button
               onClick={handleZoomReset}
-              className="px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-white rounded-md transition-all duration-200 min-w-[52px] hover:shadow-sm"
+              className="px-3 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-700 rounded-md transition-all duration-200 min-w-[52px] hover:shadow-sm"
               title="Reset zoom"
             >
               {zoom}%
             </button>
             <button
               onClick={handleZoomIn}
-              className="p-2 hover:bg-white rounded-md transition-all duration-200 hover:shadow-sm"
+              className="p-2 hover:bg-white dark:hover:bg-neutral-700 rounded-md transition-all duration-200 hover:shadow-sm"
               title="Zoom in"
             >
-              <MagnifyingGlassPlusIcon className="w-4 h-4 text-neutral-600" />
+              <MagnifyingGlassPlusIcon className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
             </button>
           </div>
         </div>
@@ -355,8 +355,8 @@ export default function TreeVisualization({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search nodes..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded border border-neutral-200 bg-neutral-50
-                         focus:border-neutral-200 focus:ring-1 focus:ring-neutral-200 focus:bg-white transition-colors"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800
+                         dark:text-neutral-100 focus:border-neutral-200 focus:ring-1 focus:ring-neutral-200 dark:focus:ring-neutral-700 focus:bg-white dark:focus:bg-neutral-800 transition-colors"
             />
           </div>
 
@@ -369,8 +369,8 @@ export default function TreeVisualization({
                 onClick={() => setStatusFilter(opt.value)}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-200 ${
                   statusFilter === opt.value
-                    ? "bg-neutral-900 text-white shadow-sm"
-                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                    ? "bg-neutral-900 dark:bg-brand-lime text-white dark:text-brand-dark shadow-sm"
+                    : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                 }`}
               >
                 {opt.label}
@@ -383,7 +383,7 @@ export default function TreeVisualization({
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
-              className="text-[11px] border border-neutral-200 rounded-md px-2 py-1 bg-white text-neutral-600"
+              className="text-[11px] border border-neutral-200 dark:border-neutral-700 rounded-md px-2 py-1 bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
             >
               <option value="">All Sources</option>
               {uniqueSources.map((s) => (
@@ -397,8 +397,8 @@ export default function TreeVisualization({
             onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
             className={`ml-auto px-3 py-1.5 rounded-md text-[11px] font-medium transition-all duration-200 border ${
               statusFilter === "active"
-                ? "bg-neutral-50 text-neutral-900 border-neutral-200"
-                : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
+                ? "bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border-neutral-200 dark:border-neutral-700"
+                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
             }`}
           >
             Active scope only
@@ -408,7 +408,7 @@ export default function TreeVisualization({
             className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-all duration-200 border flex items-center gap-1 ${
               showDeferred
                 ? "bg-neutral-700 text-white border-neutral-700"
-                : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
+                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
             }`}
           >
             <ClockIcon className="w-3.5 h-3.5" />
@@ -419,11 +419,11 @@ export default function TreeVisualization({
 
       {/* RISK-2.1C — Depth recommendation banner */}
       {treeStats?.depth_warning && !depthDismissed && (
-        <div className="mx-4 mt-2 mb-1 px-4 py-2.5 rounded-md bg-amber-50 border border-amber-200 flex items-start gap-3">
+        <div className="mx-4 mt-2 mb-1 px-4 py-2.5 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-start gap-3">
           <ExclamationTriangleIcon className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-amber-800">Deep tree detected</p>
-            <p className="text-[11px] text-amber-700 mt-0.5">
+            <p className="text-xs font-medium text-amber-800 dark:text-amber-300">Deep tree detected</p>
+            <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
               {treeStats.depth_warning}
             </p>
             <div className="flex items-center gap-3 mt-1.5 text-[11px]">
@@ -444,7 +444,7 @@ export default function TreeVisualization({
 
       {/* Tree Content + optional Deferred panel */}
       <div className="flex-1 overflow-hidden flex">
-        <div className="flex-1 overflow-auto p-8 bg-neutral-50/50 bg-dot-pattern">
+        <div className="flex-1 overflow-auto p-8 bg-neutral-50/50 dark:bg-[#0a0a0a] bg-dot-pattern">
           {filteredTree ? (
             <div
               className="inline-block min-w-full"
@@ -473,7 +473,7 @@ export default function TreeVisualization({
               <p className="text-sm font-medium">No nodes match the current filter</p>
               <button
                 onClick={() => { setStatusFilter("all"); setSearchQuery(""); setSourceFilter(""); }}
-                className="mt-2 text-xs text-primary-500 hover:underline"
+                className="mt-2 text-xs text-neutral-700 dark:text-neutral-300 hover:underline"
               >
                 Clear filters
               </button>
@@ -483,47 +483,47 @@ export default function TreeVisualization({
 
         {/* Deferred items side panel */}
         {showDeferred && (
-          <div className="w-80 flex-shrink-0 border-l border-neutral-200 bg-white overflow-y-auto p-4">
+          <div className="w-80 flex-shrink-0 border-l border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-y-auto p-4">
             <DeferredItemsList sessionId={sessionId} onReactivated={fetchTree} />
           </div>
         )}
       </div>
 
       {/* Legend: types + status indicators */}
-      <div className="border-t border-neutral-200/60 bg-white p-3 flex-shrink-0">
+      <div className="border-t border-neutral-200/60 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3 flex-shrink-0">
         <div className="flex items-center justify-center gap-4 text-xs flex-wrap">
           {/* Type legend */}
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-md bg-neutral-900"></div>
-            <span className="text-neutral-600 font-medium">Project</span>
+            <div className="w-3 h-3 rounded-md bg-neutral-900 dark:bg-neutral-100"></div>
+            <span className="text-neutral-600 dark:text-neutral-400 font-medium">Project</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-md bg-warning-500"></div>
-            <span className="text-neutral-600 font-medium">Feature</span>
+            <span className="text-neutral-600 dark:text-neutral-400 font-medium">Feature</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-md bg-success-500"></div>
-            <span className="text-neutral-600 font-medium">Requirement</span>
+            <span className="text-neutral-600 dark:text-neutral-400 font-medium">Requirement</span>
           </div>
 
-          <div className="w-px h-4 bg-neutral-200 mx-1" />
+          <div className="w-px h-4 bg-neutral-200 dark:bg-neutral-700 mx-1" />
 
           {/* Status legend */}
           <div className="flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-neutral-500">New</span>
+            <span className="text-neutral-500 dark:text-neutral-400">New</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
-            <span className="text-neutral-500">Modified</span>
+            <span className="text-neutral-500 dark:text-neutral-400">Modified</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full bg-neutral-400" />
-            <span className="text-neutral-500">Deferred</span>
+            <span className="text-neutral-500 dark:text-neutral-400">Deferred</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-neutral-500">Completed</span>
+            <span className="text-neutral-500 dark:text-neutral-400">Completed</span>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
-# MoMetric Documentation
+# Hojaa Documentation
 
-Welcome to the MoMetric documentation. This folder contains comprehensive planning and specification documents for the MoMetric platform.
+Welcome to the Hojaa documentation. This folder contains comprehensive planning and specification documents for the Hojaa platform.
 
 ---
 
@@ -21,7 +21,7 @@ Read this to understand:
 ---
 
 ### 🏗️ [Product Structure](./Product-Structure.md)
-**How all MoMetric modules fit together**
+**How all Hojaa modules fit together**
 
 Read this to understand:
 - The four modules: Ideation → Use Cases → Scope Canvas → KPI Mapping
@@ -35,11 +35,11 @@ Read this to understand:
 ---
 
 ### 🎯 [Differentiation](./Differentiation.md)
-**How MoMetric differs from existing tools**
+**How Hojaa differs from existing tools**
 
 Read this to understand:
 - Detailed comparisons with Jira, ClickUp, Miro, etc.
-- What makes MoMetric unique
+- What makes Hojaa unique
 - Positioning and messaging guidelines
 - Target customer profile
 - Sales responses to common objections
@@ -101,7 +101,7 @@ Read this to understand:
 ### The Core Problem
 Large enterprises and project teams struggle to align on scope. Clients have vague expectations, developers interpret them differently, and misalignment is discovered too late (during demos or launch).
 
-### The MoMetric Solution
+### The Hojaa Solution
 1. **Capture** business objectives (Ideation)
 2. **Define** use cases (Use Cases)
 3. **Align** on deliverables visually (Scope Canvas) ← MVP focus
@@ -195,7 +195,7 @@ For questions or clarifications about any of these documents:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    MoMetric Platform                          │
+│                    Hojaa Platform                          │
 └─────────────────────────────────────────────────────────────┘
 
 Module 1: Ideation
