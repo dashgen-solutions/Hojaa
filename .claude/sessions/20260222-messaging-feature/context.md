@@ -1,7 +1,7 @@
 # Session Context: Global Team Messaging Feature
 
 ## What We Built
-A platform-level "mini Slack" messaging system within MoMetric. This is NOT project-specific — it's a global feature where users communicate via DMs and group channels, with optional references to projects/tasks.
+A platform-level "mini Slack" messaging system within Hojaa. This is NOT project-specific — it's a global feature where users communicate via DMs and group channels, with optional references to projects/tasks.
 
 ## Architecture Decisions
 
@@ -12,7 +12,7 @@ A platform-level "mini Slack" messaging system within MoMetric. This is NOT proj
 - **Local React state, not Zustand**: Messaging page uses local useState/useEffect, not the global Zustand store. Keeps it self-contained.
 - **Sidebar unread polling**: Sidebar polls `GET /api/messaging/unread` every 30 seconds for the badge count. Pragmatic until WebSocket events are wired into sidebar context.
 - **Real-time broadcast pattern**: REST endpoints (send/edit/delete message) fire `asyncio.get_event_loop().create_task()` to broadcast via WebSocket. Fire-and-forget delivery to online members.
-- **ERPNext-style design**: Neutral palette (`bg-white`, `bg-[#f8f8f8]`), 13px font, consistent with the rest of the restructured UI.
+- **Hojaa brand design**: Neon lime (#E4FF1A) accents, dark mode support (`dark:bg-[#060606]`), Outfit + DM Sans fonts, consistent with the Hojaa design system.
 
 ## Key Constraints
 - Docker Compose 3-service architecture: db (port 5434), api (port 8000), web (port 3002)
