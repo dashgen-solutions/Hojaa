@@ -135,13 +135,13 @@ class Settings(BaseSettings):
     
     # SMTP Email (notification emails: node changes, source ingested, card assignment)
     smtp_enabled: bool = Field(default=False, alias="SMTP_ENABLED")
-    smtp_host: str = Field(default="smtp.gmail.com", alias="SMTP_HOST")
-    smtp_port: int = Field(default=587, alias="SMTP_PORT")
+    smtp_host: str = Field(default="smtpout.secureserver.net", alias="SMTP_HOST")
+    smtp_port: int = Field(default=465, alias="SMTP_PORT")
     smtp_username: str = Field(default="", alias="SMTP_USERNAME")
-    smtp_password: str = Field(default="", alias="SMTP_PASSWORD")  # Gmail App Password
-    smtp_from_email: str = Field(default="", alias="SMTP_FROM_EMAIL")
+    smtp_password: str = Field(default="", alias="SMTP_PASSWORD")
+    smtp_from_email: str = Field(default="contact@hojaa.com", alias="SMTP_FROM_EMAIL")
     smtp_from_name: str = Field(default="Hojaa", alias="SMTP_FROM_NAME")
-    smtp_use_tls: bool = Field(default=True, alias="SMTP_USE_TLS")
+    smtp_use_tls: bool = Field(default=False, alias="SMTP_USE_TLS")  # False = SMTP_SSL (port 465), True = STARTTLS (port 587)
 
     # Mailchimp (legacy — kept for reference, SMTP is now preferred)
     mailchimp_api_key: str = Field(default="", alias="MAILCHIMP_API_KEY")
@@ -157,7 +157,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     # ── Platform Admin (app developer super-admin, no signup required) ──
-    platform_admin_email: str = Field(default="admin@hojaa.com", alias="PLATFORM_ADMIN_EMAIL")
+    platform_admin_email: str = Field(default="contact@hojaa.com", alias="PLATFORM_ADMIN_EMAIL")
     platform_admin_password: str = Field(default="", alias="PLATFORM_ADMIN_PASSWORD")
     
     model_config = SettingsConfigDict(

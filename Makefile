@@ -1,4 +1,4 @@
-.PHONY: up down dev logs test lint clean setup help db-migrate db-reset status
+.PHONY: up down dev logs test lint clean setup help db-migrate db-reset status prod-up prod-down prod-logs prod-status
 
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -51,3 +51,23 @@ db-reset: ## Reset database (WARNING: destroys all data)
 
 status: ## Show service status
 	docker compose ps
+
+# ── Production (docker-compose.prod.yml) ──
+
+prod-up: ## Build and start production services (with Caddy SSL)
+	docker compose -f docker-compose.prod.yml up -d --build
+	@echo ""
+	@echo "\033[32mHojaa production is starting...\033[0m"
+	@echo ""
+	@echo "  Site:     https://hojaa.com"
+	@echo "  API:      https://hojaa.com/api/docs"
+	@echo ""
+
+prod-down: ## Stop production services
+	docker compose -f docker-compose.prod.yml down
+
+prod-logs: ## Tail production logs
+	docker compose -f docker-compose.prod.yml logs -f
+
+prod-status: ## Show production service status
+	docker compose -f docker-compose.prod.yml ps
