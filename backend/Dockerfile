@@ -10,9 +10,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy and install Python dependencies (use prod requirements if available)
+COPY requirements*.txt .
+ARG REQUIREMENTS_FILE=requirements.txt
+RUN pip install --no-cache-dir -r ${REQUIREMENTS_FILE}
 
 # Copy application code
 COPY app/ ./app/

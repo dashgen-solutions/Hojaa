@@ -25,6 +25,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        REQUIREMENTS_FILE: requirements.prod.txt
     container_name: hojaa-api
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-hojaa_db}
