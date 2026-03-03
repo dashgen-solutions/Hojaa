@@ -241,7 +241,7 @@ class NotificationService:
         Wrap *body_html* in a consistent Hojaa-branded email shell.
 
         Layout:
-          - Dark (#060606) header bar with lowercase "hojaa" in neon lime (#E4FF1A)
+          - Dark (#060606) header bar with "Hojaa" in white (#ffffff)
           - A title banner row in neon lime with dark text
           - White card body for the actual content
           - Dark (#111111) footer with muted text
@@ -255,7 +255,7 @@ class NotificationService:
         <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1NiA1NiIgd2lkdGg9IjM2IiBoZWlnaHQ9IjM2Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNFNEZGMUEiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNjOGU2MDAiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTYiIGhlaWdodD0iNTYiIHJ4PSIxNCIgZmlsbD0idXJsKCNnKSIgdHJhbnNmb3JtPSJyb3RhdGUoLTMgMjggMjgpIi8+PGNpcmNsZSBjeD0iMzQiIGN5PSIyMCIgcj0iMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzExMSIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg5LCAxNCkiPjxwYXRoIGQ9Ik0zIDhoMTVNMTIgMmw2IDYtNiA2IiBzdHJva2U9IiMxMTEiIHN0cm9rZS13aWR0aD0iMi41IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L2c+PHBvbHlnb24gcG9pbnRzPSIwLC02IC03LDYgNyw2IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxOCwzNikgcm90YXRlKC0xNSkiIGZpbGw9IiMxMTEiLz48L3N2Zz4=" alt="Hojaa" width="36" height="36" style="display:block;" />
       </td>
       <td style="vertical-align:middle;">
-        <span style="font-size:22px;font-weight:700;letter-spacing:1px;color:#E4FF1A;">hojaa</span>
+        <span style="font-size:22px;font-weight:700;letter-spacing:1px;color:#ffffff;">Hojaa</span>
       </td>
     </tr></table>
   </div>
@@ -274,7 +274,7 @@ class NotificationService:
   <div style="background:#111111;padding:20px 28px;text-align:center;">
     <p style="margin:0 0 4px;font-size:11px;color:#888888;">
       You received this email because of your notification settings in
-      <span style="color:#E4FF1A;font-weight:600;">hojaa</span>.
+      <span style="color:#ffffff;font-weight:600;">Hojaa</span>.
     </p>
     <p style="margin:0;font-size:11px;color:#555555;">
       &copy; {__import__('datetime').date.today().year} Hojaa &mdash; Requirements, reimagined.

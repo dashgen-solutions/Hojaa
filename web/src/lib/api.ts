@@ -1417,4 +1417,57 @@ export const clearDocumentAIHistory = async (documentId: string): Promise<void> 
   await api.delete(`/api/documents/${documentId}/ai/history`);
 };
 
+// ===== Public Roadmap & Feature Requests =====
+
+export const getRoadmapItems = async (filters?: {
+  category?: string;
+  status?: string;
+}) => {
+  const params = new URLSearchParams();
+  if (filters?.category) params.append('category', filters.category);
+  if (filters?.status) params.append('status', filters.status);
+  const qs = params.toString();
+  const response = await api.get(`/api/roadmap/items${qs ? '?' + qs : ''}`);
+  return response.data;
+};
+
+export const getRoadmapStats = async () => {
+  const response = await api.get('/api/roadmap/stats');
+  return response.data;
+};
+
+export const voteRoadmapItem = async (itemId: string) => {
+  const response = await api.post(`/api/roadmap/items/${itemId}/vote`);
+  return response.data;
+};
+
+export const getFeatureRequests = async (sort?: 'votes' | 'newest', limit?: number, offset?: number) => {
+  const params = new URLSearchParams();
+  if (sort) params.append('sort', sort);
+  if (limit) params.append('limit', limit.toString());
+  if (offset) params.append('offset', offset.toString());
+  const qs = params.toString();
+  const response = await api.get(`/api/roadmap/requests${qs ? '?' + qs : ''}`);
+  return response.data;
+};
+
+export const submitFeatureRequest = async (text: string) => {
+  const response = await api.post('/api/roadmap/requests', { text });
+  return response.data;
+};
+
+export const voteFeatureRequest = async (requestId: string) => {
+  const response = await api.post(`/api/roadmap/requests/${requestId}/vote`);
+  return response.data;
+};
+
+export const submitRoadmapFeedback = async (data: {
+  feedback_type: string;
+  content: string;
+  email?: string;
+}) => {
+  const response = await api.post('/api/roadmap/feedback', data);
+  return response.data;
+};
+
 export default api;

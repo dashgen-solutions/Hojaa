@@ -1194,3 +1194,144 @@ class DocumentChatMessage(Base):
     __table_args__ = (
         Index("idx_doc_chat_document", "document_id"),
     )
+
+
+# ===== Public Roadmap & Feature Requests =====
+
+class RoadmapStatus(str, enum.Enum):
+    PLANNED = "planned"
+    IN_PROGRESS = "in_progress"
+    SHIPPED = "shipped"
+
+
+class RoadmapCategory(str, enum.Enum):
+    DOCUMENT_CONTENT = "document_content"
+    TEAM_COMMUNICATION = "team_communication"
+    PROJECT_MANAGEMENT = "project_management"
+    PLATFORM_INFRASTRUCTURE = "platform_infrastructure"
+    INTEGRATIONS = "integrations"
+
+
+class FeatureRequestStatus(str, enum.Enum):
+    PENDING = "pending"
+    UNDER_REVIEW = "under_review"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+    MERGED = "merged"
+
+
+class FeedbackType(str, enum.Enum):
+    IDEA = "idea"
+    PAIN_POINT = "pain_point"
+    PRAISE = "praise"
+    BUG = "bug"
+    OTHER = "other"
+
+
+class RoadmapItem(Base):
+    __tablename__ = "roadmap_items"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(SQLEnum(RoadmapCategory), nullable=False)
+    status = Column(SQLEnum(RoadmapStatus), default=RoadmapStatus.PLANNED, nullable=False)
+    is_public = Column(Boolean, default=True, nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)
+    icon_name = Column(String(50), nullable=True)
+    inspired_by = Column(String(255), nullable=True)
+    feature_request_id = Column(UUID(as_uuid=True), ForeignKey("feature_requests.id", ondelete="SET NULL"), nullable=True)
+    shipped_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    feature_request = relationship("FeatureRequest", foreign_keys=[feature_request_id])
+    votes = relationship("RoadmapVote", back_populates="roadmap_item", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("idx_roadmap_status", "status"),
+        Index("idx_roadmap_category", "category"),
+        Index("idx_roadmap_public", "is_public"),
+        Index("idx_roadmap_order", "category", "order_index"),
+    )
+
+
+class FeatureRequest(Base):
+    __tablename__ = "feature_requests"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    original_text = Column(Text, nullable=True)
+    status = Column(SQLEnum(FeatureRequestStatus), default=FeatureRequestStatus.PENDING, nullable=False)
+    admin_note = Column(Text, nullable=True)
+    promoted_to_roadmap_id = Column(UUID(as_uuid=True), nullable=True)
+    vote_count = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user = relationship("User", foreign_keys=[user_id])
+    votes = relationship("FeatureRequestVote", back_populates="feature_request", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("idx_feature_req_status", "status"),
+        Index("idx_feature_req_user", "user_id"),
+        Index("idx_feature_req_votes", "vote_count"),
+        Index("idx_feature_req_created", "created_at"),
+    )
+
+
+class RoadmapVote(Base):
+    __tablename__ = "roadmap_votes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    roadmap_item_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_items.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    roadmap_item = relationship("RoadmapItem", back_populates="votes")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_roadmap_vote_unique", "roadmap_item_id", "user_id", unique=True),
+        Index("idx_roadmap_vote_user", "user_id"),
+    )
+
+
+class FeatureRequestVote(Base):
+    __tablename__ = "feature_request_votes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    feature_request_id = Column(UUID(as_uuid=True), ForeignKey("feature_requests.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    feature_request = relationship("FeatureRequest", back_populates="votes")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_feature_vote_unique", "feature_request_id", "user_id", unique=True),
+        Index("idx_feature_vote_user", "user_id"),
+    )
+
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    email = Column(String(255), nullable=True)
+    feedback_type = Column(SQLEnum(FeedbackType), default=FeedbackType.IDEA, nullable=False)
+    content = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False, nullable=False)
+    admin_note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", foreign_keys=[user_id])
+
+    __table_args__ = (
+        Index("idx_feedback_type", "feedback_type"),
+        Index("idx_feedback_read", "is_read"),
+        Index("idx_feedback_created", "created_at"),
+    )

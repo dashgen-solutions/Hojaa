@@ -8,6 +8,7 @@ const footerLinks = {
     { label: 'Features', href: '#features' },
     { label: 'Pricing', href: '#pricing' },
     { label: 'Open Source', href: '#open-source' },
+    { label: 'Roadmap', href: '/roadmap' },
   ],
   Company: [
     { label: 'About', href: '#' },

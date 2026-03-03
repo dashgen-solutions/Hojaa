@@ -15,11 +15,18 @@ export default function LoginPage() {
   const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
+  const [redirectTo, setRedirectTo] = useState("/projects");
+
+  useEffect(() => {
+    const redirect = new URLSearchParams(window.location.search).get("redirect");
+    if (redirect) setRedirectTo(redirect);
+  }, []);
+
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.push("/projects");
+      router.push(redirectTo);
     }
-  }, [isAuthenticated, authLoading, router]);
+  }, [isAuthenticated, authLoading, router, redirectTo]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -28,7 +35,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push("/projects");
+      router.push(redirectTo);
     } catch (err: any) {
       setError(err.message || "Login failed. Please try again.");
     } finally {

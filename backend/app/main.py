@@ -31,6 +31,7 @@ from app.api.routes import (
     session_chat,
     messaging,
     documents,
+    roadmap,
 )
 from app.models.schemas import HealthResponse
 from app.middleware.metrics import MetricsMiddleware
@@ -95,6 +96,7 @@ app.include_router(api_keys.router, prefix="/api")  # 18.2-D: Public API — API
 app.include_router(session_chat.router, prefix="/api")  # Session AI Chatbot (Command Center)
 app.include_router(messaging.router, prefix="/api")  # Global Messaging ("Mini Slack")
 app.include_router(documents.router, prefix="/api")  # Documents (PandaDoc replacement)
+app.include_router(roadmap.router, prefix="/api")  # Public Roadmap & Feature Requests
 
 
 @app.on_event("startup")
