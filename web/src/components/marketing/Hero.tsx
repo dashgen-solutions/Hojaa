@@ -119,7 +119,7 @@ export default function Hero() {
             Get Started
           </Link>
           <a
-            href="https://github.com/DashGen-Solutions/hojaa"
+            href="https://github.com/dashgen-solutions/hojaa"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-white border border-neutral-700 hover:border-brand-lime px-8 py-3 rounded-full transition-colors duration-200 text-base"

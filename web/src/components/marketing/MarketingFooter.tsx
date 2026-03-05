@@ -16,7 +16,7 @@ const footerLinks = {
   ],
   Resources: [
     { label: 'Docs', href: '#' },
-    { label: 'GitHub', href: 'https://github.com/DashGen-Solutions/hojaa' },
+    { label: 'GitHub', href: 'https://github.com/dashgen-solutions/hojaa' },
     { label: 'Support', href: '#' },
   ],
 };

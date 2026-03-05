@@ -20,7 +20,7 @@ Open an issue with:
 ## Development Setup
 
 ```bash
-git clone https://github.com/YOUR_ORG/hojaa.git
+git clone https://github.com/dashgen-solutions/hojaa.git
 cd hojaa
 cp .env.example .env           # Add your API keys
 make up                         # Start all services

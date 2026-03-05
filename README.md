@@ -51,7 +51,7 @@ Hojaa fixes this by putting **discovery before execution**. Upload a document, a
 ## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/YOUR_ORG/hojaa.git && cd hojaa
+git clone https://github.com/dashgen-solutions/hojaa.git && cd hojaa
 cp .env.example .env          # Add your OpenAI or Anthropic API key
 make up                        # Starts PostgreSQL + API + Web UI
 ```
@@ -134,7 +134,7 @@ Export to **PDF**, **JSON**, or **Markdown**. Push cards to **Jira**. Send notif
 Hojaa is designed to run on your own infrastructure. A **$10-20/month VM** handles small teams comfortably.
 
 ```bash
-git clone https://github.com/YOUR_ORG/hojaa.git && cd hojaa
+git clone https://github.com/dashgen-solutions/hojaa.git && cd hojaa
 cp .env.example .env           # Configure your keys
 docker compose up -d           # That's it
 ```

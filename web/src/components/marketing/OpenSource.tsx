@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 
 const codeLines = [
-  { cmd: 'git clone https://github.com/DashGen-Solutions/hojaa.git', delay: 0 },
+  { cmd: 'git clone https://github.com/dashgen-solutions/hojaa.git', delay: 0 },
   { cmd: 'cd hojaa', delay: 0.6 },
   { cmd: 'cp .env.example .env', delay: 1.0 },
   { cmd: 'docker compose up -d', delay: 1.4 },
