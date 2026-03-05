@@ -1,9 +1,18 @@
 'use client';
 
+import { useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
 export default function Hero() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 1.75;
+    }
+  }, []);
+
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden">
       {/* Floating animated elements */}
@@ -119,23 +128,34 @@ export default function Hero() {
           </a>
         </motion.div>
 
-        {/* Video Section */}
+        {/* Video Section — macOS window chrome */}
         <motion.div
-          className="mt-16 md:mt-20 w-full max-w-4xl mx-auto"
+          className="mt-16 md:mt-20 w-full max-w-6xl mx-auto"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5, ease: 'easeOut' }}
         >
-          <div className="relative aspect-video rounded-2xl border border-neutral-800 bg-neutral-900/50 overflow-hidden backdrop-blur-sm">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-brand-lime/20 flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-7 h-7 text-brand-lime ml-1" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
-                <p className="text-neutral-500 text-sm">Product demo coming soon</p>
-              </div>
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/80 overflow-hidden backdrop-blur-sm shadow-2xl shadow-black/40">
+            {/* macOS title bar */}
+            <div className="flex items-center gap-2 px-4 py-3 bg-neutral-900 border-b border-neutral-800">
+              <span className="w-3 h-3 rounded-full bg-[#FF5F57]" />
+              <span className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
+              <span className="w-3 h-3 rounded-full bg-[#28C840]" />
+              <span className="ml-auto mr-auto text-xs text-neutral-500 -translate-x-5">Hojaa — Make it happen</span>
+            </div>
+            {/* Video */}
+            <div className="relative bg-neutral-950" style={{ aspectRatio: '1824 / 834' }}>
+              <video
+                ref={videoRef}
+                className="w-full h-full object-contain"
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+              >
+                <source src="/hojaa-demo.mp4" type="video/mp4" />
+              </video>
             </div>
           </div>
         </motion.div>

@@ -26,6 +26,14 @@
     <a href="docs/">Docs</a>
   </p>
 
+  <br/>
+
+  <video src="assets/hojaa-demo.mp4" width="100%" autoplay loop muted playsinline>
+    Your browser does not support the video tag.
+  </video>
+
+  > 👆 *Can't see the video? [Watch the full demo on hojaa.com](https://hojaa.com)*
+
 </div>
 
 ---
