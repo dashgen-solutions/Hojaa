@@ -29,10 +29,10 @@
   <br/>
 
   <a href="https://hojaa.com">
-    <img src="assets/demo-screenshot.png" alt="Hojaa Demo" width="100%" />
+    <img src="assets/demo.gif" alt="Hojaa Demo" width="100%" />
   </a>
 
-  <sub>🎬 <a href="https://hojaa.com">Watch the live demo at hojaa.com</a></sub>
+  <sub>🎬 <a href="https://hojaa.com">Watch the full demo at hojaa.com</a></sub>
 
 </div>
 
