@@ -28,11 +28,11 @@
 
   <br/>
 
-  <video src="assets/hojaa-demo.mp4" width="100%" autoplay loop muted playsinline>
-    Your browser does not support the video tag.
-  </video>
+  <a href="https://hojaa.com">
+    <img src="assets/demo-screenshot.png" alt="Hojaa Demo" width="100%" />
+  </a>
 
-  > 👆 *Can't see the video? [Watch the full demo on hojaa.com](https://hojaa.com)*
+  <sub>🎬 <a href="https://hojaa.com">Watch the live demo at hojaa.com</a></sub>
 
 </div>
 
