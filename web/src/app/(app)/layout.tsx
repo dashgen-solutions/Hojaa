@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AppSidebar from "@/components/layout/AppSidebar";
 import AppHeader from "@/components/layout/AppHeader";
+import APIKeySetupDialog from "@/components/onboarding/APIKeySetupDialog";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -32,6 +33,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      <APIKeySetupDialog />
     </div>
   );
 }

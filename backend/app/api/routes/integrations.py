@@ -319,7 +319,7 @@ async def slack_notify(
 
 # ── Secret masking ──
 
-_SECRET_KEYS = {"api_token", "bot_token", "webhook_url"}
+_SECRET_KEYS = {"api_key", "api_token", "bot_token", "webhook_url"}
 
 
 def _mask_secrets(config: dict) -> dict:
