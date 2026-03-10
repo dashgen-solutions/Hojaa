@@ -67,6 +67,8 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setProjectName(name);
+      // Notify sidebar and other components
+      window.dispatchEvent(new CustomEvent('projectRenamed', { detail: { id: projectId, name } }));
     } catch (err) {
       console.error("Failed to update project name:", err);
     }

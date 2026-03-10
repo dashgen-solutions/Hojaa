@@ -80,7 +80,8 @@ class AITreeBuilder:
         self,
         session_id: UUID,
         user_type: str,
-        db: Session
+        db: Session,
+        user_id=None,
     ) -> Node:
         """
         Build initial tree structure from answered questions using AI agent.
@@ -121,6 +122,7 @@ class AITreeBuilder:
             result = await cached_agent_run(
                 self.tree_agent, user_prompt, deps=context,
                 task="tree_building", session_id=str(session_id),
+                user_id=user_id,
             )
             
             # Log usage
@@ -203,7 +205,8 @@ class AITreeBuilder:
         self,
         conversation_id: UUID,
         parent_node_id: UUID,
-        db: Session
+        db: Session,
+        user_id=None,
     ) -> List[Node]:
         """
         Expand a node by creating child nodes from conversation using AI agent.
@@ -265,6 +268,7 @@ class AITreeBuilder:
                 self.sub_req_agent, user_prompt, deps=context,
                 task="tree_building",
                 session_id=str(parent_node.session_id),
+                user_id=user_id,
             )
             
             # Log usage

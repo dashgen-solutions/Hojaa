@@ -46,6 +46,7 @@ _STATUS_SUGGEST_AGENT = create_requirements_agent(
 async def suggest_status(
     database: DBSession,
     node_id: UUID,
+    user_id=None,
 ) -> List[Dict[str, Any]]:
     """
     Return AI-recommended status(es) for a node based on its
@@ -91,6 +92,7 @@ async def suggest_status(
         model_name="status_suggest",
         task="status_suggest",
         cache_ttl=settings.cache_ttl_seconds,
+        user_id=user_id,
     )
     return [s.model_dump() for s in result.output.suggestions]
 
@@ -119,6 +121,7 @@ _AC_AGENT = create_requirements_agent(
 async def generate_acceptance_criteria(
     database: DBSession,
     node_id: UUID,
+    user_id=None,
 ) -> List[Dict[str, Any]]:
     """
     AI-generate acceptance criteria for a node/card.
@@ -150,6 +153,7 @@ async def generate_acceptance_criteria(
         model_name="ac_generate",
         task="ac_generate",
         cache_ttl=settings.cache_ttl_seconds,
+        user_id=user_id,
     )
     return [ac.model_dump() for ac in result.output.acceptance_criteria]
 
@@ -178,6 +182,7 @@ _SUMMARY_AGENT = create_requirements_agent(
 async def generate_export_summary(
     database: DBSession,
     session_id: UUID,
+    user_id=None,
 ) -> Dict[str, Any]:
     """
     Generate an AI executive summary for an export document.
@@ -223,5 +228,6 @@ async def generate_export_summary(
         model_name="summary",
         task="summary",
         cache_ttl=settings.cache_ttl_seconds,
+        user_id=user_id,
     )
     return result.output.model_dump()

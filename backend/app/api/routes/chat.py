@@ -10,9 +10,10 @@ from app.models.schemas import (
     ChatConfirmRequest, ChatConfirmResponse,
     ConversationHistoryResponse
 )
-from app.models.database import Conversation, Message
+from app.models.database import Conversation, Message, User
 from app.services.conversation_flow import conversation_flow
 from app.services.tree_builder import tree_builder
+from app.core.auth import get_optional_user
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -22,7 +23,8 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 @router.post("/start", response_model=ChatStartResponse)
 async def start_chat(
     request: ChatStartRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """Start a new conversation for exploring a feature node."""
     try:
@@ -32,7 +34,8 @@ async def start_chat(
         result = await conversation_flow.start_feature_conversation(
             session_id=request.session_id,
             node_id=request.node_id,
-            db=db
+            db=db,
+            user_id=current_user.id if current_user else None,
         )
         
         return ChatStartResponse(**result)
@@ -48,7 +51,8 @@ async def start_chat(
 @router.post("/message", response_model=ChatMessageResponse)
 async def send_message(
     request: ChatMessageRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """Send a message in an ongoing conversation."""
     try:
@@ -58,7 +62,8 @@ async def send_message(
         result = await conversation_flow.process_user_message(
             conversation_id=request.conversation_id,
             user_message=request.message,
-            db=db
+            db=db,
+            user_id=current_user.id if current_user else None,
         )
         
         return ChatMessageResponse(**result)
@@ -74,7 +79,8 @@ async def send_message(
 @router.post("/confirm", response_model=ChatConfirmResponse)
 async def confirm_chat(
     request: ChatConfirmRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """Confirm conversation and create child nodes in tree."""
     try:
@@ -92,7 +98,8 @@ async def confirm_chat(
         child_nodes = await tree_builder.expand_node_from_conversation(
             conversation_id=request.conversation_id,
             parent_node_id=conversation.node_id,
-            db=db
+            db=db,
+            user_id=current_user.id if current_user else None,
         )
         
         # Convert nodes to dict format with empty children lists

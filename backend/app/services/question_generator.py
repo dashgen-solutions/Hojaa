@@ -64,7 +64,8 @@ class AIQuestionGenerator:
         document_text: str,
         session_id: str,
         user_type: str,
-        db: Session
+        db: Session,
+        user_id=None,
     ) -> List[Question]:
         """
         Generate 10 initial questions using AI agent.
@@ -94,6 +95,7 @@ class AIQuestionGenerator:
             result = await cached_agent_run(
                 self.agent, user_prompt, deps=context,
                 task="question_gen", session_id=str(session_id),
+                user_id=user_id,
             )
             
             # Log usage stats

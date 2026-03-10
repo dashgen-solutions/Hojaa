@@ -7,8 +7,9 @@ from uuid import UUID
 from typing import Dict, Any
 from app.db.session import get_db
 from app.models.schemas import QuestionsSubmitRequest, TreeResponse, NodeResponse
-from app.models.database import Question, Session as DBSession, SessionStatus, Node
+from app.models.database import Question, Session as DBSession, SessionStatus, Node, User
 from app.services.tree_builder import tree_builder
+from app.core.auth import get_optional_user
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +34,8 @@ def node_to_dict(node: Node) -> Dict[str, Any]:
 @router.post("/submit", response_model=TreeResponse)
 async def submit_questions(
     request: QuestionsSubmitRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """
     Submit answers to initial questions and generate requirements tree.
@@ -68,7 +70,8 @@ async def submit_questions(
         root_node = await tree_builder.build_initial_tree(
             session_id=request.session_id,
             user_type=session.user_type,
-            db=db
+            db=db,
+            user_id=current_user.id if current_user else None,
         )
         
         # Update session status

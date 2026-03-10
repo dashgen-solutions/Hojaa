@@ -17,6 +17,7 @@ from app.models.schemas import (
 )
 from app.services.planning_service import planning_service
 from app.services.notification_service import notification_service
+from app.services.project_channel_service import sync_team_member
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -243,6 +244,14 @@ async def add_team_member(
             email=request.email,
             role=request.role,
         )
+
+        # Sync: add team member to project channel (if their email is a registered user)
+        try:
+            sync_team_member(database, UUID(session_id), request.email, remove=False)
+            database.commit()
+        except Exception as ch_err:
+            logger.warning(f"Channel sync on team-add failed: {ch_err}")
+
         # Notify subscribed users + welcome email to new member
         try:
             notification_service.notify_team_member_added(
@@ -269,10 +278,25 @@ async def delete_team_member(
 ):
     """Delete a team member and their assignments."""
     try:
+        # Fetch member before deletion so we can get session_id + email for channel sync
+        from app.models.database import TeamMember
+        member_obj = database.query(TeamMember).filter(TeamMember.id == UUID(team_member_id)).first()
+        member_session_id = member_obj.session_id if member_obj else None
+        member_email = member_obj.email if member_obj else None
+
         planning_service.delete_team_member(
             database=database,
             team_member_id=team_member_id,
         )
+
+        # Sync: remove team member from project channel
+        if member_session_id and member_email:
+            try:
+                sync_team_member(database, member_session_id, member_email, remove=True)
+                database.commit()
+            except Exception as ch_err:
+                logger.warning(f"Channel sync on team-remove failed: {ch_err}")
+
         return SuccessResponse(message="Team member removed")
         
     except ValueError as error:

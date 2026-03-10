@@ -77,7 +77,8 @@ class AIConversationFlow:
         self,
         session_id: UUID,
         node_id: UUID,
-        db: Session
+        db: Session,
+        user_id=None,
     ) -> Dict[str, Any]:
         """
         Start a new conversation for exploring a feature using AI agent.
@@ -151,6 +152,7 @@ class AIConversationFlow:
             result = await cached_agent_run(
                 self.start_agent, user_prompt, deps=context,
                 task="conversation", session_id=str(node.session_id),
+                user_id=user_id,
             )
             
             # Log usage
@@ -201,7 +203,8 @@ class AIConversationFlow:
         self,
         conversation_id: UUID,
         user_message: str,
-        db: Session
+        db: Session,
+        user_id=None,
     ) -> Dict[str, Any]:
         """
         Process user message and generate next question using AI agent.
@@ -279,6 +282,7 @@ class AIConversationFlow:
             result = await cached_agent_run(
                 self.continue_agent, user_prompt, deps=context,
                 task="conversation",
+                user_id=user_id,
             )
             
             # Log usage

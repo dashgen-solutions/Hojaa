@@ -6,6 +6,7 @@ import {
   TrashIcon,
   ArrowPathIcon,
   CurrencyDollarIcon,
+  DocumentPlusIcon,
 } from '@heroicons/react/24/outline';
 import type { PricingLineItemInfo } from '@/lib/api';
 import {
@@ -19,6 +20,7 @@ import {
 interface PricingTableBlockProps {
   documentId: string;
   sessionId: string;
+  onInsertBlock?: () => void;
 }
 
 interface EditableItem extends PricingLineItemInfo {
@@ -40,7 +42,7 @@ function formatCurrency(amount: number): string {
   });
 }
 
-export default function PricingTableBlock({ documentId, sessionId }: PricingTableBlockProps) {
+export default function PricingTableBlock({ documentId, sessionId, onInsertBlock }: PricingTableBlockProps) {
   const [items, setItems] = useState<EditableItem[]>([]);
   const [subtotal, setSubtotal] = useState(0);
   const [totalTax, setTotalTax] = useState(0);
@@ -233,7 +235,7 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
   return (
     <div className="flex flex-col h-full">
       {/* Actions Bar */}
-      <div className="flex items-center gap-2 p-3 border-b border-neutral-200 dark:border-neutral-700">
+      <div className="flex items-center gap-2 p-3 border-b border-neutral-200 dark:border-neutral-700 flex-wrap">
         <button
           onClick={handleAddRow}
           className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
@@ -248,6 +250,16 @@ export default function PricingTableBlock({ documentId, sessionId }: PricingTabl
           <ArrowPathIcon className="h-3.5 w-3.5" />
           Import from Planning
         </button>
+        {onInsertBlock && items.length > 0 && (
+          <button
+            onClick={onInsertBlock}
+            className="inline-flex items-center gap-1.5 rounded-md bg-neutral-900 dark:bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
+            title="Insert a pricing table block into the document"
+          >
+            <DocumentPlusIcon className="h-3.5 w-3.5" />
+            Add to Document
+          </button>
+        )}
       </div>
 
       {/* Import Dialog */}

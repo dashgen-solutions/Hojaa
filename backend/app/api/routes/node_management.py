@@ -158,17 +158,18 @@ async def delete_node(
 ):
     """
     Delete a node from the requirements tree.
+    Always cascades — if the node has children, they are deleted too.
     
     Args:
         node_id: Node ID to delete
-        cascade: If True, delete all child nodes. If False, move children up one level.
+        cascade: Kept for backward compatibility (always treated as True)
         db: Database session
     
     Returns:
         No content (204)
     """
     try:
-        logger.info(f"Deleting node {node_id} (cascade={cascade})")
+        logger.info(f"Deleting node {node_id} (always cascade)")
         
         # Find node
         node = db.query(Node).filter(Node.id == UUID(node_id)).first()
@@ -182,18 +183,9 @@ async def delete_node(
                 detail="Cannot delete root node"
             )
         
-        # Check if node has children
+        # Check if node has children (for info in response, but always cascade)
         children = db.query(Node).filter(Node.parent_id == node.id).all()
         has_children = len(children) > 0
-        
-        # If node has children and cascade is False, prevent deletion with helpful message
-        if has_children and not cascade:
-            child_count = len(children)
-            child_word = "child node" if child_count == 1 else "child nodes"
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot delete this node because it has {child_count} {child_word}. Please delete the child nodes first, or use cascade deletion to delete this node and all its children."
-            )
         
         session_id = node.session_id
         parent_id = node.parent_id
@@ -222,50 +214,22 @@ async def delete_node(
         except Exception:
             pass
         
-        if cascade:
-            # Delete node and all descendants (cascade delete)
-            descendant_ids = _get_all_descendant_ids(node.id, db)
-            descendant_ids.append(node.id)
-            
-            # Delete conversations for all nodes being deleted
-            db.query(Conversation).filter(Conversation.node_id.in_(descendant_ids)).delete(
-                synchronize_session=False
-            )
-            
-            # Flush to ensure conversations are deleted before deleting nodes
-            db.flush()
-            
-            # Delete all nodes
-            db.query(Node).filter(Node.id.in_(descendant_ids)).delete(
-                synchronize_session=False
-            )
-        else:
-            # Get ALL descendants (children, grandchildren, etc.)
-            descendant_ids = _get_all_descendant_ids(node.id, db)
-            
-            # Delete conversations for the node AND all its descendants
-            # (conversations are context-specific and won't make sense after tree restructure)
-            nodes_to_clear_conversations = [node.id] + descendant_ids
-            db.query(Conversation).filter(
-                Conversation.node_id.in_(nodes_to_clear_conversations)
-            ).delete(synchronize_session=False)
-            
-            # Flush to ensure conversations are deleted before moving children
-            db.flush()
-            
-            # Move direct children up one level to this node's parent
-            children = db.query(Node).filter(Node.parent_id == node.id).all()
-            
-            for child in children:
-                child.parent_id = parent_id
-                child.depth -= 1
-                # Recalculate depth for all descendants
-                _update_descendant_depths(child.id, db)
-            
-            # Delete the node using direct query to avoid cascade triggers
-            db.query(Node).filter(Node.id == node.id).delete(
-                synchronize_session=False
-            )
+        # Always cascade delete — delete node and all descendants
+        descendant_ids = _get_all_descendant_ids(node.id, db)
+        descendant_ids.append(node.id)
+        
+        # Delete conversations for all nodes being deleted
+        db.query(Conversation).filter(Conversation.node_id.in_(descendant_ids)).delete(
+            synchronize_session=False
+        )
+        
+        # Flush to ensure conversations are deleted before deleting nodes
+        db.flush()
+        
+        # Delete all nodes
+        db.query(Node).filter(Node.id.in_(descendant_ids)).delete(
+            synchronize_session=False
+        )
         
         # Reorder remaining siblings
         remaining_siblings = db.query(Node).filter(
@@ -614,11 +578,12 @@ def _update_descendant_depths_by_change(node_id: UUID, depth_change: int, db: Se
 async def suggest_status(
     node_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """AI-powered status suggestion based on node context, children, and history."""
     try:
         from app.services.ai_features_service import suggest_status as _suggest
-        suggestions = await _suggest(db, UUID(node_id))
+        suggestions = await _suggest(db, UUID(node_id), user_id=current_user.id if current_user else None)
         return {"suggestions": suggestions}
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error))
@@ -770,5 +735,70 @@ async def unassign_node(
         raise
     except Exception as error:
         logger.error(f"Error unassigning node: {error}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(error))
+
+
+# ===== Activate All Nodes =====
+
+@router.post("/{session_id}/activate-all")
+async def activate_all_nodes(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
+):
+    """
+    Set all non-removed nodes in a session to ACTIVE status.
+    Useful for quickly enabling all nodes before card generation.
+    """
+    try:
+        session_uuid = UUID(session_id)
+
+        # Verify session exists
+        session = db.query(DBSession).filter(DBSession.id == session_uuid).first()
+        if not session:
+            raise resource_not_found_error("Session", session_id)
+
+        # Get all non-removed, non-active nodes
+        nodes = (
+            db.query(Node)
+            .filter(
+                Node.session_id == session_uuid,
+                Node.status != NodeStatus.ACTIVE,
+                Node.status != NodeStatus.REMOVED,
+            )
+            .all()
+        )
+
+        activated_count = 0
+        for node in nodes:
+            old_status = node.status.value if node.status else "active"
+            node.status = NodeStatus.ACTIVE
+
+            audit_service.record_change(
+                database=db,
+                node_id=node.id,
+                change_type=ChangeType.STATUS_CHANGED,
+                field_changed="status",
+                old_value=old_status,
+                new_value="active",
+                changed_by=current_user.id if current_user else None,
+                session_id=session_uuid,
+            )
+            activated_count += 1
+
+        db.commit()
+
+        logger.info(f"Activated {activated_count} nodes in session {session_id}")
+        return {
+            "success": True,
+            "activated_count": activated_count,
+            "message": f"Activated {activated_count} nodes",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as error:
+        logger.error(f"Error activating all nodes: {error}")
         db.rollback()
         raise HTTPException(status_code=500, detail=str(error))

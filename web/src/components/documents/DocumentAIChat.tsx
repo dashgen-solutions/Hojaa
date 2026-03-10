@@ -8,6 +8,7 @@ import {
   TrashIcon,
   DocumentArrowDownIcon,
   ArrowPathIcon,
+  ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import {
   sendDocumentAIMessage,
@@ -16,25 +17,37 @@ import {
   type DocumentAIChatMessage,
   type DocumentAIChatResponse,
 } from '@/lib/api';
+import MermaidDiagram from './MermaidDiagram';
 
 interface DocumentAIChatProps {
   documentId: string;
   sessionId: string;
   onInsertBlocks: (blocks: any[]) => void;
+  onDocumentUpdated?: (content: any[]) => void;
 }
 
 const QUICK_PROMPTS = [
-  { label: 'Generate a project proposal', prompt: 'Generate a project proposal' },
-  { label: 'Write an executive summary', prompt: 'Write an executive summary' },
-  { label: 'Create a scope of work', prompt: 'Create a scope of work' },
-  { label: 'Draft a pricing section', prompt: 'Draft a pricing section' },
-  { label: 'Summarize the project scope', prompt: 'Summarize the project scope' },
+  { label: '📄 Generate a project proposal', prompt: 'Generate a comprehensive project proposal using the project data' },
+  { label: '📋 Write an executive summary', prompt: 'Write an executive summary of this project' },
+  { label: '📝 Create a scope of work', prompt: 'Create a detailed scope of work document' },
+  { label: '💰 Draft a pricing section', prompt: 'Draft a pricing section based on planning cards and estimates' },
+  { label: '📊 Summarize the project scope', prompt: 'Summarize the full project scope with all features and deliverables' },
+];
+
+const DIAGRAM_PROMPTS = [
+  { label: '🔀 Project workflow diagram', prompt: 'Create a Mermaid flowchart showing the project workflow and phases' },
+  { label: '🏗️ Architecture diagram', prompt: 'Create a Mermaid diagram showing the system architecture based on the scope' },
+  { label: '📅 Project timeline (Gantt)', prompt: 'Create a Mermaid Gantt chart showing the project timeline and milestones' },
+  { label: '🔄 Sequence diagram', prompt: 'Create a Mermaid sequence diagram showing the main user interaction flow' },
+  { label: '🧠 Feature mindmap', prompt: 'Create a Mermaid mindmap showing all features and their groupings from the scope tree' },
+  { label: '📊 Effort breakdown (Pie)', prompt: 'Create a Mermaid pie chart showing effort distribution across project areas' },
 ];
 
 export default function DocumentAIChat({
   documentId,
   sessionId,
   onInsertBlocks,
+  onDocumentUpdated,
 }: DocumentAIChatProps) {
   const [messages, setMessages] = useState<DocumentAIChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -99,11 +112,21 @@ export default function DocumentAIChat({
           msg,
         );
 
+        // Auto-applied: update editor content if backend merged blocks
+        if (response.auto_applied && response.updated_content && onDocumentUpdated) {
+          onDocumentUpdated(response.updated_content);
+        }
+
+        // Display the chat response (already cleaned by backend)
+        const displayText = response.response || (response.auto_applied ? 'Document updated.' : 'Content generated.');
+
         const assistantMsg: DocumentAIChatMessage = {
           id: response.message_id,
           role: 'assistant',
-          content: response.response,
-          generated_blocks: response.blocks,
+          content: response.auto_applied
+            ? displayText + '\n\n✅ *Changes applied to the document.*'
+            : displayText,
+          generated_blocks: response.auto_applied ? undefined : response.blocks,
           created_at: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, assistantMsg]);
@@ -173,19 +196,34 @@ export default function DocumentAIChat({
                 AI Document Assistant
               </h4>
               <p className="text-xs text-neutral-500 text-center mt-1 max-w-[260px]">
-                Generate content for your document with AI. Try a prompt below
-                or type your own.
+                Generate content, add diagrams, and build your document with AI.
+                Try a prompt below or type your own.
               </p>
             </div>
             <div className="space-y-1.5">
               <p className="text-[10px] text-neutral-400 uppercase tracking-wider font-medium">
-                Quick prompts
+                Document prompts
               </p>
               {QUICK_PROMPTS.map((action) => (
                 <button
                   key={action.label}
                   onClick={() => sendMessage(action.prompt)}
                   className="w-full text-left px-3 py-2 rounded-md border border-neutral-200 dark:border-neutral-700 hover:border-[#E4FF1A]/60 hover:bg-brand-lime/10 transition-colors text-xs text-neutral-700 dark:text-neutral-300"
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+            <div className="space-y-1.5 mt-4">
+              <p className="text-[10px] text-neutral-400 uppercase tracking-wider font-medium flex items-center gap-1">
+                <ChartBarIcon className="w-3 h-3" />
+                Diagrams &amp; Visuals
+              </p>
+              {DIAGRAM_PROMPTS.map((action) => (
+                <button
+                  key={action.label}
+                  onClick={() => sendMessage(action.prompt)}
+                  className="w-full text-left px-3 py-2 rounded-md border border-neutral-200 dark:border-neutral-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors text-xs text-neutral-700 dark:text-neutral-300"
                 >
                   {action.label}
                 </button>
@@ -213,17 +251,19 @@ export default function DocumentAIChat({
                 <span>{msg.content}</span>
               )}
 
-              {/* Insert into Document button */}
+              {/* Fallback Insert button — only shown when auto-apply failed */}
               {msg.role === 'assistant' &&
                 msg.generated_blocks &&
                 msg.generated_blocks.length > 0 && (
-                  <button
-                    onClick={() => onInsertBlocks(msg.generated_blocks!)}
-                    className="inline-flex items-center gap-1.5 bg-brand-lime/20 text-brand-dark dark:text-[#E4FF1A] hover:bg-brand-lime/30 rounded-md text-xs font-medium px-3 py-1.5 mt-2 transition-colors"
-                  >
-                    <DocumentArrowDownIcon className="w-3.5 h-3.5" />
-                    Insert into Document
-                  </button>
+                  <div className="flex items-center gap-2 mt-2">
+                    <button
+                      onClick={() => onInsertBlocks(msg.generated_blocks!)}
+                      className="inline-flex items-center gap-1.5 bg-neutral-200/60 dark:bg-neutral-700/60 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-md text-xs font-medium px-3 py-1.5 transition-colors"
+                    >
+                      <DocumentArrowDownIcon className="w-3.5 h-3.5" />
+                      Insert at End
+                    </button>
+                  </div>
                 )}
             </div>
           </div>
@@ -309,13 +349,14 @@ export default function DocumentAIChat({
   );
 }
 
-// ── Simple Markdown Renderer ───────────────────────────────────
+// ── Enhanced Markdown Renderer with Mermaid Support ────────────
 
 function MarkdownRenderer({ content }: { content: string }) {
   const lines = content.split('\n');
   const elements: JSX.Element[] = [];
   let inCodeBlock = false;
   let codeLines: string[] = [];
+  let codeLanguage = '';
 
   const processInline = (text: string): JSX.Element[] => {
     const parts: JSX.Element[] = [];
@@ -336,7 +377,7 @@ function MarkdownRenderer({ content }: { content: string }) {
         parts.push(
           <code
             key={`c${idx++}`}
-            className="bg-indigo-50 text-indigo-600 px-1 rounded text-[11px]"
+            className="bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 px-1 rounded text-[11px]"
           >
             {match[4]}
           </code>,
@@ -355,20 +396,32 @@ function MarkdownRenderer({ content }: { content: string }) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Code blocks
+    // Code blocks (including Mermaid)
     if (line.trim().startsWith('```')) {
       if (inCodeBlock) {
-        elements.push(
-          <pre
-            key={`code-${i}`}
-            className="bg-neutral-800 text-neutral-100 rounded-md p-2.5 text-[11px] overflow-x-auto my-1.5"
-          >
-            <code>{codeLines.join('\n')}</code>
-          </pre>,
-        );
+        // Closing code block
+        if (codeLanguage === 'mermaid') {
+          // Render as live Mermaid diagram
+          elements.push(
+            <div key={`mermaid-${i}`} className="my-2">
+              <MermaidDiagram code={codeLines.join('\n')} />
+            </div>,
+          );
+        } else {
+          elements.push(
+            <pre
+              key={`code-${i}`}
+              className="bg-neutral-800 text-neutral-100 rounded-md p-2.5 text-[11px] overflow-x-auto my-1.5"
+            >
+              <code>{codeLines.join('\n')}</code>
+            </pre>,
+          );
+        }
         codeLines = [];
+        codeLanguage = '';
         inCodeBlock = false;
       } else {
+        codeLanguage = line.trim().slice(3).trim().toLowerCase();
         inCodeBlock = true;
       }
       continue;

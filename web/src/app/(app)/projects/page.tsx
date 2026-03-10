@@ -12,6 +12,9 @@ import {
   ArrowRightIcon,
   EyeIcon,
   ShareIcon,
+  PencilIcon,
+  CheckIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -30,6 +33,8 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -84,6 +89,26 @@ export default function ProjectsPage() {
     } catch (err: any) {
       console.error("Failed to delete project:", err);
       alert("Failed to delete project. Please try again.");
+    }
+  };
+
+  const handleRenameProject = async (projectId: string) => {
+    if (!token || !editingName.trim()) return;
+    try {
+      await axios.patch(
+        `${API_URL}/api/sessions/${projectId}`,
+        { document_filename: editingName.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setProjects(projects.map((p) =>
+        p.id === projectId ? { ...p, document_filename: editingName.trim() } : p
+      ));
+      setEditingProjectId(null);
+      // Notify sidebar and other components
+      window.dispatchEvent(new CustomEvent('projectRenamed', { detail: { id: projectId, name: editingName.trim() } }));
+    } catch (err: any) {
+      console.error("Failed to rename project:", err);
+      alert("Failed to rename project.");
     }
   };
 
@@ -207,7 +232,52 @@ export default function ProjectsPage() {
                   </div>
 
                   <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-2 line-clamp-2">
-                    {project.document_filename || "Untitled Project"}
+                    {editingProjectId === project.id ? (
+                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          autoFocus
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleRenameProject(project.id);
+                            if (e.key === "Escape") setEditingProjectId(null);
+                          }}
+                          className="flex-1 text-base font-semibold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                        />
+                        <button
+                          onClick={() => handleRenameProject(project.id)}
+                          className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 text-green-600"
+                          title="Save"
+                        >
+                          <CheckIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setEditingProjectId(null)}
+                          className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-400"
+                          title="Cancel"
+                        >
+                          <XMarkIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="group/name inline-flex items-center gap-1.5">
+                        {project.document_filename || "Untitled Project"}
+                        {isOwned && !isViewer && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingProjectId(project.id);
+                              setEditingName(project.document_filename || "Untitled Project");
+                            }}
+                            className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 opacity-0 group-hover/name:opacity-100 transition-opacity"
+                            title="Rename project"
+                          >
+                            <PencilIcon className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </span>
+                    )}
                   </h3>
 
                   <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400 mb-4">

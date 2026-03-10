@@ -23,6 +23,27 @@ api.interceptors.request.use(
   }
 );
 
+// Intercept 402 responses — AI usage limit exceeded
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 402 && error.response?.data?.error === 'AI_USAGE_LIMIT_EXCEEDED') {
+      const detail = error.response.data;
+      const msg = `You've used $${(detail.used_usd ?? 0).toFixed(2)} of your free $${(detail.limit_usd ?? 0.10).toFixed(2)} AI quota. ` +
+        'Please configure your own OpenAI API key in Settings \u2192 Integrations, or upgrade your plan for unlimited access.';
+
+      // Dispatch a global custom event so any UI component can show a modal / toast
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai-usage-limit', { detail: { ...detail, message: msg } }));
+      }
+
+      // Replace error message with user-friendly text
+      error.message = msg;
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Session API
 export const createSession = async (userType: 'technical' | 'non_technical' = 'non_technical') => {
   const response = await api.post('/api/sessions', {
@@ -159,6 +180,11 @@ export const addNode = async (nodeData: {
 
 export const deleteNode = async (nodeId: string, cascade: boolean = true) => {
   const response = await api.delete(`/api/manage/nodes/${nodeId}?cascade=${cascade}`);
+  return response.data;
+};
+
+export const activateAllNodes = async (sessionId: string) => {
+  const response = await api.post(`/api/manage/nodes/${sessionId}/activate-all`);
   return response.data;
 };
 
@@ -972,13 +998,14 @@ export const clearSessionChatHistory = async (sessionId: string) => {
 };
 
 
-// ===== Global Messaging API ("Mini Slack") =====
+// ===== Global Messaging API (Slack-like) =====
 
 export interface ChatChannelMemberInfo {
   user_id: string;
   username: string;
   email: string;
   joined_at: string;
+  is_online: boolean;
 }
 
 export interface ChatMessagePreview {
@@ -991,12 +1018,28 @@ export interface ChatChannel {
   id: string;
   name: string | null;
   is_direct: boolean;
+  topic: string | null;
+  description: string | null;
   other_user: { user_id: string; username: string } | null;
   members: ChatChannelMemberInfo[];
   member_count: number;
   last_message: ChatMessagePreview | null;
   unread_count: number;
   created_at: string;
+}
+
+export interface MessageReactionGroup {
+  emoji: string;
+  count: number;
+  users: { user_id: string; username: string }[];
+}
+
+export interface MessageAttachmentInfo {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string | null;
+  file_size: number | null;
 }
 
 export interface ChatMessageItem {
@@ -1009,6 +1052,12 @@ export interface ChatMessageItem {
   reference_id: string | null;
   reference_name: string | null;
   is_edited: boolean;
+  is_pinned: boolean;
+  parent_message_id: string | null;
+  thread_reply_count: number;
+  reactions: MessageReactionGroup[];
+  attachments: MessageAttachmentInfo[];
+  mentions: [string, string][]; // [displayName, userId][]
   created_at: string;
 }
 
@@ -1019,6 +1068,38 @@ export interface MessagingUser {
   job_title: string | null;
 }
 
+export interface MentionableUser {
+  id: string;
+  username: string;
+  email: string;
+  is_online: boolean;
+}
+
+export interface MessageSearchResult {
+  results: (ChatMessageItem & { channel_name: string | null; is_direct: boolean })[];
+  total: number;
+}
+
+export interface ThreadResponse {
+  parent: ChatMessageItem;
+  replies: ChatMessageItem[];
+  reply_count: number;
+}
+
+export interface PinnedMessageItem {
+  id: string;
+  message: ChatMessageItem | null;
+  pinned_by: string;
+  pinned_at: string;
+}
+
+export interface UserPresenceInfo {
+  user_id: string;
+  username: string;
+  is_online: boolean;
+}
+
+// -- Channel APIs --
 export const getChannels = async (): Promise<ChatChannel[]> => {
   const response = await api.get('/api/messaging/channels');
   return response.data;
@@ -1028,6 +1109,8 @@ export const createChannel = async (data: {
   name?: string;
   is_direct: boolean;
   member_ids: string[];
+  topic?: string;
+  description?: string;
 }): Promise<{ id: string; name: string | null; is_direct: boolean; already_exists?: boolean }> => {
   const response = await api.post('/api/messaging/channels', data);
   return response.data;
@@ -1038,8 +1121,8 @@ export const getChannelDetail = async (channelId: string) => {
   return response.data;
 };
 
-export const updateChannelName = async (channelId: string, name: string) => {
-  const response = await api.patch(`/api/messaging/channels/${channelId}`, { name });
+export const updateChannel = async (channelId: string, data: { name?: string; topic?: string; description?: string }) => {
+  const response = await api.patch(`/api/messaging/channels/${channelId}`, data);
   return response.data;
 };
 
@@ -1047,6 +1130,7 @@ export const deleteChannel = async (channelId: string) => {
   await api.delete(`/api/messaging/channels/${channelId}`);
 };
 
+// -- Channel Members --
 export const addChannelMember = async (channelId: string, userId: string) => {
   const response = await api.post(`/api/messaging/channels/${channelId}/members`, { user_id: userId });
   return response.data;
@@ -1056,6 +1140,7 @@ export const removeChannelMember = async (channelId: string, userId: string) => 
   await api.delete(`/api/messaging/channels/${channelId}/members/${userId}`);
 };
 
+// -- Messages --
 export const getChannelMessages = async (
   channelId: string,
   limit: number = 50,
@@ -1074,6 +1159,8 @@ export const sendChannelMessage = async (
     reference_type?: string;
     reference_id?: string;
     reference_name?: string;
+    parent_message_id?: string;
+    mentions?: string[];
   },
 ): Promise<ChatMessageItem> => {
   const response = await api.post(`/api/messaging/channels/${channelId}/messages`, data);
@@ -1089,6 +1176,60 @@ export const deleteChannelMessage = async (messageId: string) => {
   await api.delete(`/api/messaging/messages/${messageId}`);
 };
 
+// -- Reactions --
+export const addMessageReaction = async (messageId: string, emoji: string) => {
+  const response = await api.post(`/api/messaging/messages/${messageId}/reactions`, { emoji });
+  return response.data;
+};
+
+export const removeMessageReaction = async (messageId: string, emoji: string) => {
+  const response = await api.delete(`/api/messaging/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`);
+  return response.data;
+};
+
+export const getMessageReactions = async (messageId: string): Promise<MessageReactionGroup[]> => {
+  const response = await api.get(`/api/messaging/messages/${messageId}/reactions`);
+  return response.data;
+};
+
+// -- Threads --
+export const getMessageThread = async (messageId: string, limit: number = 50): Promise<ThreadResponse> => {
+  const response = await api.get(`/api/messaging/messages/${messageId}/thread?limit=${limit}`);
+  return response.data;
+};
+
+// -- Search --
+export const searchMessages = async (q: string, channelId?: string, limit: number = 20): Promise<MessageSearchResult> => {
+  const params = new URLSearchParams({ q, limit: limit.toString() });
+  if (channelId) params.append('channel_id', channelId);
+  const response = await api.get(`/api/messaging/search?${params.toString()}`);
+  return response.data;
+};
+
+// -- Pins --
+export const pinMessage = async (messageId: string) => {
+  const response = await api.post(`/api/messaging/messages/${messageId}/pin`);
+  return response.data;
+};
+
+export const unpinMessage = async (messageId: string) => {
+  const response = await api.delete(`/api/messaging/messages/${messageId}/pin`);
+  return response.data;
+};
+
+export const getPinnedMessages = async (channelId: string): Promise<PinnedMessageItem[]> => {
+  const response = await api.get(`/api/messaging/channels/${channelId}/pins`);
+  return response.data;
+};
+
+// -- @Mention Users --
+export const getMentionableUsers = async (channelId: string, q: string = ''): Promise<MentionableUser[]> => {
+  const params = q ? `?q=${encodeURIComponent(q)}` : '';
+  const response = await api.get(`/api/messaging/channels/${channelId}/mention-users${params}`);
+  return response.data;
+};
+
+// -- Read Tracking --
 export const markChannelRead = async (channelId: string) => {
   const response = await api.post(`/api/messaging/channels/${channelId}/read`);
   return response.data;
@@ -1099,8 +1240,14 @@ export const getMessagingUnreadCount = async (): Promise<{ total: number }> => {
   return response.data;
 };
 
+// -- Users + Presence --
 export const getMessagingUsers = async (): Promise<MessagingUser[]> => {
   const response = await api.get('/api/messaging/users');
+  return response.data;
+};
+
+export const getOnlinePresence = async (): Promise<UserPresenceInfo[]> => {
+  const response = await api.get('/api/messaging/presence');
   return response.data;
 };
 
@@ -1167,6 +1314,7 @@ export interface DocumentVersionInfo {
   changed_by: string | null;
   author_name: string | null;
   change_summary: string | null;
+  content_preview: string[];
   created_at: string;
 }
 
@@ -1348,6 +1496,10 @@ export const sendDocument = async (documentId: string): Promise<ScopeDocument> =
   return response.data;
 };
 
+export const removeDocumentRecipient = async (documentId: string, recipientId: string): Promise<void> => {
+  await api.delete(`/api/documents/${documentId}/recipients/${recipientId}`);
+};
+
 // Templates
 
 export const getDocumentTemplates = async (): Promise<DocumentTemplate[]> => {
@@ -1359,10 +1511,7 @@ export const saveAsTemplate = async (
   documentId: string,
   data: { name: string; description?: string; category?: string }
 ): Promise<DocumentTemplate> => {
-  const response = await api.post('/api/documents/templates', {
-    document_id: documentId,
-    ...data,
-  });
+  const response = await api.post(`/api/documents/templates?document_id=${documentId}`, data);
   return response.data;
 };
 
@@ -1370,7 +1519,7 @@ export const deleteTemplate = async (templateId: string): Promise<void> => {
   await api.delete(`/api/documents/templates/${templateId}`);
 };
 
-// PDF Export
+// Export (PDF & DOCX)
 
 export const getDocumentPDF = async (documentId: string): Promise<Blob> => {
   const response = await api.get(`/api/documents/${documentId}/pdf`, {
@@ -1379,6 +1528,50 @@ export const getDocumentPDF = async (documentId: string): Promise<Blob> => {
   return response.data;
 };
 
+export const getDocumentDOCX = async (documentId: string): Promise<Blob> => {
+  const response = await api.get(`/api/documents/${documentId}/docx`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+// Version Restore
+
+export const restoreDocumentVersion = async (
+  documentId: string,
+  versionId: string
+): Promise<{ status: string; restored_version: number; content: unknown[] }> => {
+  const response = await api.post(`/api/documents/${documentId}/versions/${versionId}/restore`);
+  return response.data;
+};
+
+export const renameDocumentVersion = async (
+  documentId: string,
+  versionId: string,
+  changeSummary: string
+): Promise<DocumentVersionInfo> => {
+  const response = await api.patch(`/api/documents/${documentId}/versions/${versionId}`, {
+    change_summary: changeSummary,
+  });
+  return response.data;
+};
+
+// Shared Document (public — no auth)
+
+export interface SharedDocumentView {
+  title: string;
+  status: string;
+  content: unknown[];
+  creator_name: string;
+  sent_at: string | null;
+  recipient: { name: string; email: string; role: string };
+  pricing_items: PricingLineItemInfo[];
+}
+
+export const getSharedDocument = async (token: string): Promise<SharedDocumentView> => {
+  const response = await api.get(`/api/documents/view/${token}`);
+  return response.data;
+};
 
 // ── Document AI Chat ──────────────────────────────────────────
 
@@ -1396,6 +1589,8 @@ export interface DocumentAIChatResponse {
   blocks: any[];
   provider: string;
   model: string;
+  auto_applied?: boolean;
+  updated_content?: any[] | null;
 }
 
 export const sendDocumentAIMessage = async (
@@ -1415,6 +1610,19 @@ export const getDocumentAIHistory = async (
 
 export const clearDocumentAIHistory = async (documentId: string): Promise<void> => {
   await api.delete(`/api/documents/${documentId}/ai/history`);
+};
+
+export const applyAIBlocksToDocument = async (
+  documentId: string,
+  blocks: any[],
+): Promise<{ content: any[]; action: string }> => {
+  const response = await api.post(`/api/documents/${documentId}/ai/apply`, { blocks });
+  return response.data;
+};
+
+export const getDocumentPreviewUrl = (documentId: string): string => {
+  const baseURL = api.defaults.baseURL || '';
+  return `${baseURL}/api/documents/${documentId}/preview`;
 };
 
 // ===== Public Roadmap & Feature Requests =====

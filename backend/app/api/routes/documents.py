@@ -7,7 +7,9 @@ sharing/recipients, templates, variable resolution, and PDF export.
 from __future__ import annotations
 
 import io
+import base64
 import secrets
+import tempfile
 from datetime import datetime, date
 from typing import List, Optional
 from uuid import UUID
@@ -33,6 +35,27 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
+def _render_mermaid_to_png(code: str, timeout: float = 15.0) -> Optional[bytes]:
+    """Render Mermaid diagram code to PNG bytes via mermaid.ink API.
+
+    Returns PNG bytes on success, or None if rendering fails.
+    """
+    try:
+        import httpx
+
+        # mermaid.ink expects base64-encoded mermaid definition
+        encoded = base64.urlsafe_b64encode(code.encode("utf-8")).decode("ascii")
+        url = f"https://mermaid.ink/img/{encoded}?type=png&bgColor=white"
+
+        resp = httpx.get(url, timeout=timeout, follow_redirects=True)
+        if resp.status_code == 200 and resp.headers.get("content-type", "").startswith("image/"):
+            return resp.content
+        logger.warning(f"mermaid.ink returned {resp.status_code} for diagram")
+    except Exception as exc:
+        logger.warning(f"Failed to render Mermaid diagram to image: {exc}")
+    return None
+
+
 # -- Pydantic Schemas --------------------------------------------------------
 
 class CreateDocumentRequest(BaseModel):
@@ -51,6 +74,10 @@ class SaveContentRequest(BaseModel):
 
 class CreateVersionRequest(BaseModel):
     change_summary: Optional[str] = None
+
+
+class RenameVersionRequest(BaseModel):
+    change_summary: str = Field(..., min_length=1, max_length=500)
 
 
 class AddLineItemRequest(BaseModel):
@@ -329,6 +356,191 @@ def _apply_variables_to_content(content: list, variables: dict) -> list:
     return json_lib.loads(serialized)
 
 
+def _generate_version_summary(db: Session, doc: Document, prev_version_number: int) -> str:
+    """Generate a descriptive summary for a version snapshot by analysing the content.
+    
+    Extracts section headings from the current content and optionally compares 
+    with the previous version to describe what changed.
+    """
+    # Extract section headings from current content
+    headings = []
+    block_count = 0
+    if doc.content and isinstance(doc.content, list):
+        block_count = len(doc.content)
+        for block in doc.content:
+            if isinstance(block, dict) and block.get("type") == "heading":
+                text_parts = []
+                for item in (block.get("content") or []):
+                    if isinstance(item, dict):
+                        text_parts.append(item.get("text", ""))
+                heading_text = "".join(text_parts).strip()
+                if heading_text:
+                    headings.append(heading_text)
+    
+    if not headings and block_count == 0:
+        return "Empty document snapshot"
+    
+    # Try to compare with previous version
+    if prev_version_number > 0:
+        prev = (
+            db.query(DocumentVersion)
+            .filter(
+                DocumentVersion.document_id == doc.id,
+                DocumentVersion.version_number == prev_version_number,
+            )
+            .first()
+        )
+        if prev and prev.content:
+            prev_headings = set()
+            for block in prev.content:
+                if isinstance(block, dict) and block.get("type") == "heading":
+                    text_parts = []
+                    for item in (block.get("content") or []):
+                        if isinstance(item, dict):
+                            text_parts.append(item.get("text", ""))
+                    h = "".join(text_parts).strip()
+                    if h:
+                        prev_headings.add(h)
+            
+            new_sections = [h for h in headings if h not in prev_headings]
+            prev_block_count = len(prev.content) if prev.content else 0
+            diff = block_count - prev_block_count
+            
+            parts = []
+            if new_sections:
+                parts.append(f"Added: {', '.join(new_sections[:3])}")
+                if len(new_sections) > 3:
+                    parts.append(f"(+{len(new_sections) - 3} more sections)")
+            if diff > 0:
+                parts.append(f"+{diff} blocks")
+            elif diff < 0:
+                parts.append(f"{diff} blocks")
+            
+            if parts:
+                return "; ".join(parts)
+    
+    # First version or no previous — describe content
+    if headings:
+        sections_str = ", ".join(headings[:4])
+        if len(headings) > 4:
+            sections_str += f" (+{len(headings) - 4} more)"
+        return f"Sections: {sections_str}"
+    
+    return f"Document snapshot ({block_count} blocks)"
+
+
+def _extract_section_headings(content) -> list:
+    """Extract heading text from BlockNote content blocks for version preview."""
+    headings = []
+    if not content or not isinstance(content, list):
+        return headings
+    for block in content:
+        if isinstance(block, dict) and block.get("type") == "heading":
+            text_parts = []
+            for item in (block.get("content") or []):
+                if isinstance(item, dict):
+                    text_parts.append(item.get("text", ""))
+            heading_text = "".join(text_parts).strip()
+            if heading_text:
+                headings.append(heading_text)
+    return headings
+
+
+# -- Templates (MUST be registered before /{document_id} to avoid route conflict) --
+
+@router.get("/templates")
+def list_templates(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List available templates (system templates + user's org templates)."""
+    query = db.query(DocumentTemplate).filter(
+        DocumentTemplate.is_active == True,
+    )
+
+    if current_user.organization_id:
+        query = query.filter(
+            (DocumentTemplate.is_system == True)
+            | (DocumentTemplate.organization_id == current_user.organization_id)
+        )
+    else:
+        query = query.filter(DocumentTemplate.is_system == True)
+
+    templates = query.order_by(DocumentTemplate.category, DocumentTemplate.name).all()
+
+    return [
+        {
+            "id": str(t.id),
+            "name": t.name,
+            "description": t.description,
+            "category": t.category,
+            "thumbnail_url": t.thumbnail_url,
+            "is_system": t.is_system,
+            "variables": t.variables or [],
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+        }
+        for t in templates
+    ]
+
+
+@router.post("/templates", status_code=201)
+def create_template(
+    body: CreateTemplateRequest,
+    document_id: str = Query(..., description="Source document ID to save as template"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save an existing document as a reusable template."""
+    doc = _verify_document_access(db, document_id, current_user)
+
+    template = DocumentTemplate(
+        organization_id=current_user.organization_id,
+        created_by=current_user.id,
+        name=body.name,
+        description=body.description,
+        category=body.category,
+        content=list(doc.content) if doc.content else [],
+        variables=[],
+        is_system=False,
+        is_active=True,
+    )
+    db.add(template)
+    db.commit()
+    db.refresh(template)
+
+    return {
+        "id": str(template.id),
+        "name": template.name,
+        "description": template.description,
+        "category": template.category,
+        "created_at": template.created_at.isoformat(),
+    }
+
+
+@router.delete("/templates/{template_id}", status_code=204)
+def delete_template(
+    template_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete an organization template (not system templates)."""
+    template = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(404, "Template not found")
+
+    if template.is_system:
+        raise HTTPException(403, "Cannot delete system templates")
+
+    # Only org members or the creator can delete
+    if template.organization_id != current_user.organization_id and template.created_by != current_user.id:
+        raise HTTPException(403, "You do not have permission to delete this template")
+
+    db.delete(template)
+    db.commit()
+
+
+# -- Document by ID -----------------------------------------------------------
+
 @router.get("/{document_id}")
 def get_document(
     document_id: str,
@@ -497,11 +709,50 @@ def list_versions(
             "version_number": v.version_number,
             "change_summary": v.change_summary,
             "changed_by": str(v.changed_by) if v.changed_by else None,
-            "changed_by_name": v.author.username if v.author else "Unknown",
+            "author_name": v.author.username if v.author else "Unknown",
+            "content_preview": _extract_section_headings(v.content),
             "created_at": v.created_at.isoformat(),
         }
         for v in versions
     ]
+
+
+@router.patch("/{document_id}/versions/{version_id}")
+def rename_version(
+    document_id: str,
+    version_id: str,
+    body: RenameVersionRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Rename a version (update its change_summary)."""
+    _verify_document_access(db, document_id, current_user)
+
+    version = (
+        db.query(DocumentVersion)
+        .filter(
+            DocumentVersion.id == version_id,
+            DocumentVersion.document_id == document_id,
+        )
+        .options(joinedload(DocumentVersion.author))
+        .first()
+    )
+    if not version:
+        raise HTTPException(404, "Version not found")
+
+    version.change_summary = body.change_summary
+    db.commit()
+    db.refresh(version)
+
+    return {
+        "id": str(version.id),
+        "version_number": version.version_number,
+        "change_summary": version.change_summary,
+        "changed_by": str(version.changed_by) if version.changed_by else None,
+        "author_name": version.author.username if version.author else "Unknown",
+        "content_preview": _extract_section_headings(version.content),
+        "created_at": version.created_at.isoformat(),
+    }
 
 
 @router.post("/{document_id}/versions", status_code=201)
@@ -511,7 +762,11 @@ def create_version(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Create a named version snapshot of the current content."""
+    """Create a named version snapshot of the current content.
+    
+    If no change_summary is provided, auto-generates one by analysing
+    the document content (compares with previous version if one exists).
+    """
     doc = _verify_document_access(db, document_id, current_user)
 
     # Determine next version number
@@ -521,12 +776,17 @@ def create_version(
         .scalar()
     ) or 0
 
+    # Auto-generate a descriptive summary when none is provided
+    summary = body.change_summary
+    if not summary or summary.strip() in ("", "Manual snapshot"):
+        summary = _generate_version_summary(db, doc, max_version)
+
     version = DocumentVersion(
         document_id=doc.id,
         version_number=max_version + 1,
         content=list(doc.content) if doc.content else [],
         changed_by=current_user.id,
-        change_summary=body.change_summary,
+        change_summary=summary,
     )
     db.add(version)
     db.commit()
@@ -536,6 +796,7 @@ def create_version(
         "id": str(version.id),
         "version_number": version.version_number,
         "change_summary": version.change_summary,
+        "author_name": current_user.username if current_user else "Unknown",
         "created_at": version.created_at.isoformat(),
     }
 
@@ -569,8 +830,44 @@ def get_version(
         "content": version.content,
         "change_summary": version.change_summary,
         "changed_by": str(version.changed_by) if version.changed_by else None,
-        "changed_by_name": version.author.username if version.author else "Unknown",
+        "author_name": version.author.username if version.author else "Unknown",
         "created_at": version.created_at.isoformat(),
+    }
+
+
+@router.post("/{document_id}/versions/{version_id}/restore")
+def restore_version(
+    document_id: str,
+    version_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Restore a document to a previous version.
+
+    Replaces the document content with the selected version's content.
+    """
+    doc = _verify_document_access(db, document_id, current_user)
+
+    version = (
+        db.query(DocumentVersion)
+        .filter(
+            DocumentVersion.id == version_id,
+            DocumentVersion.document_id == document_id,
+        )
+        .first()
+    )
+    if not version:
+        raise HTTPException(404, "Version not found")
+
+    # Replace current content with the version's content
+    doc.content = list(version.content) if version.content else []
+    db.commit()
+    db.refresh(doc)
+
+    return {
+        "status": "restored",
+        "restored_version": version.version_number,
+        "content": doc.content,
     }
 
 
@@ -852,6 +1149,14 @@ def share_document(
     for r in added_recipients:
         db.refresh(r)
 
+    # Return ALL recipients (not just newly added) so the frontend stays in sync
+    all_recipients = (
+        db.query(DocumentRecipient)
+        .filter(DocumentRecipient.document_id == doc.id)
+        .order_by(DocumentRecipient.created_at)
+        .all()
+    )
+
     return {
         "share_token": doc.share_token,
         "recipients": [
@@ -861,10 +1166,40 @@ def share_document(
                 "email": r.email,
                 "role": r.role,
                 "access_token": r.access_token,
+                "sent_at": r.sent_at.isoformat() if r.sent_at else None,
+                "viewed_at": r.viewed_at.isoformat() if r.viewed_at else None,
+                "completed_at": r.completed_at.isoformat() if r.completed_at else None,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
             }
-            for r in added_recipients
+            for r in all_recipients
         ],
     }
+
+
+@router.delete("/{document_id}/recipients/{recipient_id}")
+def remove_recipient(
+    document_id: str,
+    recipient_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Remove a recipient from a document."""
+    _verify_document_access(db, document_id, current_user)
+
+    recipient = (
+        db.query(DocumentRecipient)
+        .filter(
+            DocumentRecipient.id == recipient_id,
+            DocumentRecipient.document_id == document_id,
+        )
+        .first()
+    )
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+
+    db.delete(recipient)
+    db.commit()
+    return {"success": True}
 
 
 @router.get("/{document_id}/recipients")
@@ -939,26 +1274,36 @@ def view_document_public(
     access_token: str,
     db: Session = Depends(get_db),
 ):
-    """PUBLIC endpoint -- view a document as a recipient. No auth required."""
+    """PUBLIC endpoint — view a document via share_token or recipient access_token.
+
+    Accepts either the document-level share_token (from the copy-link flow)
+    or a per-recipient access_token.
+    """
+    # Try per-recipient access_token first
     recipient = (
         db.query(DocumentRecipient)
         .filter(DocumentRecipient.access_token == access_token)
         .first()
     )
-    if not recipient:
-        raise HTTPException(404, "Invalid or expired access link")
 
-    doc = (
-        db.query(Document)
-        .filter(Document.id == recipient.document_id)
-        .options(
-            joinedload(Document.creator),
-            joinedload(Document.pricing_items),
+    if recipient:
+        doc = (
+            db.query(Document)
+            .filter(Document.id == recipient.document_id)
+            .options(joinedload(Document.creator), joinedload(Document.pricing_items))
+            .first()
         )
-        .first()
-    )
+    else:
+        # Fallback: try document-level share_token
+        doc = (
+            db.query(Document)
+            .filter(Document.share_token == access_token)
+            .options(joinedload(Document.creator), joinedload(Document.pricing_items))
+            .first()
+        )
+
     if not doc:
-        raise HTTPException(404, "Document not found")
+        raise HTTPException(404, "Invalid or expired access link")
 
     # Check expiry
     if doc.expires_at and doc.expires_at < datetime.utcnow():
@@ -966,7 +1311,7 @@ def view_document_public(
 
     # Update viewed_at timestamps
     now = datetime.utcnow()
-    if not recipient.viewed_at:
+    if recipient and not recipient.viewed_at:
         recipient.viewed_at = now
     if not doc.viewed_at:
         doc.viewed_at = now
@@ -976,7 +1321,6 @@ def view_document_public(
     db.commit()
     db.refresh(doc)
 
-    # Return document content (public view -- no share_token or internal IDs)
     pricing_items = sorted((doc.pricing_items or []), key=lambda i: i.order_index)
 
     return {
@@ -986,108 +1330,424 @@ def view_document_public(
         "creator_name": doc.creator.username if doc.creator else "Unknown",
         "sent_at": doc.sent_at.isoformat() if doc.sent_at else None,
         "recipient": {
-            "name": recipient.name,
-            "email": recipient.email,
-            "role": recipient.role,
+            "name": recipient.name if recipient else "Link visitor",
+            "email": recipient.email if recipient else "",
+            "role": recipient.role if recipient else "viewer",
         },
         "pricing_items": [_serialize_line_item(i) for i in pricing_items],
     }
 
 
-# -- Templates ----------------------------------------------------------------
+# -- Export (PDF & DOCX) ------------------------------------------------------
 
-@router.get("/templates")
-def list_templates(
+
+class ExportFormatQuery:
+    """Allow ?format=pdf or ?format=docx query param."""
+    pass
+
+
+@router.get("/{document_id}/docx")
+def export_document_docx(
+    document_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List available templates (system templates + user's org templates)."""
-    query = db.query(DocumentTemplate).filter(
-        DocumentTemplate.is_active == True,
-    )
-
-    if current_user.organization_id:
-        query = query.filter(
-            (DocumentTemplate.is_system == True)
-            | (DocumentTemplate.organization_id == current_user.organization_id)
-        )
-    else:
-        query = query.filter(DocumentTemplate.is_system == True)
-
-    templates = query.order_by(DocumentTemplate.category, DocumentTemplate.name).all()
-
-    return [
-        {
-            "id": str(t.id),
-            "name": t.name,
-            "description": t.description,
-            "category": t.category,
-            "thumbnail_url": t.thumbnail_url,
-            "is_system": t.is_system,
-            "variables": t.variables or [],
-            "created_at": t.created_at.isoformat() if t.created_at else None,
-        }
-        for t in templates
-    ]
-
-
-@router.post("/templates", status_code=201)
-def create_template(
-    body: CreateTemplateRequest,
-    document_id: str = Query(..., description="Source document ID to save as template"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Save an existing document as a reusable template."""
+    """Render document to DOCX (Word) and return as a streaming download."""
     doc = _verify_document_access(db, document_id, current_user)
+    content_blocks = doc.content or []
 
-    template = DocumentTemplate(
-        organization_id=current_user.organization_id,
-        created_by=current_user.id,
-        name=body.name,
-        description=body.description,
-        category=body.category,
-        content=list(doc.content) if doc.content else [],
-        variables=[],
-        is_system=False,
-        is_active=True,
+    try:
+        from docx import Document as WordDocument
+        from docx.shared import Pt, Inches, RGBColor, Emu
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+        from docx.oxml.ns import qn
+    except ImportError:
+        raise HTTPException(
+            500,
+            "DOCX generation requires the python-docx package. Install with: pip install python-docx",
+        )
+
+    word = WordDocument()
+
+    # ── Configure default styles to match preview ──
+    style_normal = word.styles["Normal"]
+    style_normal.font.name = "Inter"
+    style_normal.font.size = Pt(10.5)
+    style_normal.font.color.rgb = RGBColor(55, 65, 81)  # text-neutral-700
+    style_normal.paragraph_format.space_after = Pt(4)
+    style_normal.paragraph_format.line_spacing = 1.5
+
+    # Heading styles
+    for level_num, (size, color_hex) in {
+        0: (24, "111827"),
+        1: (20, "111827"),
+        2: (16, "1F2937"),
+        3: (13, "374151"),
+    }.items():
+        try:
+            hs = word.styles[f"Heading {level_num}"]
+            hs.font.name = "Inter"
+            hs.font.size = Pt(size)
+            hs.font.color.rgb = RGBColor(
+                int(color_hex[0:2], 16),
+                int(color_hex[2:4], 16),
+                int(color_hex[4:6], 16),
+            )
+            hs.font.bold = True
+            hs.paragraph_format.space_before = Pt(16 if level_num <= 1 else 12)
+            hs.paragraph_format.space_after = Pt(6)
+        except KeyError:
+            pass
+
+    # List styles
+    for list_style_name in ["List Bullet", "List Number"]:
+        try:
+            ls = word.styles[list_style_name]
+            ls.font.name = "Inter"
+            ls.font.size = Pt(10.5)
+            ls.font.color.rgb = RGBColor(55, 65, 81)
+        except KeyError:
+            pass
+
+    # Document title
+    title_para = word.add_heading(doc.title or "Untitled Document", level=0)
+    title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    # Project name
+    session = db.query(SessionModel).filter(
+        SessionModel.id == doc.session_id
+    ).first()
+    project_name = session.document_filename or "Untitled" if session else ""
+
+    # Metadata line
+    meta_parts = []
+    if project_name:
+        meta_parts.append(f"Project: {project_name}")
+    meta_parts.append(f"Status: {doc.status.value.title() if doc.status else 'Draft'}")
+    if doc.created_at:
+        meta_parts.append(f"Created: {doc.created_at.strftime('%B %d, %Y')}")
+    meta_para = word.add_paragraph("  |  ".join(meta_parts))
+    meta_run = meta_para.runs[0] if meta_para.runs else meta_para.add_run("")
+    meta_run.font.size = Pt(9)
+    meta_run.font.color.rgb = RGBColor(107, 114, 128)
+
+    # Divider
+    word.add_paragraph("─" * 60).runs[0].font.color.rgb = RGBColor(229, 231, 235)
+
+    # Render content blocks
+    for block in content_blocks:
+        _render_block_to_docx_v2(word, block)
+
+    # Pricing table
+    pricing_items = (
+        db.query(PricingLineItem)
+        .filter(PricingLineItem.document_id == doc.id)
+        .order_by(PricingLineItem.order_index)
+        .all()
     )
-    db.add(template)
-    db.commit()
-    db.refresh(template)
 
-    return {
-        "id": str(template.id),
-        "name": template.name,
-        "description": template.description,
-        "category": template.category,
-        "created_at": template.created_at.isoformat(),
-    }
+    if pricing_items:
+        word.add_heading("Pricing", level=1)
+        table = word.add_table(rows=1, cols=6)
+        table.style = "Table Grid"
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        headers = ["Item", "Qty", "Unit Price", "Discount", "Tax", "Total"]
+        for idx_h, header in enumerate(headers):
+            cell = table.rows[0].cells[idx_h]
+            cell.text = header
+            # Bold header styling
+            for p in cell.paragraphs:
+                for run in p.runs:
+                    run.bold = True
+                    run.font.size = Pt(9)
+                    run.font.name = "Inter"
+            # Gray background
+            shading = cell._element.get_or_add_tcPr()
+            bg = shading.makeelement(qn("w:shd"), {
+                qn("w:val"): "clear",
+                qn("w:color"): "auto",
+                qn("w:fill"): "F9FAFB",
+            })
+            shading.append(bg)
+
+        grand_total = 0.0
+        for item in pricing_items:
+            line_total = item.quantity * item.unit_price * (1 - item.discount_percent / 100) * (1 + item.tax_percent / 100)
+            grand_total += line_total
+            row = table.add_row()
+            row.cells[0].text = item.name[:50]
+            row.cells[1].text = f"{item.quantity:.1f}"
+            row.cells[2].text = f"${item.unit_price:,.2f}"
+            row.cells[3].text = f"{item.discount_percent:.0f}%"
+            row.cells[4].text = f"{item.tax_percent:.0f}%"
+            row.cells[5].text = f"${line_total:,.2f}"
+
+        total_row = table.add_row()
+        total_row.cells[0].text = "Total"
+        for p in total_row.cells[0].paragraphs:
+            for run in p.runs:
+                run.bold = True
+        total_row.cells[5].text = f"${grand_total:,.2f}"
+
+    # Output
+    buf = io.BytesIO()
+    word.save(buf)
+    buf.seek(0)
+
+    filename = f"{doc.title or 'document'}_{datetime.utcnow().strftime('%Y%m%d')}.docx"
+    filename = "".join(c if c.isalnum() or c in "._- " else "_" for c in filename)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
-@router.delete("/templates/{template_id}", status_code=204)
-def delete_template(
-    template_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Delete an organization template (not system templates)."""
-    template = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id).first()
-    if not template:
-        raise HTTPException(404, "Template not found")
+def _extract_cell_text_export(cell) -> str:
+    """Extract plain text from a table cell in any storage format."""
+    if cell is None:
+        return ""
+    if isinstance(cell, str):
+        return cell
+    if isinstance(cell, list):
+        if cell and isinstance(cell[0], list):
+            return _extract_cell_text_export(cell[0])
+        parts = []
+        for item in cell:
+            if isinstance(item, dict):
+                parts.append(item.get("text", ""))
+            elif isinstance(item, str):
+                parts.append(item)
+        return "".join(parts)
+    if isinstance(cell, dict):
+        if "content" in cell:
+            return _extract_cell_text_export(cell["content"])
+        return cell.get("text", "")
+    return str(cell)
 
-    if template.is_system:
-        raise HTTPException(403, "Cannot delete system templates")
 
-    # Only org members or the creator can delete
-    if template.organization_id != current_user.organization_id and template.created_by != current_user.id:
-        raise HTTPException(403, "You do not have permission to delete this template")
+def _render_block_to_docx_v2(word, block: dict) -> None:
+    """Render a single content block to a python-docx Document with proper styling."""
+    from docx.shared import Pt, Inches, RGBColor
+    from docx.oxml.ns import qn
 
-    db.delete(template)
-    db.commit()
+    block_type = block.get("type", "paragraph")
+    props = block.get("props", {})
+    content = block.get("content", [])
 
+    # Extract inline text with styling info
+    inline_items = []
+    if isinstance(content, list):
+        for item in content:
+            if isinstance(item, dict):
+                inline_items.append(item)
+            elif isinstance(item, str):
+                inline_items.append({"type": "text", "text": item, "styles": {}})
 
-# -- PDF Export ---------------------------------------------------------------
+    plain_text = "".join(item.get("text", "") for item in inline_items)
+
+    if block_type == "heading":
+        level = min(props.get("level", 1), 4)
+        para = word.add_heading("", level=level)
+        # Add inline content with formatting
+        for item in inline_items:
+            run = para.add_run(item.get("text", ""))
+            styles = item.get("styles", {})
+            if styles.get("bold"):
+                run.bold = True
+            if styles.get("italic"):
+                run.italic = True
+
+    elif block_type == "bulletListItem":
+        para = word.add_paragraph("", style="List Bullet")
+        for item in inline_items:
+            run = para.add_run(item.get("text", ""))
+            styles = item.get("styles", {})
+            run.font.name = "Inter"
+            run.font.size = Pt(10.5)
+            run.font.color.rgb = RGBColor(55, 65, 81)
+            if styles.get("bold"):
+                run.bold = True
+            if styles.get("italic"):
+                run.italic = True
+            if styles.get("code"):
+                run.font.name = "Courier New"
+                run.font.size = Pt(9)
+                run.font.color.rgb = RGBColor(79, 70, 229)
+
+    elif block_type == "numberedListItem":
+        para = word.add_paragraph("", style="List Number")
+        for item in inline_items:
+            run = para.add_run(item.get("text", ""))
+            styles = item.get("styles", {})
+            run.font.name = "Inter"
+            run.font.size = Pt(10.5)
+            run.font.color.rgb = RGBColor(55, 65, 81)
+            if styles.get("bold"):
+                run.bold = True
+            if styles.get("italic"):
+                run.italic = True
+
+    elif block_type == "codeBlock":
+        lang = props.get("language", "")
+        para = word.add_paragraph()
+        para.paragraph_format.space_before = Pt(6)
+        para.paragraph_format.space_after = Pt(6)
+        # Code block with background
+        run = para.add_run(plain_text)
+        run.font.name = "Courier New"
+        run.font.size = Pt(9)
+        run.font.color.rgb = RGBColor(30, 41, 59)
+        # Add shading to paragraph
+        pPr = para._element.get_or_add_pPr()
+        shading = pPr.makeelement(qn("w:shd"), {
+            qn("w:val"): "clear",
+            qn("w:color"): "auto",
+            qn("w:fill"): "F1F5F9",
+        })
+        pPr.append(shading)
+
+    elif block_type == "mermaid":
+        code = props.get("code", plain_text)
+
+        # Try to render Mermaid code to a real PNG image
+        png_bytes = _render_mermaid_to_png(code)
+        if png_bytes:
+            # Insert the rendered diagram as an image
+            img_stream = io.BytesIO(png_bytes)
+            para = word.add_paragraph()
+            para.paragraph_format.space_before = Pt(8)
+            para.paragraph_format.space_after = Pt(8)
+            run = para.add_run()
+            run.add_picture(img_stream, width=Inches(5.5))
+        else:
+            # Fallback: styled placeholder with raw code
+            para = word.add_paragraph()
+            para.paragraph_format.space_before = Pt(8)
+            para.paragraph_format.space_after = Pt(4)
+            run = para.add_run("📊 Diagram")
+            run.bold = True
+            run.font.name = "Inter"
+            run.font.size = Pt(10)
+            run.font.color.rgb = RGBColor(59, 130, 246)
+
+            desc_para = word.add_paragraph()
+            desc_run = desc_para.add_run(
+                "(Could not render diagram image. Below is the diagram definition.)"
+            )
+            desc_run.font.name = "Inter"
+            desc_run.font.size = Pt(8)
+            desc_run.font.italic = True
+            desc_run.font.color.rgb = RGBColor(156, 163, 175)
+
+            code_para = word.add_paragraph()
+            code_para.paragraph_format.space_after = Pt(8)
+            code_run = code_para.add_run(code)
+            code_run.font.name = "Courier New"
+            code_run.font.size = Pt(8)
+            code_run.font.color.rgb = RGBColor(30, 41, 59)
+            pPr = code_para._element.get_or_add_pPr()
+            shading = pPr.makeelement(qn("w:shd"), {
+                qn("w:val"): "clear",
+                qn("w:color"): "auto",
+                qn("w:fill"): "EFF6FF",
+            })
+            pPr.append(shading)
+
+    elif block_type == "table":
+        # Render BlockNote table
+        table_content = content
+        rows_data = []
+        if isinstance(table_content, dict):
+            rows_data = table_content.get("rows", [])
+        elif isinstance(table_content, list):
+            rows_data = table_content
+
+        if rows_data:
+            num_cols = max(len(r.get("cells", [])) for r in rows_data) if rows_data else 1
+            table = word.add_table(rows=0, cols=num_cols)
+            table.style = "Table Grid"
+
+            for ri, row in enumerate(rows_data):
+                cells = row.get("cells", [])
+                word_row = table.add_row()
+                for ci in range(num_cols):
+                    cell_data = cells[ci] if ci < len(cells) else None
+                    cell_text = _extract_cell_text_export(cell_data)
+                    word_row.cells[ci].text = cell_text
+
+                    # Style cell text
+                    for p in word_row.cells[ci].paragraphs:
+                        for run in p.runs:
+                            run.font.name = "Inter"
+                            run.font.size = Pt(9)
+                            if ri == 0:
+                                run.bold = True
+                                run.font.color.rgb = RGBColor(55, 65, 81)
+                            else:
+                                run.font.color.rgb = RGBColor(75, 85, 99)
+
+                    # Header row background
+                    if ri == 0:
+                        tc_pr = word_row.cells[ci]._element.get_or_add_tcPr()
+                        shading = tc_pr.makeelement(qn("w:shd"), {
+                            qn("w:val"): "clear",
+                            qn("w:color"): "auto",
+                            qn("w:fill"): "F9FAFB",
+                        })
+                        tc_pr.append(shading)
+
+    elif block_type in ("quote", "callout"):
+        para = word.add_paragraph()
+        para.paragraph_format.left_indent = Pt(18)
+        para.paragraph_format.space_before = Pt(6)
+        para.paragraph_format.space_after = Pt(6)
+        # Left border via shading
+        pPr = para._element.get_or_add_pPr()
+        shading = pPr.makeelement(qn("w:shd"), {
+            qn("w:val"): "clear",
+            qn("w:color"): "auto",
+            qn("w:fill"): "FAFAF5",
+        })
+        pPr.append(shading)
+        for item in inline_items:
+            run = para.add_run(item.get("text", ""))
+            run.font.name = "Inter"
+            run.font.size = Pt(10)
+            run.font.italic = True
+            run.font.color.rgb = RGBColor(75, 85, 99)
+
+    else:
+        # Default paragraph with inline styling
+        if plain_text:
+            para = word.add_paragraph()
+            for item in inline_items:
+                run = para.add_run(item.get("text", ""))
+                styles = item.get("styles", {})
+                run.font.name = "Inter"
+                run.font.size = Pt(10.5)
+                run.font.color.rgb = RGBColor(55, 65, 81)
+                if styles.get("bold"):
+                    run.bold = True
+                    run.font.color.rgb = RGBColor(17, 24, 39)
+                if styles.get("italic"):
+                    run.italic = True
+                if styles.get("code"):
+                    run.font.name = "Courier New"
+                    run.font.size = Pt(9)
+                    run.font.color.rgb = RGBColor(79, 70, 229)
+                if styles.get("underline"):
+                    run.underline = True
+                if styles.get("strikethrough"):
+                    run.font.strike = True
+
+    # Recurse into children
+    for child in block.get("children", []):
+        if isinstance(child, dict):
+            _render_block_to_docx_v2(word, child)
+
 
 @router.get("/{document_id}/pdf")
 def export_document_pdf(
@@ -1100,7 +1760,6 @@ def export_document_pdf(
 
     content_blocks = doc.content or []
 
-    # Build simple PDF from content JSON
     try:
         from fpdf import FPDF
     except ImportError:
@@ -1110,29 +1769,50 @@ def export_document_pdf(
         )
 
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_auto_page_break(auto=True, margin=20)
     pdf.add_page()
 
-    # Title
-    pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(0, 12, doc.title or "Untitled Document", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(4)
+    # Use built-in fonts (DejaVu available in container, but fallback to Helvetica for safety)
+    PAGE_W = pdf.w - pdf.l_margin - pdf.r_margin
 
-    # Metadata line
-    pdf.set_font("Helvetica", "", 9)
-    pdf.set_text_color(120, 120, 120)
-    meta_line = f"Status: {doc.status.value.title()}"
+    # ── Title ──
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.set_text_color(17, 24, 39)
+    pdf.multi_cell(0, 10, doc.title or "Untitled Document")
+    pdf.ln(2)
+
+    # ── Metadata line ──
+    session = db.query(SessionModel).filter(
+        SessionModel.id == doc.session_id
+    ).first()
+    project_name = session.document_filename or "Untitled" if session else ""
+
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(107, 114, 128)
+    meta_parts = []
+    if project_name:
+        meta_parts.append(f"Project: {project_name}")
+    meta_parts.append(f"Status: {doc.status.value.title() if doc.status else 'Draft'}")
     if doc.created_at:
-        meta_line += f"  |  Created: {doc.created_at.strftime('%B %d, %Y')}"
-    pdf.cell(0, 6, meta_line, new_x="LMARGIN", new_y="NEXT")
+        meta_parts.append(f"Created: {doc.created_at.strftime('%B %d, %Y')}")
+    pdf.cell(0, 5, "  |  ".join(meta_parts), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(2)
+
+    # Divider line
+    pdf.set_draw_color(229, 231, 235)
+    pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
     pdf.ln(6)
-    pdf.set_text_color(0, 0, 0)
 
-    # Render content blocks
+    # Reset text color
+    pdf.set_text_color(55, 65, 81)
+
+    # ── Render content blocks ──
+    _pdf_list_counter = [0]  # mutable counter for numbered lists
+
     for block in content_blocks:
-        _render_block_to_pdf(pdf, block)
+        _render_block_to_pdf_v2(pdf, block, PAGE_W, _pdf_list_counter)
 
-    # Pricing table if items exist
+    # ── Pricing table ──
     pricing_items = (
         db.query(PricingLineItem)
         .filter(PricingLineItem.document_id == doc.id)
@@ -1142,27 +1822,31 @@ def export_document_pdf(
 
     if pricing_items:
         pdf.ln(8)
-        pdf.set_font("Helvetica", "B", 14)
+        pdf.set_font("Helvetica", "B", 16)
+        pdf.set_text_color(17, 24, 39)
         pdf.cell(0, 10, "Pricing", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(2)
 
-        # Table header
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.set_fill_color(240, 240, 240)
-        col_widths = [60, 20, 25, 25, 20, 30]
+        col_widths = [55, 18, 28, 25, 20, 34]
         headers = ["Item", "Qty", "Unit Price", "Discount", "Tax", "Total"]
+
+        # Header row
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_fill_color(249, 250, 251)
+        pdf.set_text_color(55, 65, 81)
         for w, h in zip(col_widths, headers):
-            pdf.cell(w, 8, h, border=1, fill=True)
+            pdf.cell(w, 7, h, border=1, fill=True)
         pdf.ln()
 
-        # Table rows
-        pdf.set_font("Helvetica", "", 9)
+        # Data rows
+        pdf.set_font("Helvetica", "", 8)
+        pdf.set_text_color(75, 85, 99)
         grand_total = 0.0
         for item in pricing_items:
             line_total = item.quantity * item.unit_price * (1 - item.discount_percent / 100) * (1 + item.tax_percent / 100)
             grand_total += line_total
 
-            name_display = item.name[:30] + "..." if len(item.name) > 30 else item.name
+            name_display = item.name[:28] + ".." if len(item.name) > 30 else item.name
             pdf.cell(col_widths[0], 7, name_display, border=1)
             pdf.cell(col_widths[1], 7, f"{item.quantity:.1f}", border=1)
             pdf.cell(col_widths[2], 7, f"${item.unit_price:,.2f}", border=1)
@@ -1172,9 +1856,11 @@ def export_document_pdf(
             pdf.ln()
 
         # Grand total row
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_fill_color(249, 250, 251)
+        pdf.set_text_color(17, 24, 39)
         total_label_width = sum(col_widths[:-1])
-        pdf.cell(total_label_width, 8, "Total", border=1, fill=True)
+        pdf.cell(total_label_width, 8, "Grand Total", border=1, fill=True, align="R")
         pdf.cell(col_widths[-1], 8, f"${grand_total:,.2f}", border=1, fill=True)
         pdf.ln()
 
@@ -1182,7 +1868,6 @@ def export_document_pdf(
     pdf_bytes = pdf.output()
 
     filename = f"{doc.title or 'document'}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
-    # Sanitize filename
     filename = "".join(c if c.isalnum() or c in "._- " else "_" for c in filename)
 
     return StreamingResponse(
@@ -1192,51 +1877,225 @@ def export_document_pdf(
     )
 
 
-def _render_block_to_pdf(pdf: "FPDF", block: dict) -> None:
-    """Render a single content block to the PDF."""
+def _safe_text(text: str) -> str:
+    """Sanitize text for fpdf2: replace chars that can't be encoded in latin-1."""
+    replacements = {
+        "\u2013": "-", "\u2014": "--", "\u2018": "'", "\u2019": "'",
+        "\u201c": '"', "\u201d": '"', "\u2026": "...", "\u2022": "-",
+        "\u2192": "->", "\u2190": "<-", "\u2194": "<->",
+        "\u2500": "-", "\u2502": "|", "\u250c": "+", "\u2510": "+",
+        "\u2514": "+", "\u2518": "+", "\u251c": "+", "\u2524": "+",
+        "\u252c": "+", "\u2534": "+", "\u253c": "+",
+        "\u2713": "v", "\u2717": "x", "\u00a0": " ",
+    }
+    for ch, repl in replacements.items():
+        text = text.replace(ch, repl)
+    # Final fallback: replace any remaining non-latin1 chars
+    try:
+        text.encode("latin-1")
+    except UnicodeEncodeError:
+        text = text.encode("latin-1", errors="replace").decode("latin-1")
+    return text
+
+
+def _render_block_to_pdf_v2(pdf: "FPDF", block: dict, page_w: float, list_counter: list) -> None:
+    """Render a single content block to the PDF with proper styling."""
     block_type = block.get("type", "paragraph")
     props = block.get("props", {})
+    content = block.get("content", [])
 
-    # Extract text from inline content array
-    text = ""
-    for inline in block.get("content", []):
-        if isinstance(inline, dict):
-            text += inline.get("text", "")
-        elif isinstance(inline, str):
-            text += inline
+    # Extract inline items
+    inline_items = []
+    if isinstance(content, list):
+        for item in content:
+            if isinstance(item, dict):
+                inline_items.append(item)
+            elif isinstance(item, str):
+                inline_items.append({"type": "text", "text": item, "styles": {}})
+
+    plain_text = _safe_text("".join(item.get("text", "") for item in inline_items))
 
     if block_type == "heading":
         level = props.get("level", 1)
-        sizes = {1: 16, 2: 14, 3: 12}
-        pdf.set_font("Helvetica", "B", sizes.get(level, 12))
-        pdf.ln(4)
-        pdf.multi_cell(0, 7, text)
+        sizes = {1: 18, 2: 15, 3: 13, 4: 11}
+        pdf.ln(4 if level <= 2 else 3)
+        pdf.set_font("Helvetica", "B", sizes.get(level, 11))
+        pdf.set_text_color(17, 24, 39)
+        pdf.multi_cell(0, sizes.get(level, 11) * 0.5, _safe_text(plain_text))
         pdf.ln(2)
-    elif block_type == "bulletListItem":
-        pdf.set_font("Helvetica", "", 10)
-        pdf.cell(8, 6, "")
-        pdf.multi_cell(0, 6, f"  - {text}")
-    elif block_type == "numberedListItem":
-        pdf.set_font("Helvetica", "", 10)
-        pdf.cell(8, 6, "")
-        pdf.multi_cell(0, 6, f"  {text}")
-    else:
-        # Default paragraph
-        pdf.set_font("Helvetica", "", 10)
-        if text:
-            pdf.multi_cell(0, 6, text)
-            pdf.ln(2)
 
-    # Recurse into nested children blocks
+    elif block_type == "bulletListItem":
+        list_counter[0] = 0  # reset numbered counter
+        pdf.set_font("Helvetica", "", 10)
+        pdf.set_text_color(55, 65, 81)
+        x = pdf.get_x()
+        pdf.cell(6, 6, "", new_x="END")  # indent
+        pdf.cell(4, 6, "-", new_x="END")
+        _pdf_write_inline(pdf, inline_items, page_w - 12)
+        pdf.ln(1)
+
+    elif block_type == "numberedListItem":
+        list_counter[0] += 1
+        pdf.set_font("Helvetica", "", 10)
+        pdf.set_text_color(55, 65, 81)
+        pdf.cell(6, 6, "", new_x="END")  # indent
+        pdf.cell(6, 6, f"{list_counter[0]}.", new_x="END")
+        _pdf_write_inline(pdf, inline_items, page_w - 14)
+        pdf.ln(1)
+
+    elif block_type == "codeBlock":
+        pdf.ln(3)
+        pdf.set_fill_color(241, 245, 249)  # slate-100
+        pdf.set_font("Courier", "", 8)
+        pdf.set_text_color(30, 41, 59)  # slate-800
+        # Split into lines and render
+        for line in plain_text.split("\n"):
+            pdf.cell(0, 5, "  " + _safe_text(line), fill=True, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(3)
+
+    elif block_type == "mermaid":
+        code = props.get("code", plain_text)
+        pdf.ln(4)
+
+        # Try to render Mermaid code to a real PNG image
+        png_bytes = _render_mermaid_to_png(code)
+        if png_bytes:
+            tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+            try:
+                tmp.write(png_bytes)
+                tmp.flush()
+                tmp.close()
+                # Calculate image width to fit page (max PAGE_W mm)
+                img_w = min(page_w, 170)
+                pdf.image(tmp.name, x=pdf.l_margin, w=img_w)
+                pdf.ln(4)
+            finally:
+                import os
+                try:
+                    os.unlink(tmp.name)
+                except OSError:
+                    pass
+        else:
+            # Fallback: raw code
+            code = _safe_text(code)
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_text_color(59, 130, 246)
+            pdf.cell(0, 6, "Diagram", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", "I", 7)
+            pdf.set_text_color(156, 163, 175)
+            pdf.cell(0, 4, "(Could not render diagram image. Definition below.)", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(1)
+            pdf.set_fill_color(239, 246, 255)
+            pdf.set_font("Courier", "", 7)
+            pdf.set_text_color(30, 41, 59)
+            for line in code.split("\n"):
+                pdf.cell(0, 4, "  " + _safe_text(line), fill=True, new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(4)
+
+    elif block_type == "table":
+        table_content = content
+        rows_data = []
+        if isinstance(table_content, dict):
+            rows_data = table_content.get("rows", [])
+        elif isinstance(table_content, list):
+            rows_data = table_content
+
+        if rows_data:
+            pdf.ln(3)
+            num_cols = max(len(r.get("cells", [])) for r in rows_data) if rows_data else 1
+            col_w = min(page_w / num_cols, 50)  # cap column width
+
+            for ri, row in enumerate(rows_data):
+                cells = row.get("cells", [])
+                if ri == 0:
+                    pdf.set_font("Helvetica", "B", 8)
+                    pdf.set_fill_color(249, 250, 251)
+                    pdf.set_text_color(55, 65, 81)
+                else:
+                    pdf.set_font("Helvetica", "", 8)
+                    pdf.set_text_color(75, 85, 99)
+
+                for ci in range(num_cols):
+                    cell_data = cells[ci] if ci < len(cells) else None
+                    cell_text = _safe_text(_extract_cell_text_export(cell_data))
+                    # Truncate long cell text
+                    if len(cell_text) > 40:
+                        cell_text = cell_text[:38] + ".."
+                    pdf.cell(col_w, 6, cell_text, border=1, fill=(ri == 0))
+                pdf.ln()
+            pdf.ln(3)
+
+    elif block_type in ("quote", "callout"):
+        pdf.ln(2)
+        pdf.set_fill_color(250, 250, 245)
+        pdf.set_font("Helvetica", "I", 10)
+        pdf.set_text_color(75, 85, 99)
+        x = pdf.get_x()
+        # Left indent
+        pdf.set_x(x + 8)
+        pdf.multi_cell(page_w - 16, 6, plain_text, fill=True)
+        pdf.ln(2)
+
+    else:
+        # Default paragraph with inline styling
+        if plain_text:
+            list_counter[0] = 0  # reset numbered counter
+            _pdf_write_inline(pdf, inline_items, page_w)
+            pdf.ln(3)
+
+    # Reset default text color
+    pdf.set_text_color(55, 65, 81)
+
+    # Recurse into children
     for child in block.get("children", []):
         if isinstance(child, dict):
-            _render_block_to_pdf(pdf, child)
+            _render_block_to_pdf_v2(pdf, child, page_w, list_counter)
+
+
+def _pdf_write_inline(pdf: "FPDF", inline_items: list, max_w: float) -> None:
+    """Write inline content items with bold/italic/code styling."""
+    for item in inline_items:
+        text = _safe_text(item.get("text", ""))
+        if not text:
+            continue
+        styles = item.get("styles", {})
+
+        is_bold = styles.get("bold", False)
+        is_italic = styles.get("italic", False)
+        is_code = styles.get("code", False)
+
+        if is_code:
+            pdf.set_font("Courier", "", 8)
+            pdf.set_text_color(79, 70, 229)
+        else:
+            style_str = ""
+            if is_bold:
+                style_str += "B"
+            if is_italic:
+                style_str += "I"
+            pdf.set_font("Helvetica", style_str, 10)
+
+            if is_bold:
+                pdf.set_text_color(17, 24, 39)
+            else:
+                pdf.set_text_color(55, 65, 81)
+
+        pdf.write(6, text)
+
+    # Reset
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(55, 65, 81)
+    pdf.ln()
 
 
 # -- AI Document Generation Endpoints ----------------------------------------
 
 class AIMessageRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=5000)
+
+
+class AIApplyRequest(BaseModel):
+    blocks: list = Field(..., description="BlockNote JSON blocks to merge into the document")
 
 
 @router.post("/{document_id}/ai/chat")
@@ -1246,8 +2105,8 @@ async def send_ai_chat_message(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Send a message to the AI assistant and get generated document content."""
-    from app.services.document_ai_service import generate_document_content
+    """Send a message to the AI assistant and auto-apply generated content to the document."""
+    from app.services.document_ai_service import generate_document_content, apply_blocks_to_document
 
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
@@ -1265,6 +2124,27 @@ async def send_ai_chat_message(
             user_message=body.message,
             user=current_user,
         )
+
+        # Auto-apply generated blocks to the document
+        updated_content = None
+        has_blocks = result.get("blocks") and len(result["blocks"]) > 0
+        is_full_replace = result.get("is_full_replace", False)
+
+        if has_blocks:
+            try:
+                apply_result = await apply_blocks_to_document(
+                    db=db,
+                    document_id=UUID(document_id),
+                    new_blocks=result.get("blocks", []),
+                    user=current_user,
+                    full_replace=is_full_replace,
+                )
+                updated_content = apply_result.get("content")
+            except Exception as apply_err:
+                logger.warning(f"Auto-apply failed, blocks still available: {apply_err}")
+
+        result["auto_applied"] = updated_content is not None
+        result["updated_content"] = updated_content
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1286,6 +2166,37 @@ def get_ai_chat_history(
     return {"messages": get_chat_history(db, UUID(document_id))}
 
 
+@router.post("/{document_id}/ai/apply")
+async def apply_ai_blocks_to_document(
+    document_id: str,
+    body: AIApplyRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Intelligently merge AI-generated blocks into the document.
+
+    Instead of appending at the end, this analyses the document structure
+    and places new content where it logically belongs — replacing sections
+    with matching headings and inserting new sections at appropriate positions.
+    """
+    from app.services.document_ai_service import apply_blocks_to_document
+
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    try:
+        result = await apply_blocks_to_document(
+            db=db,
+            document_id=UUID(document_id),
+            new_blocks=body.blocks,
+            user=current_user,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.delete("/{document_id}/ai/history")
 def clear_ai_chat_history(
     document_id: str,
@@ -1301,3 +2212,29 @@ def clear_ai_chat_history(
 
     clear_chat_history(db, UUID(document_id))
     return {"status": "cleared"}
+
+
+@router.get("/{document_id}/preview")
+def get_document_preview(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get a rich HTML preview of the document, including Mermaid diagrams."""
+    from app.services.document_ai_service import generate_document_preview_html
+    from fastapi.responses import HTMLResponse
+
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Verify session membership
+    session = db.query(SessionModel).filter(SessionModel.id == doc.session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        html = generate_document_preview_html(db, UUID(document_id))
+        return HTMLResponse(content=html)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

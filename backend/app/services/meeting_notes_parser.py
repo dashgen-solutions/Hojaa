@@ -304,6 +304,7 @@ Identify all scope changes, action items, and unresolved questions."""
         self,
         source_id: UUID,
         database: DBSession,
+        user_id=None,
     ) -> List[SourceSuggestion]:
         """
         Analyze a source (meeting notes/document) and generate suggestions.
@@ -374,6 +375,7 @@ Identify all scope changes, action items, and unresolved questions."""
             result = await cached_agent_run(
                 self.analysis_agent, user_prompt,
                 task="meeting_notes", session_id=str(source.session_id),
+                user_id=user_id,
             )
             meeting_output = result.output
 

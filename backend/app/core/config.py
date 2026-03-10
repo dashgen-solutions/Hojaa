@@ -4,7 +4,8 @@ Application configuration management using Pydantic Settings.
 from typing import Dict, List, Optional
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
+import json
 
 
 def _get_env_file() -> Optional[str]:
@@ -111,6 +112,13 @@ class Settings(BaseSettings):
     pdf_timeout_seconds: float = Field(default=15.0, alias="PDF_TIMEOUT_SECONDS")
     default_request_timeout_seconds: float = Field(default=60.0, alias="DEFAULT_REQUEST_TIMEOUT_SECONDS")
 
+    # ── Free-tier AI usage limit (per user) ──
+    # Users without their own API key get this much platform-funded AI usage.
+    # Once exceeded they must configure their own key or purchase a plan.
+    free_tier_usage_limit_usd: float = Field(default=0.10, alias="FREE_TIER_USAGE_LIMIT_USD")
+    # Platform-provided API key used for free-tier users (falls back to OPENAI_API_KEY)
+    platform_openai_api_key: str = Field(default="", alias="PLATFORM_OPENAI_API_KEY")
+
     # Redis
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
     redis_enabled: bool = Field(default=False, alias="REDIS_ENABLED")
@@ -128,6 +136,17 @@ class Settings(BaseSettings):
         default=[".pdf", ".doc", ".docx", ".txt"],
         alias="ALLOWED_FILE_TYPES"
     )
+
+    # Accept both JSON arrays and comma-separated strings for list fields
+    @field_validator("cors_origins", "allowed_file_types", mode="before")
+    @classmethod
+    def _parse_comma_or_json_list(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("["):
+                return json.loads(v)
+            return [item.strip() for item in v.split(",") if item.strip()]
+        return v
     
     # Logging
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")

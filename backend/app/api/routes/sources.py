@@ -347,7 +347,10 @@ async def ingest_source(
         )
 
         # Run AI analysis
-        suggestions = await meeting_notes_parser.analyze_source(source.id, database)
+        suggestions = await meeting_notes_parser.analyze_source(
+            source.id, database,
+            user_id=current_user.id if current_user else None,
+        )
 
         # Fire source ingested notification
         try:
@@ -452,7 +455,10 @@ async def upload_source_file(
         )
 
         # Run AI analysis
-        suggestions = await meeting_notes_parser.analyze_source(source.id, database)
+        suggestions = await meeting_notes_parser.analyze_source(
+            source.id, database,
+            user_id=current_user.id if current_user else None,
+        )
 
         # Fire source ingested notification
         try:
@@ -668,7 +674,10 @@ async def reanalyze_source(
         )
 
         # Re-run AI analysis (creates new suggestion rows)
-        new_suggestions = await meeting_notes_parser.analyze_source(source.id, database)
+        new_suggestions = await meeting_notes_parser.analyze_source(
+            source.id, database,
+            user_id=current_user.id if current_user else None,
+        )
 
         # Return full detail including both old reviewed + new pending suggestions
         all_suggestions = (

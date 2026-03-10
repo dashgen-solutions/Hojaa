@@ -53,6 +53,37 @@ class ConversationException(HojaaException):
     pass
 
 
+class AIUsageLimitExceeded(HojaaException):
+    """Raised when a user exceeds their free-tier AI usage budget.
+
+    Carries structured details so the API layer can return a 402 with
+    actionable guidance (configure own API key or purchase a plan).
+    """
+
+    def __init__(
+        self,
+        used_usd: float,
+        limit_usd: float,
+        message: str | None = None,
+    ):
+        self.used_usd = round(used_usd, 4)
+        self.limit_usd = round(limit_usd, 4)
+        super().__init__(
+            message
+            or (
+                f"You've used ${self.used_usd:.2f} of your ${self.limit_usd:.2f} "
+                f"free AI credits. To continue using AI features, please "
+                f"configure your own API key in Settings → AI, or upgrade to a paid plan "
+                f"for unlimited access."
+            ),
+            details={
+                "error_code": "AI_USAGE_LIMIT_EXCEEDED",
+                "used_usd": self.used_usd,
+                "limit_usd": self.limit_usd,
+            },
+        )
+
+
 class TreeBuildingException(HojaaException):
     """Raised when tree building operations fail."""
     pass

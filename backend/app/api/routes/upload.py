@@ -6,10 +6,11 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.db.session import get_db
 from app.models.schemas import DocumentUploadResponse, SessionCreate
-from app.models.database import Session as DBSession, SessionStatus
+from app.models.database import Session as DBSession, SessionStatus, User
 from app.services.document_analyzer import document_analyzer
 from app.services.question_generator import question_generator
 from app.api.dependencies import validate_file_upload
+from app.core.auth import get_optional_user
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -20,7 +21,8 @@ router = APIRouter(prefix="/upload", tags=["upload"])
 async def upload_document(
     session_id: str,
     file: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """
     Upload a document or text and generate initial questions.
@@ -103,7 +105,8 @@ async def upload_document(
                 document_text=document_text,
                 session_id=str(session.id),
                 user_type=session.user_type,
-                db=db
+                db=db,
+                user_id=current_user.id if current_user else None,
             )
         except Exception as e:
             logger.error(f"Error generating questions: {str(e)}", exc_info=True)

@@ -1,12 +1,14 @@
 """
-Global Messaging API — "Mini Slack" for team communication.
+Global Messaging API — Slack-like team communication.
 
-REST endpoints for channels, messages, and members.
-WebSocket endpoint for real-time delivery.
+REST endpoints for channels, messages, members, reactions, threads, pins, search.
+WebSocket endpoint for real-time delivery with presence tracking.
 """
 from __future__ import annotations
 
+import asyncio
 import json
+import re
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
@@ -14,7 +16,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query, status
 from jose import JWTError, jwt
 from pydantic import BaseModel, Field
-from sqlalchemy import func, and_, or_, desc
+from sqlalchemy import func, and_, or_, desc, asc
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth import get_current_user
@@ -23,6 +25,7 @@ from app.core.logger import get_logger
 from app.db.session import get_db, SessionLocal
 from app.models.database import (
     User, ChatChannel, ChatChannelMember, ChatChannelMessage,
+    MessageReaction, MessageAttachment, PinnedMessage,
 )
 from app.services.messaging_ws_manager import messaging_ws_manager
 
@@ -38,6 +41,8 @@ class CreateChannelRequest(BaseModel):
     name: Optional[str] = None
     is_direct: bool = False
     member_ids: List[str]  # user UUIDs to add
+    topic: Optional[str] = None
+    description: Optional[str] = None
 
 
 class SendMessageRequest(BaseModel):
@@ -45,6 +50,8 @@ class SendMessageRequest(BaseModel):
     reference_type: Optional[str] = None  # "project" | "node" | "card"
     reference_id: Optional[str] = None
     reference_name: Optional[str] = None
+    parent_message_id: Optional[str] = None  # for thread replies
+    mentions: Optional[List[str]] = None  # list of user_ids mentioned with @
 
 
 class EditMessageRequest(BaseModel):
@@ -52,17 +59,37 @@ class EditMessageRequest(BaseModel):
 
 
 class UpdateChannelRequest(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255)
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    topic: Optional[str] = Field(None, max_length=500)
+    description: Optional[str] = None
 
 
 class AddMemberRequest(BaseModel):
     user_id: str
 
 
+class ReactionRequest(BaseModel):
+    emoji: str = Field(..., min_length=1, max_length=50)
+
+
 # ── Helper: Serialize ─────────────────────────────────────────────────
 
-def _serialize_message(msg: ChatChannelMessage) -> dict:
-    return {
+def _serialize_reactions(reactions: list) -> list:
+    """Group reactions by emoji with user info."""
+    grouped = {}
+    for r in reactions:
+        if r.emoji not in grouped:
+            grouped[r.emoji] = {"emoji": r.emoji, "count": 0, "users": []}
+        grouped[r.emoji]["count"] += 1
+        grouped[r.emoji]["users"].append({
+            "user_id": str(r.user_id),
+            "username": r.user.username if r.user else "Unknown",
+        })
+    return list(grouped.values())
+
+
+def _serialize_message(msg: ChatChannelMessage, include_reactions: bool = True) -> dict:
+    result = {
         "id": str(msg.id),
         "channel_id": str(msg.channel_id),
         "sender_id": str(msg.sender_id) if msg.sender_id else None,
@@ -72,8 +99,31 @@ def _serialize_message(msg: ChatChannelMessage) -> dict:
         "reference_id": msg.reference_id,
         "reference_name": msg.reference_name,
         "is_edited": msg.is_edited,
+        "is_pinned": msg.is_pinned,
+        "parent_message_id": str(msg.parent_message_id) if msg.parent_message_id else None,
+        "thread_reply_count": msg.thread_reply_count,
         "created_at": msg.created_at.isoformat(),
     }
+    if include_reactions and hasattr(msg, "reactions") and msg.reactions is not None:
+        result["reactions"] = _serialize_reactions(msg.reactions)
+    else:
+        result["reactions"] = []
+    if hasattr(msg, "attachments") and msg.attachments:
+        result["attachments"] = [
+            {
+                "id": str(a.id),
+                "file_name": a.file_name,
+                "file_url": a.file_url,
+                "file_type": a.file_type,
+                "file_size": a.file_size,
+            }
+            for a in msg.attachments
+        ]
+    else:
+        result["attachments"] = []
+    # Extract @mentions from content
+    result["mentions"] = re.findall(r"@\[([^\]]+)\]\(([^)]+)\)", msg.content)
+    return result
 
 
 def _serialize_member(member: ChatChannelMember) -> dict:
@@ -82,6 +132,7 @@ def _serialize_member(member: ChatChannelMember) -> dict:
         "username": member.user.username if member.user else "Unknown",
         "email": member.user.email if member.user else "",
         "joined_at": member.joined_at.isoformat(),
+        "is_online": messaging_ws_manager.is_user_online(str(member.user_id)),
     }
 
 
@@ -159,6 +210,8 @@ def list_channels(
             "id": str(ch.id),
             "name": ch.name,
             "is_direct": ch.is_direct,
+            "topic": ch.topic,
+            "description": ch.description,
             "other_user": other_user,
             "members": [_serialize_member(m) for m in ch.members],
             "member_count": len(ch.members),
@@ -224,6 +277,8 @@ def create_channel(
     channel = ChatChannel(
         name=body.name if not body.is_direct else None,
         is_direct=body.is_direct,
+        topic=body.topic if not body.is_direct else None,
+        description=body.description if not body.is_direct else None,
         organization_id=current_user.organization_id,
         created_by=current_user.id,
     )
@@ -247,7 +302,13 @@ def create_channel(
     db.commit()
     db.refresh(channel)
 
-    return {"id": str(channel.id), "name": channel.name, "is_direct": channel.is_direct}
+    return {
+        "id": str(channel.id),
+        "name": channel.name,
+        "is_direct": channel.is_direct,
+        "topic": channel.topic,
+        "description": channel.description,
+    }
 
 
 @router.get("/channels/{channel_id}")
@@ -281,6 +342,8 @@ def get_channel(
         "id": str(ch.id),
         "name": ch.name,
         "is_direct": ch.is_direct,
+        "topic": ch.topic,
+        "description": ch.description,
         "created_by": str(ch.created_by) if ch.created_by else None,
         "members": [_serialize_member(m) for m in members],
         "created_at": ch.created_at.isoformat(),
@@ -298,7 +361,7 @@ def update_channel(
     ch = db.query(ChatChannel).filter(ChatChannel.id == channel_id).first()
     if not ch:
         raise HTTPException(404, "Channel not found")
-    if ch.is_direct:
+    if ch.is_direct and body.name:
         raise HTTPException(400, "Cannot rename DM channels")
 
     membership = (
@@ -309,7 +372,12 @@ def update_channel(
     if not membership:
         raise HTTPException(403, "You are not a member of this channel")
 
-    ch.name = body.name
+    if body.name is not None:
+        ch.name = body.name
+    if body.topic is not None:
+        ch.topic = body.topic
+    if body.description is not None:
+        ch.description = body.description
     db.commit()
 
     # Broadcast channel update via WS
@@ -329,7 +397,12 @@ def update_channel(
     except Exception:
         pass
 
-    return {"id": str(ch.id), "name": ch.name}
+    return {
+        "id": str(ch.id),
+        "name": ch.name,
+        "topic": ch.topic,
+        "description": ch.description,
+    }
 
 
 @router.delete("/channels/{channel_id}", status_code=204)
@@ -465,7 +538,12 @@ def get_messages(
     query = (
         db.query(ChatChannelMessage)
         .filter(ChatChannelMessage.channel_id == channel_id)
-        .options(joinedload(ChatChannelMessage.sender))
+        .filter(ChatChannelMessage.parent_message_id == None)  # exclude thread replies from main view
+        .options(
+            joinedload(ChatChannelMessage.sender),
+            joinedload(ChatChannelMessage.reactions).joinedload(MessageReaction.user),
+            joinedload(ChatChannelMessage.attachments),
+        )
     )
 
     if before:
@@ -506,8 +584,17 @@ def send_message(
         reference_type=body.reference_type,
         reference_id=body.reference_id,
         reference_name=body.reference_name,
+        parent_message_id=UUID(body.parent_message_id) if body.parent_message_id else None,
     )
     db.add(msg)
+
+    # If this is a thread reply, increment the parent's thread_reply_count
+    if body.parent_message_id:
+        parent = db.query(ChatChannelMessage).filter(
+            ChatChannelMessage.id == body.parent_message_id
+        ).first()
+        if parent:
+            parent.thread_reply_count = (parent.thread_reply_count or 0) + 1
 
     # Update sender's last_read_at
     membership.last_read_at = datetime.utcnow()
@@ -519,11 +606,12 @@ def send_message(
 
     # Broadcast via WebSocket
     import asyncio
+    ws_event_type = "thread_reply" if body.parent_message_id else "new_message"
     try:
         asyncio.get_event_loop().create_task(
             messaging_ws_manager.send_to_channel_members(
                 channel_id,
-                {"type": "new_message", "channel_id": channel_id, "message": serialized},
+                {"type": ws_event_type, "channel_id": channel_id, "message": serialized},
                 exclude_user=str(current_user.id),
             )
         )
@@ -601,6 +689,422 @@ def delete_message(
         )
     except Exception:
         pass
+
+
+# ── Reactions ─────────────────────────────────────────────────────────
+
+@router.post("/messages/{message_id}/reactions", status_code=201)
+def add_reaction(
+    message_id: str,
+    body: ReactionRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Add an emoji reaction to a message."""
+    msg = db.query(ChatChannelMessage).filter(ChatChannelMessage.id == message_id).first()
+    if not msg:
+        raise HTTPException(404, "Message not found")
+
+    # Verify membership
+    membership = (
+        db.query(ChatChannelMember)
+        .filter_by(channel_id=msg.channel_id, user_id=current_user.id)
+        .first()
+    )
+    if not membership:
+        raise HTTPException(403, "You are not a member of this channel")
+
+    # Check if already reacted with same emoji
+    existing = (
+        db.query(MessageReaction)
+        .filter_by(message_id=msg.id, user_id=current_user.id, emoji=body.emoji)
+        .first()
+    )
+    if existing:
+        raise HTTPException(400, "You already reacted with this emoji")
+
+    reaction = MessageReaction(
+        message_id=msg.id,
+        user_id=current_user.id,
+        emoji=body.emoji,
+    )
+    db.add(reaction)
+    db.commit()
+
+    # Broadcast reaction via WebSocket
+    try:
+        asyncio.get_event_loop().create_task(
+            messaging_ws_manager.send_to_channel_members(
+                str(msg.channel_id),
+                {
+                    "type": "reaction_added",
+                    "channel_id": str(msg.channel_id),
+                    "message_id": message_id,
+                    "emoji": body.emoji,
+                    "user_id": str(current_user.id),
+                    "username": current_user.username,
+                },
+            )
+        )
+    except Exception:
+        pass
+
+    return {"status": "added", "emoji": body.emoji}
+
+
+@router.delete("/messages/{message_id}/reactions/{emoji}")
+def remove_reaction(
+    message_id: str,
+    emoji: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Remove an emoji reaction from a message."""
+    reaction = (
+        db.query(MessageReaction)
+        .filter_by(message_id=UUID(message_id), user_id=current_user.id, emoji=emoji)
+        .first()
+    )
+    if not reaction:
+        raise HTTPException(404, "Reaction not found")
+
+    channel_id = str(
+        db.query(ChatChannelMessage.channel_id)
+        .filter(ChatChannelMessage.id == message_id)
+        .scalar()
+    )
+
+    db.delete(reaction)
+    db.commit()
+
+    # Broadcast reaction removal
+    try:
+        asyncio.get_event_loop().create_task(
+            messaging_ws_manager.send_to_channel_members(
+                channel_id,
+                {
+                    "type": "reaction_removed",
+                    "channel_id": channel_id,
+                    "message_id": message_id,
+                    "emoji": emoji,
+                    "user_id": str(current_user.id),
+                },
+            )
+        )
+    except Exception:
+        pass
+
+    return {"status": "removed"}
+
+
+@router.get("/messages/{message_id}/reactions")
+def get_reactions(
+    message_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get all reactions on a message, grouped by emoji."""
+    reactions = (
+        db.query(MessageReaction)
+        .filter(MessageReaction.message_id == message_id)
+        .options(joinedload(MessageReaction.user))
+        .all()
+    )
+    return _serialize_reactions(reactions)
+
+
+# ── Thread Replies ────────────────────────────────────────────────────
+
+@router.get("/messages/{message_id}/thread")
+def get_thread(
+    message_id: str,
+    limit: int = Query(50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get thread replies for a parent message."""
+    parent = (
+        db.query(ChatChannelMessage)
+        .filter(ChatChannelMessage.id == message_id)
+        .options(
+            joinedload(ChatChannelMessage.sender),
+            joinedload(ChatChannelMessage.reactions).joinedload(MessageReaction.user),
+        )
+        .first()
+    )
+    if not parent:
+        raise HTTPException(404, "Message not found")
+
+    # Verify membership
+    membership = (
+        db.query(ChatChannelMember)
+        .filter_by(channel_id=parent.channel_id, user_id=current_user.id)
+        .first()
+    )
+    if not membership:
+        raise HTTPException(403, "You are not a member of this channel")
+
+    replies = (
+        db.query(ChatChannelMessage)
+        .filter(ChatChannelMessage.parent_message_id == message_id)
+        .options(
+            joinedload(ChatChannelMessage.sender),
+            joinedload(ChatChannelMessage.reactions).joinedload(MessageReaction.user),
+        )
+        .order_by(asc(ChatChannelMessage.created_at))
+        .limit(limit)
+        .all()
+    )
+
+    return {
+        "parent": _serialize_message(parent),
+        "replies": [_serialize_message(r) for r in replies],
+        "reply_count": parent.thread_reply_count,
+    }
+
+
+# ── Message Search ────────────────────────────────────────────────────
+
+@router.get("/search")
+def search_messages(
+    q: str = Query(..., min_length=1, max_length=200),
+    channel_id: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Search messages across channels the user belongs to."""
+    # Get user's channel IDs
+    user_channel_ids = [
+        m.channel_id
+        for m in db.query(ChatChannelMember)
+        .filter(ChatChannelMember.user_id == current_user.id)
+        .all()
+    ]
+
+    if not user_channel_ids:
+        return {"results": [], "total": 0}
+
+    query = (
+        db.query(ChatChannelMessage)
+        .filter(
+            ChatChannelMessage.channel_id.in_(user_channel_ids),
+            ChatChannelMessage.content.ilike(f"%{q}%"),
+        )
+        .options(joinedload(ChatChannelMessage.sender))
+    )
+
+    if channel_id:
+        query = query.filter(ChatChannelMessage.channel_id == channel_id)
+
+    total = query.count()
+    messages = query.order_by(desc(ChatChannelMessage.created_at)).limit(limit).all()
+
+    results = []
+    for msg in messages:
+        serialized = _serialize_message(msg, include_reactions=False)
+        # Add channel info for context
+        ch = db.query(ChatChannel).filter(ChatChannel.id == msg.channel_id).first()
+        serialized["channel_name"] = ch.name if ch else None
+        serialized["is_direct"] = ch.is_direct if ch else False
+        results.append(serialized)
+
+    return {"results": results, "total": total}
+
+
+# ── Pinned Messages ──────────────────────────────────────────────────
+
+@router.post("/messages/{message_id}/pin", status_code=201)
+def pin_message(
+    message_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Pin a message in its channel."""
+    msg = db.query(ChatChannelMessage).filter(ChatChannelMessage.id == message_id).first()
+    if not msg:
+        raise HTTPException(404, "Message not found")
+
+    # Verify membership
+    membership = (
+        db.query(ChatChannelMember)
+        .filter_by(channel_id=msg.channel_id, user_id=current_user.id)
+        .first()
+    )
+    if not membership:
+        raise HTTPException(403, "You are not a member of this channel")
+
+    # Check if already pinned
+    existing = (
+        db.query(PinnedMessage)
+        .filter_by(channel_id=msg.channel_id, message_id=msg.id)
+        .first()
+    )
+    if existing:
+        raise HTTPException(400, "Message is already pinned")
+
+    pin = PinnedMessage(
+        channel_id=msg.channel_id,
+        message_id=msg.id,
+        pinned_by=current_user.id,
+    )
+    db.add(pin)
+    msg.is_pinned = True
+    db.commit()
+
+    # Broadcast pin event
+    try:
+        asyncio.get_event_loop().create_task(
+            messaging_ws_manager.send_to_channel_members(
+                str(msg.channel_id),
+                {
+                    "type": "message_pinned",
+                    "channel_id": str(msg.channel_id),
+                    "message_id": message_id,
+                    "pinned_by": current_user.username,
+                },
+            )
+        )
+    except Exception:
+        pass
+
+    return {"status": "pinned"}
+
+
+@router.delete("/messages/{message_id}/pin")
+def unpin_message(
+    message_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Unpin a message."""
+    msg = db.query(ChatChannelMessage).filter(ChatChannelMessage.id == message_id).first()
+    if not msg:
+        raise HTTPException(404, "Message not found")
+
+    pin = (
+        db.query(PinnedMessage)
+        .filter_by(channel_id=msg.channel_id, message_id=msg.id)
+        .first()
+    )
+    if not pin:
+        raise HTTPException(404, "Message is not pinned")
+
+    db.delete(pin)
+    msg.is_pinned = False
+    db.commit()
+
+    return {"status": "unpinned"}
+
+
+@router.get("/channels/{channel_id}/pins")
+def get_pinned_messages(
+    channel_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get all pinned messages in a channel."""
+    # Verify membership
+    membership = (
+        db.query(ChatChannelMember)
+        .filter_by(channel_id=channel_id, user_id=current_user.id)
+        .first()
+    )
+    if not membership:
+        raise HTTPException(403, "You are not a member of this channel")
+
+    pins = (
+        db.query(PinnedMessage)
+        .filter(PinnedMessage.channel_id == channel_id)
+        .options(
+            joinedload(PinnedMessage.message).joinedload(ChatChannelMessage.sender),
+            joinedload(PinnedMessage.user),
+        )
+        .order_by(desc(PinnedMessage.created_at))
+        .all()
+    )
+
+    return [
+        {
+            "id": str(p.id),
+            "message": _serialize_message(p.message, include_reactions=False) if p.message else None,
+            "pinned_by": p.user.username if p.user else "Unknown",
+            "pinned_at": p.created_at.isoformat(),
+        }
+        for p in pins
+    ]
+
+
+# ── @Mention User Search ─────────────────────────────────────────────
+
+@router.get("/channels/{channel_id}/mention-users")
+def get_mentionable_users(
+    channel_id: str,
+    q: str = Query("", max_length=100),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get users that can be @mentioned in a channel (members of the channel)."""
+    membership = (
+        db.query(ChatChannelMember)
+        .filter_by(channel_id=channel_id, user_id=current_user.id)
+        .first()
+    )
+    if not membership:
+        raise HTTPException(403, "You are not a member of this channel")
+
+    query = (
+        db.query(User)
+        .join(ChatChannelMember, ChatChannelMember.user_id == User.id)
+        .filter(
+            ChatChannelMember.channel_id == channel_id,
+            User.id != current_user.id,
+            User.is_active == True,
+        )
+    )
+    if q:
+        query = query.filter(
+            or_(
+                User.username.ilike(f"%{q}%"),
+                User.email.ilike(f"%{q}%"),
+            )
+        )
+
+    users = query.order_by(User.username).limit(10).all()
+    return [
+        {
+            "id": str(u.id),
+            "username": u.username,
+            "email": u.email,
+            "is_online": messaging_ws_manager.is_user_online(str(u.id)),
+        }
+        for u in users
+    ]
+
+
+# ── User Presence ────────────────────────────────────────────────────
+
+@router.get("/presence")
+def get_online_users(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get online status of users in the same org."""
+    query = db.query(User).filter(
+        User.is_active == True,
+    )
+    if current_user.organization_id:
+        query = query.filter(User.organization_id == current_user.organization_id)
+
+    users = query.all()
+    return [
+        {
+            "user_id": str(u.id),
+            "username": u.username,
+            "is_online": messaging_ws_manager.is_user_online(str(u.id)),
+        }
+        for u in users
+    ]
 
 
 # ── Read Tracking ─────────────────────────────────────────────────────
@@ -701,7 +1205,7 @@ async def messaging_websocket(
     websocket: WebSocket,
     token: str = Query(...),
 ):
-    """WebSocket endpoint for real-time messaging."""
+    """WebSocket endpoint for real-time messaging with presence tracking."""
     auth = _authenticate_messaging_ws(token)
     if not auth:
         await websocket.close(code=4001, reason="Authentication failed")
@@ -712,6 +1216,29 @@ async def messaging_websocket(
         user_id=auth["user_id"],
         username=auth["username"],
     )
+
+    # Broadcast online presence to all org users
+    try:
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.id == auth["user_id"]).first()
+            if user and user.organization_id:
+                org_users = db.query(User.id).filter(
+                    User.organization_id == user.organization_id,
+                    User.id != user.id,
+                    User.is_active == True,
+                ).all()
+                for (uid,) in org_users:
+                    await messaging_ws_manager.send_to_user(str(uid), {
+                        "type": "presence",
+                        "user_id": auth["user_id"],
+                        "username": auth["username"],
+                        "status": "online",
+                    })
+        finally:
+            db.close()
+    except Exception:
+        pass
 
     try:
         while True:
@@ -744,8 +1271,55 @@ async def messaging_websocket(
                         exclude_user=auth["user_id"],
                     )
 
+            elif msg_type == "presence_update":
+                # User manually sets status (away, dnd, etc.)
+                user_status = msg.get("status", "online")
+                try:
+                    db = SessionLocal()
+                    try:
+                        user = db.query(User).filter(User.id == auth["user_id"]).first()
+                        if user and user.organization_id:
+                            org_users = db.query(User.id).filter(
+                                User.organization_id == user.organization_id,
+                                User.id != user.id,
+                                User.is_active == True,
+                            ).all()
+                            for (uid,) in org_users:
+                                await messaging_ws_manager.send_to_user(str(uid), {
+                                    "type": "presence",
+                                    "user_id": auth["user_id"],
+                                    "username": auth["username"],
+                                    "status": user_status,
+                                })
+                    finally:
+                        db.close()
+                except Exception:
+                    pass
+
     except WebSocketDisconnect:
         await messaging_ws_manager.disconnect(conn)
+        # Broadcast offline presence
+        try:
+            db = SessionLocal()
+            try:
+                user = db.query(User).filter(User.id == auth["user_id"]).first()
+                if user and user.organization_id:
+                    org_users = db.query(User.id).filter(
+                        User.organization_id == user.organization_id,
+                        User.id != user.id,
+                        User.is_active == True,
+                    ).all()
+                    for (uid,) in org_users:
+                        await messaging_ws_manager.send_to_user(str(uid), {
+                            "type": "presence",
+                            "user_id": auth["user_id"],
+                            "username": auth["username"],
+                            "status": "offline",
+                        })
+            finally:
+                db.close()
+        except Exception:
+            pass
     except Exception as e:
         logger.error(f"Messaging WS error: {e}", exc_info=True)
         await messaging_ws_manager.disconnect(conn)

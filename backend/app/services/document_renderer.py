@@ -85,6 +85,8 @@ class DocumentRenderer:
             return self._render_scope_reference(props)
         elif block_type == "pricingTable":
             return self._render_pricing_table(pricing_items or [])
+        elif block_type == "mermaid":
+            return self._render_mermaid_html(props)
         elif block_type == "variableText":
             return f"<p>{text}</p>"
         else:
@@ -170,6 +172,27 @@ class DocumentRenderer:
             html += "</ul>"
         html += "</div>"
         return html
+
+    def _render_mermaid_html(self, props: dict) -> str:
+        """Render a mermaid block as an image (via mermaid.ink) or styled code fallback."""
+        import base64 as _b64
+
+        code = props.get("code", "")
+        if not code:
+            return ""
+
+        # Build mermaid.ink URL for an <img> tag
+        encoded = _b64.urlsafe_b64encode(code.encode("utf-8")).decode("ascii")
+        img_url = f"https://mermaid.ink/img/{encoded}?type=png&bgColor=white"
+
+        return (
+            f'<div style="margin:12px 0;text-align:center;">'
+            f'<img src="{img_url}" alt="Diagram" style="max-width:100%;border-radius:8px;" '
+            f'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';" />'
+            f'<pre style="display:none;background:#eff6ff;padding:12px;border-radius:8px;'
+            f'font-size:12px;text-align:left;overflow-x:auto;">'
+            f'<code>{code}</code></pre></div>'
+        )
 
     def _render_pricing_table(self, items: List[dict]) -> str:
         """Render pricing line items as an HTML table."""
@@ -343,6 +366,9 @@ class DocumentRenderer:
                 lines.append(f"> {text}")
             elif block_type == "codeBlock":
                 lines.append(f"```\n{text}\n```")
+            elif block_type == "mermaid":
+                code = props.get("code", text)
+                lines.append(f"```mermaid\n{code}\n```")
             elif block_type == "scopeReference":
                 title = props.get("nodeTitle", "")
                 desc = props.get("nodeDescription", "")
@@ -446,8 +472,53 @@ class DocumentRenderer:
                 pdf.ln(4)
             elif block_type == "pricingTable" and pricing_items:
                 self._render_pricing_pdf(pdf, pricing_items)
+            elif block_type == "mermaid":
+                code = props.get("code", text)
+                self._render_mermaid_pdf(pdf, code)
 
         return pdf.output()
+
+    def _render_mermaid_pdf(self, pdf: Any, code: str) -> None:
+        """Render a Mermaid diagram as a PNG image in the PDF, with code fallback."""
+        import base64 as _b64
+        import tempfile
+        import os
+
+        png_bytes = None
+        try:
+            import httpx
+            encoded = _b64.urlsafe_b64encode(code.encode("utf-8")).decode("ascii")
+            url = f"https://mermaid.ink/img/{encoded}?type=png&bgColor=white"
+            resp = httpx.get(url, timeout=15.0, follow_redirects=True)
+            if resp.status_code == 200 and resp.headers.get("content-type", "").startswith("image/"):
+                png_bytes = resp.content
+        except Exception as exc:
+            logger.warning(f"Mermaid render failed in DocumentRenderer: {exc}")
+
+        if png_bytes:
+            tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+            try:
+                tmp.write(png_bytes)
+                tmp.flush()
+                tmp.close()
+                pdf.ln(4)
+                pdf.image(tmp.name, x=pdf.l_margin if hasattr(pdf, "l_margin") else 15, w=170)
+                pdf.ln(4)
+            finally:
+                try:
+                    os.unlink(tmp.name)
+                except OSError:
+                    pass
+        else:
+            # Fallback: print raw code
+            pdf.ln(4)
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.cell(0, 6, "Diagram", ln=True)
+            pdf.set_font("Courier", "", 7)
+            for line in code.split("\n"):
+                safe = line.encode("latin-1", errors="replace").decode("latin-1")
+                pdf.cell(0, 4, "  " + safe, ln=True)
+            pdf.ln(4)
 
     def _render_pricing_pdf(self, pdf: Any, items: List[dict]) -> None:
         """Render pricing table in PDF."""

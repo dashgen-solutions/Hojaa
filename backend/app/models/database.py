@@ -9,7 +9,7 @@ from sqlalchemy import (
     ForeignKey, JSON, Enum as SQLEnum, Index
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from app.db.session import Base
 from passlib.context import CryptContext
 import enum
@@ -245,6 +245,8 @@ class Session(Base):
     cards = relationship("Card", back_populates="session", cascade="all, delete-orphan")
     team_members = relationship("TeamMember", back_populates="session", cascade="all, delete-orphan")
     members = relationship("SessionMember", back_populates="session", cascade="all, delete-orphan")  # SEC-2.3
+    project_channel = relationship("ChatChannel", back_populates="session", foreign_keys="[ChatChannel.session_id]", uselist=False, cascade="all, delete-orphan")
+    documents = relationship("Document", back_populates="session", cascade="all, delete-orphan")
 
 
 class Question(Base):
@@ -676,6 +678,9 @@ class AIUsageLog(Base):
     session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True)
     org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True)
 
+    # Which user triggered this call (for per-user budget enforcement)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
     # Token counts (from pydantic-ai result.usage())
     prompt_tokens = Column(Integer, default=0, nullable=False)
     completion_tokens = Column(Integer, default=0, nullable=False)
@@ -698,6 +703,7 @@ class AIUsageLog(Base):
         Index("idx_ai_usage_created_at", "created_at"),
         Index("idx_ai_usage_session_id", "session_id"),
         Index("idx_ai_usage_org_id", "org_id"),
+        Index("idx_ai_usage_user_id", "user_id"),
     )
 
 
@@ -940,8 +946,11 @@ class ChatChannel(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name = Column(String(255), nullable=True)  # null for DMs, named for groups
     is_direct = Column(Boolean, default=False, nullable=False)  # True = 1:1 DM
+    topic = Column(String(500), nullable=True)  # Slack-like channel topic
+    description = Column(Text, nullable=True)  # Channel description / purpose
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=True)  # Links channel to a project
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -949,11 +958,14 @@ class ChatChannel(Base):
     # Relationships
     members = relationship("ChatChannelMember", back_populates="channel", cascade="all, delete-orphan")
     messages = relationship("ChatChannelMessage", back_populates="channel", cascade="all, delete-orphan")
+    pinned_messages = relationship("PinnedMessage", back_populates="channel", cascade="all, delete-orphan")
     creator = relationship("User", foreign_keys=[created_by])
+    session = relationship("Session", back_populates="project_channel", foreign_keys=[session_id])
 
     __table_args__ = (
         Index("idx_chat_channel_org", "organization_id"),
         Index("idx_chat_channel_created_by", "created_by"),
+        Index("idx_chat_channel_session", "session_id"),
     )
 
 
@@ -987,12 +999,17 @@ class ChatChannelMessage(Base):
     sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     content = Column(Text, nullable=False)
 
+    # Thread support — if set, this message is a reply in a thread
+    parent_message_id = Column(UUID(as_uuid=True), ForeignKey("chat_channel_messages.id", ondelete="CASCADE"), nullable=True)
+    thread_reply_count = Column(Integer, default=0, nullable=False)  # denormalized counter on parent
+
     # Optional project/task reference
     reference_type = Column(String(50), nullable=True)  # "project" | "node" | "card"
     reference_id = Column(String(100), nullable=True)  # UUID of the referenced entity
     reference_name = Column(String(255), nullable=True)  # display name snapshot
 
     is_edited = Column(Boolean, default=False, nullable=False)
+    is_pinned = Column(Boolean, default=False, nullable=False)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -1000,11 +1017,85 @@ class ChatChannelMessage(Base):
     # Relationships
     channel = relationship("ChatChannel", back_populates="messages")
     sender = relationship("User")
+    reactions = relationship("MessageReaction", back_populates="message", cascade="all, delete-orphan")
+    attachments = relationship("MessageAttachment", back_populates="message", cascade="all, delete-orphan")
+    thread_replies = relationship(
+        "ChatChannelMessage",
+        backref=backref("parent_message", remote_side="ChatChannelMessage.id"),
+        foreign_keys="[ChatChannelMessage.parent_message_id]",
+        lazy="select",
+    )
 
     __table_args__ = (
         Index("idx_chat_msg_channel", "channel_id"),
         Index("idx_chat_msg_created", "created_at"),
         Index("idx_chat_msg_sender", "sender_id"),
+        Index("idx_chat_msg_parent", "parent_message_id"),
+    )
+
+
+class MessageReaction(Base):
+    """Emoji reaction on a message (Slack-style)."""
+    __tablename__ = "message_reactions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    message_id = Column(UUID(as_uuid=True), ForeignKey("chat_channel_messages.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    emoji = Column(String(50), nullable=False)  # e.g. "👍", ":thumbsup:", or "+1"
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    message = relationship("ChatChannelMessage", back_populates="reactions")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_reaction_message", "message_id"),
+        Index("idx_reaction_user_msg", "user_id", "message_id"),
+        Index("idx_reaction_unique", "message_id", "user_id", "emoji", unique=True),
+    )
+
+
+class MessageAttachment(Base):
+    """File attachment on a message."""
+    __tablename__ = "message_attachments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    message_id = Column(UUID(as_uuid=True), ForeignKey("chat_channel_messages.id", ondelete="CASCADE"), nullable=False)
+    file_name = Column(String(500), nullable=False)
+    file_url = Column(Text, nullable=False)  # URL or path
+    file_type = Column(String(100), nullable=True)  # MIME type
+    file_size = Column(Integer, nullable=True)  # in bytes
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    message = relationship("ChatChannelMessage", back_populates="attachments")
+
+    __table_args__ = (
+        Index("idx_attachment_message", "message_id"),
+    )
+
+
+class PinnedMessage(Base):
+    """Pinned messages in a channel."""
+    __tablename__ = "pinned_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    channel_id = Column(UUID(as_uuid=True), ForeignKey("chat_channels.id", ondelete="CASCADE"), nullable=False)
+    message_id = Column(UUID(as_uuid=True), ForeignKey("chat_channel_messages.id", ondelete="CASCADE"), nullable=False)
+    pinned_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    channel = relationship("ChatChannel", back_populates="pinned_messages")
+    message = relationship("ChatChannelMessage")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_pinned_channel", "channel_id"),
+        Index("idx_pinned_unique", "channel_id", "message_id", unique=True),
     )
 
 
@@ -1048,13 +1139,14 @@ class Document(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relationships
-    session = relationship("Session")
+    session = relationship("Session", back_populates="documents")
     organization = relationship("Organization")
     creator = relationship("User", foreign_keys=[created_by])
     template = relationship("DocumentTemplate")
     recipients = relationship("DocumentRecipient", back_populates="document", cascade="all, delete-orphan")
     pricing_items = relationship("PricingLineItem", back_populates="document", cascade="all, delete-orphan")
     versions = relationship("DocumentVersion", back_populates="document", cascade="all, delete-orphan")
+    chat_messages = relationship("DocumentChatMessage", back_populates="document", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_document_session", "session_id"),
@@ -1189,7 +1281,7 @@ class DocumentChatMessage(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    document = relationship("Document")
+    document = relationship("Document", back_populates="chat_messages")
 
     __table_args__ = (
         Index("idx_doc_chat_document", "document_id"),

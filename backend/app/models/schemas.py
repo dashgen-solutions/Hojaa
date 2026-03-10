@@ -51,6 +51,8 @@ class UserRegister(SanitizedModel):
     industry: Optional[str] = None
     company_size: Optional[str] = None   # 1-10, 11-50, 51-200, 201-500, 500+
     website: Optional[str] = None
+    # Optional AI API key — skip free-tier limits if provided
+    openai_api_key: Optional[str] = None
 
 
 class UserLogin(BaseModel):
@@ -85,6 +87,9 @@ class UserResponse(BaseModel):
     organization_id: Optional[UUID] = None
     org_role: Optional[str] = None   # owner | admin | member
     job_title: Optional[str] = None
+    has_own_api_key: bool = False       # Whether user/org has configured their own LLM key
+    ai_usage_usd: float = 0.0          # Total platform AI spend for free-tier tracking
+    ai_usage_limit_usd: float = 0.10   # Free-tier limit
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)

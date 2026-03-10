@@ -204,9 +204,10 @@ export default function PlanningBoard({ sessionId, readOnly = false }: PlanningB
                 onClick={handleBulkCreate}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium
                            bg-neutral-900 text-white hover:bg-neutral-800 transition-colors shadow-sm"
+                title="Only active nodes will generate cards — deferred or removed nodes are excluded"
               >
                 <SparklesIcon className="w-4 h-4" />
-                Generate Cards from Graph
+                Generate Cards from Active Nodes
               </button>
             </>
           )}

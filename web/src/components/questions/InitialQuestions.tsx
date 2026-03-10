@@ -250,7 +250,7 @@ export default function InitialQuestions({
           Let's refine your requirements
         </h1>
         <p className="text-neutral-500 dark:text-neutral-400 text-base max-w-md mx-auto">
-          Answer these questions to help us understand your project better
+          Answering helps generate a better tree, but it&apos;s optional — skip anytime
         </p>
       </div>
 
@@ -326,7 +326,8 @@ export default function InitialQuestions({
         {questions.map((q, idx) => (
           <div
             key={q.id}
-            className={`card p-4 transition-all duration-300 ${
+            onClick={() => { if (!q.is_answered && editingId !== q.id) setCurrentIndex(idx); }}
+            className={`card p-4 transition-all duration-300 cursor-pointer ${
               idx === currentIndex && !q.is_answered
                 ? "border-2 border-neutral-200 dark:border-neutral-700 shadow-sm bg-white dark:bg-neutral-900"
                 : q.is_answered
@@ -516,26 +517,35 @@ export default function InitialQuestions({
         ))}
       </div>
 
-      {/* Complete Button */}
-      {answeredCount === questions.length && questions.length > 0 && (
+      {/* Action Buttons */}
+      {questions.length > 0 && (
         <div className="sticky bottom-0 pt-4 pb-2 bg-neutral-50 dark:bg-neutral-950 animate-fade-in">
-          <button
-            onClick={handleComplete}
-            disabled={isSubmitting}
-            className="w-full btn bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-brand-lime dark:text-brand-dark dark:hover:bg-brand-lime/90 py-4 text-base font-semibold shadow-sm hover:shadow transition-all duration-300"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                Generating Requirements Tree...
-              </>
-            ) : (
-              <>
-                Generate Requirements Tree
-                <ArrowRightIcon className="w-5 h-5" />
-              </>
-            )}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleComplete}
+              disabled={isSubmitting}
+              className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-brand-lime dark:text-brand-dark dark:hover:bg-brand-lime/90 py-4 text-base font-semibold shadow-sm hover:shadow transition-all duration-300"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Generating Requirements Tree...
+                </>
+              ) : (
+                <>
+                  {answeredCount > 0 ? 'Generate Requirements Tree' : 'Skip & Generate Tree'}
+                  <ArrowRightIcon className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </div>
+          {answeredCount < questions.length && (
+            <p className="text-center text-xs text-neutral-400 dark:text-neutral-500 mt-2">
+              {answeredCount === 0
+                ? 'You can skip all questions — the tree will be based on your uploaded content'
+                : `${answeredCount} of ${questions.length} answered — you can generate now or answer more`}
+            </p>
+          )}
         </div>
       )}
     </div>

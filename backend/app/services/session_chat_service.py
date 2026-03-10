@@ -28,6 +28,7 @@ from app.models.database import (
     Source, Conversation, Message,
 )
 from app.services.audit_service import audit_service
+from app.services.ai_usage_limit_service import enforce_ai_limit
 
 logger = get_logger(__name__)
 
@@ -234,6 +235,20 @@ TOOLS = [
             "name": "get_scope_analytics",
             "description": "Get scope analytics: completion percentage, feature breakdown, priority distribution, estimated total hours, risk indicators.",
             "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "rename_project",
+            "description": "Rename the current project / session. Updates the project title shown everywhere.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "new_name": {"type": "string", "description": "The new name for the project"},
+                },
+                "required": ["new_name"],
+            },
         },
     },
 ]
@@ -702,6 +717,30 @@ class SessionChatTools:
             })
         return {"conversations": result}
 
+    def rename_project(self, new_name: str) -> Dict[str, Any]:
+        """Rename the current project / session."""
+        session = self._get_session()
+        if not session:
+            return {"error": "Session not found"}
+        old_name = session.document_filename or "Untitled"
+        session.document_filename = new_name
+
+        # Sync: rename the linked project channel
+        try:
+            from app.services.project_channel_service import rename_project_channel
+            rename_project_channel(self.db, self.session_id, new_name)
+        except Exception as ch_err:
+            import logging
+            logging.getLogger(__name__).warning(f"Channel rename in chatbot failed: {ch_err}")
+
+        self.db.commit()
+        return {
+            "success": True,
+            "old_name": old_name,
+            "new_name": new_name,
+            "message": f"Project renamed from '{old_name}' to '{new_name}'",
+        }
+
     def get_scope_analytics(self) -> Dict[str, Any]:
         nodes = self.db.query(Node).filter(Node.session_id == self.session_id).all()
         cards = self.db.query(Card).filter(Card.session_id == self.session_id).all()
@@ -751,6 +790,7 @@ class SessionChatTools:
             "assign_card_to_member": lambda: self.assign_card_to_member(args["node_title"], args["member_name"]),
             "get_node_conversations": lambda: self.get_node_conversations(args["node_title"]),
             "get_scope_analytics": lambda: self.get_scope_analytics(),
+            "rename_project": lambda: self.rename_project(args["new_name"]),
         }
 
         fn = fn_map.get(tool_name)
@@ -774,16 +814,26 @@ You are scoped to a **specific project session**. You have access to tools that 
 ## Your Capabilities
 1. **Answer questions** about the project: scope structure, team composition, progress, history, analytics
 2. **Perform actions** when asked: create/edit/delete requirements nodes, manage team members, assign cards
-3. **Provide insights**: team performance analysis, scope health, change patterns, risk indicators
+3. **Rename the project** using the rename_project tool
+4. **Provide insights**: team performance analysis, scope health, change patterns, risk indicators
 
 ## Guidelines
 - Always use tools to get current data before answering — never guess at project-specific information
-- When performing write actions (create, update, delete), confirm what you did clearly
+- When performing write actions (create, update, delete, rename), confirm what you did clearly
 - For analytics questions, call get_scope_analytics or get_team_performance to get real numbers
 - Be concise but thorough — use bullet points and structured formatting
 - If asked about something outside this session's scope, explain that you only have access to this session
 - When multiple nodes match a search, ask the user to clarify
 - For destructive actions (delete, remove), mention what was removed so it's clear
+
+## Things You CANNOT Do
+- **Create new projects** — you are scoped to the current project only. If a user asks you to create a new project (e.g. "create a gym app"), politely explain that you can help build out the scope tree, add features, and manage the team for THIS project, but creating a brand-new project must be done from the Projects page using the "New Project" button.
+- **Upload documents** — guide the user to the Discovery page's upload area
+- **Navigate the UI** — you cannot click buttons or change pages for the user
+
+When users describe an app idea (e.g. "create a gym app"), interpret this as a request to **structure that idea as scope nodes within the current project**. Ask if they'd like you to:
+1. Rename the project to match their idea
+2. Create a scope tree with features and requirements for it
 
 ## Formatting
 - Use markdown formatting for readability
@@ -816,6 +866,12 @@ async def process_session_chat(
         }
     """
     import openai
+
+    # ── Enforce AI usage limit for free-tier users ──
+    if user_id:
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            enforce_ai_limit(db, user)
 
     client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
 
@@ -874,6 +930,23 @@ async def process_session_chat(
         choice = response.choices[0]
         msg = choice.message
 
+        # ── Log usage for this iteration ──
+        try:
+            usage = response.usage
+            if usage:
+                from app.services.ai_usage_service import log_usage
+                log_usage(
+                    db=db,
+                    task="session_chat",
+                    model=model,
+                    prompt_tokens=usage.prompt_tokens,
+                    completion_tokens=usage.completion_tokens,
+                    session_id=str(session_id),
+                    user_id=user_id,
+                )
+        except Exception as log_err:
+            logger.warning(f"Failed to log session-chat usage: {log_err}")
+
         # If the model wants to call tools
         if msg.tool_calls:
             # Add assistant message with tool calls
@@ -904,7 +977,8 @@ async def process_session_chat(
 
                 # Track write actions
                 if fn_name in ("create_node", "update_node", "delete_node",
-                               "add_team_member", "remove_team_member", "assign_card_to_member"):
+                               "add_team_member", "remove_team_member", "assign_card_to_member",
+                               "rename_project"):
                     actions_taken.append({"action": fn_name, "args": fn_args})
 
                 messages.append({

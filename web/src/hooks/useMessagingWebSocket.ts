@@ -19,6 +19,11 @@ interface UseMessagingWebSocketOptions {
   onChannelUpdate?: (msg: WSMessage) => void;
   onMessageEdited?: (msg: WSMessage) => void;
   onMessageDeleted?: (msg: WSMessage) => void;
+  onReactionAdded?: (msg: WSMessage) => void;
+  onReactionRemoved?: (msg: WSMessage) => void;
+  onThreadReply?: (msg: WSMessage) => void;
+  onPresence?: (msg: WSMessage) => void;
+  onMessagePinned?: (msg: WSMessage) => void;
   enabled?: boolean;
 }
 
@@ -36,6 +41,11 @@ export function useMessagingWebSocket({
   onChannelUpdate,
   onMessageEdited,
   onMessageDeleted,
+  onReactionAdded,
+  onReactionRemoved,
+  onThreadReply,
+  onPresence,
+  onMessagePinned,
   enabled = true,
 }: UseMessagingWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
@@ -97,6 +107,21 @@ export function useMessagingWebSocket({
           case "message_deleted":
             onMessageDeleted?.(msg);
             break;
+          case "reaction_added":
+            onReactionAdded?.(msg);
+            break;
+          case "reaction_removed":
+            onReactionRemoved?.(msg);
+            break;
+          case "thread_reply":
+            onThreadReply?.(msg);
+            break;
+          case "presence":
+            onPresence?.(msg);
+            break;
+          case "message_pinned":
+            onMessagePinned?.(msg);
+            break;
         }
       } catch {
         // ignore malformed JSON
@@ -115,7 +140,7 @@ export function useMessagingWebSocket({
     ws.onerror = () => {
       ws.close();
     };
-  }, [token, enabled, onNewMessage, onTyping, onChannelUpdate, onMessageEdited, onMessageDeleted, cleanup]);
+  }, [token, enabled, onNewMessage, onTyping, onChannelUpdate, onMessageEdited, onMessageDeleted, onReactionAdded, onReactionRemoved, onThreadReply, onPresence, onMessagePinned, cleanup]);
 
   useEffect(() => {
     connect();
@@ -131,5 +156,14 @@ export function useMessagingWebSocket({
     [],
   );
 
-  return { connected, sendTyping };
+  const sendPresenceUpdate = useCallback(
+    (status: "online" | "away" | "dnd") => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "presence_update", status }));
+      }
+    },
+    [],
+  );
+
+  return { connected, sendTyping, sendPresenceUpdate };
 }

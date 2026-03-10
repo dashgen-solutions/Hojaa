@@ -52,6 +52,7 @@ def log_usage(
     cache_hit: bool = False,
     session_id: Optional[UUID] = None,
     org_id: Optional[UUID] = None,
+    user_id: Optional[UUID] = None,
 ) -> None:
     """Persist a single AI usage record.  Fire-and-forget — errors are logged
     but never propagated so they don't break the main request.
@@ -69,6 +70,7 @@ def log_usage(
             cache_hit=cache_hit,
             session_id=session_id,
             org_id=org_id,
+            user_id=user_id,
         )
         database.add(record)
         database.commit()

@@ -1,6 +1,7 @@
 "use client";
 
 import { ProjectProvider } from "@/contexts/ProjectContext";
+import SessionChatbot from "@/components/chat/SessionChatbot";
 import { useParams } from "next/navigation";
 
 export default function ProjectLayout({ children }: { children: React.ReactNode }) {
@@ -10,6 +11,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
   return (
     <ProjectProvider projectId={projectId}>
       {children}
+      <SessionChatbot sessionId={projectId} />
     </ProjectProvider>
   );
 }

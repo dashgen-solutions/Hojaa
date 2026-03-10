@@ -18,6 +18,7 @@ import {
   SessionChatMessage,
   SessionChatResponse,
 } from '@/lib/api';
+import { useOptionalProject } from '@/contexts/ProjectContext';
 
 interface SessionChatbotProps {
   sessionId: string;
@@ -44,6 +45,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const projectCtx = useOptionalProject();
 
   // Only show for authenticated users
   const canAccess = isAuthenticated && user?.role && ['owner', 'admin'].includes(user.role);
@@ -115,6 +117,11 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
         created_at: new Date().toISOString(),
       };
       setMessages(prev => [...prev, assistantMsg]);
+
+      // If the chatbot renamed the project, refresh context + notify sidebar
+      if (response.tool_calls?.some((tc: { name: string }) => tc.name === 'rename_project')) {
+        projectCtx?.refreshProject();
+      }
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 403) {

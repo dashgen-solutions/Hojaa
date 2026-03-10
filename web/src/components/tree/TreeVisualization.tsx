@@ -14,8 +14,9 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   ArrowsPointingInIcon,
+  CheckBadgeIcon,
 } from "@heroicons/react/24/outline";
-import { getTree, getPlanningBoard } from "@/lib/api";
+import { getTree, getPlanningBoard, activateAllNodes } from "@/lib/api";
 
 interface TreeNodeData {
   id: string;
@@ -72,6 +73,7 @@ export default function TreeVisualization({
     recommend_collapse_depth: number | null;
   } | null>(null);
   const [depthDismissed, setDepthDismissed] = useState(false);
+  const [isActivatingAll, setIsActivatingAll] = useState(false);
 
   const fetchTree = async () => {
     try {
@@ -393,6 +395,31 @@ export default function TreeVisualization({
           )}
 
           {/* Active scope toggle */}
+          {!readOnly && (
+            <button
+              onClick={async () => {
+                setIsActivatingAll(true);
+                try {
+                  await activateAllNodes(sessionId);
+                  await fetchTree();
+                } catch (err: any) {
+                  setError(err.response?.data?.detail || 'Failed to activate nodes');
+                } finally {
+                  setIsActivatingAll(false);
+                }
+              }}
+              disabled={isActivatingAll}
+              className="ml-auto px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all duration-200 border bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 flex items-center gap-1"
+              title="Activate all nodes in the tree"
+            >
+              {isActivatingAll ? (
+                <div className="w-3 h-3 border-2 border-green-400 border-t-green-700 rounded-full animate-spin" />
+              ) : (
+                <CheckBadgeIcon className="w-3.5 h-3.5" />
+              )}
+              Activate All
+            </button>
+          )}
           <button
             onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
             className={`ml-auto px-3 py-1.5 rounded-md text-[11px] font-medium transition-all duration-200 border ${

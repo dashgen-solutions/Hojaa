@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.logger import get_logger, configure_logging
+from app.core.exceptions import AIUsageLimitExceeded
 from app.db.session import init_db
 from app.api.routes import (
     upload,
@@ -41,6 +42,8 @@ from app.middleware.security import (
     CSRFMiddleware,
 )
 from app.services.websocket_manager import ws_manager
+from app.services.template_seeder import seed_system_templates
+from app.db.session import SessionLocal
 
 # Configure logging
 configure_logging()
@@ -111,6 +114,15 @@ async def startup_event():
         init_db()
         app.state.db_ready = True
         logger.info("Database initialized successfully")
+
+        # Seed predefined document templates (idempotent)
+        try:
+            db = SessionLocal()
+            seed_system_templates(db)
+            db.close()
+            logger.info("System templates seeded successfully")
+        except Exception as seed_err:
+            logger.warning(f"Template seeding skipped: {seed_err}")
         
         # Start WebSocket presence cleanup loop
         await ws_manager.start_cleanup_loop()
@@ -152,6 +164,21 @@ async def health_check():
         version=settings.app_version,
         environment=settings.environment,
         database="connected" if getattr(app.state, "db_ready", False) else "unavailable"
+    )
+
+
+@app.exception_handler(AIUsageLimitExceeded)
+async def ai_usage_limit_handler(request, exc: AIUsageLimitExceeded):
+    """Return 402 Payment Required when free-tier AI usage is exhausted."""
+    return JSONResponse(
+        status_code=402,
+        content={
+            "success": False,
+            "error": "AI_USAGE_LIMIT_EXCEEDED",
+            "detail": exc.message,
+            "used_usd": exc.used_usd,
+            "limit_usd": exc.limit_usd,
+        },
     )
 
 

@@ -3,6 +3,7 @@ import { Outfit, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import AIUsageLimitBanner from "@/components/layout/AIUsageLimitBanner";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -35,7 +36,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${outfit.variable} ${dmSans.variable} font-sans`}>
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <AIUsageLimitBanner />
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -15,6 +15,9 @@ from app.models.database import (
 )
 from app.core.auth import get_optional_user, get_current_active_user, get_current_user
 from app.core.logger import get_logger
+from app.services.project_channel_service import (
+    create_project_channel, sync_shared_user, rename_project_channel,
+)
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/sessions", tags=["sessions"])
@@ -73,6 +76,15 @@ async def create_session(
         )
         
         db.add(new_session)
+        db.flush()  # get new_session.id before channel creation
+
+        # Auto-create a project group channel for authenticated users
+        if current_user:
+            try:
+                create_project_channel(db, new_session, current_user.id)
+            except Exception as ch_err:
+                logger.warning(f"Project channel creation failed (session created OK): {ch_err}")
+
         db.commit()
         db.refresh(new_session)
         
@@ -232,6 +244,13 @@ async def share_session(
                 role=share_role,
                 invited_by=current_user.id,
             ))
+
+        # Sync: add shared user to the project channel
+        try:
+            sync_shared_user(db, sid, target.id, remove=False)
+        except Exception as ch_err:
+            logger.warning(f"Channel sync on share failed: {ch_err}")
+
         db.commit()
 
         return {"message": f"Session shared with {body.email} as {share_role.value}"}
@@ -267,7 +286,15 @@ async def revoke_session_share(
         if not member:
             raise HTTPException(status_code=404, detail="Share not found")
 
+        target_user_id = member.user_id
         db.delete(member)
+
+        # Sync: remove user from the project channel
+        try:
+            sync_shared_user(db, sid, target_user_id, remove=True)
+        except Exception as ch_err:
+            logger.warning(f"Channel sync on revoke failed: {ch_err}")
+
         db.commit()
         return {"message": "Access revoked"}
 
@@ -342,6 +369,13 @@ async def delete_session(
     """
     try:
         from uuid import UUID
+        from sqlalchemy import text
+        from app.models.database import (
+            Document, DocumentChatMessage, DocumentVersion,
+            DocumentRecipient, PricingLineItem, NodeHistory,
+            Node, SessionChatMessage, WebSocketPresence,
+            NotificationPreference,
+        )
         
         session = db.query(DBSession).filter(
             DBSession.id == UUID(session_id)
@@ -354,6 +388,31 @@ async def delete_session(
         if not _can_access_session(session, current_user, db):
             raise HTTPException(status_code=403, detail="Access denied to this session")
         
+        sid = session.id
+        
+        # 1. Delete document sub-tables first
+        doc_ids = [d.id for d in db.query(Document.id).filter(Document.session_id == sid).all()]
+        if doc_ids:
+            db.query(DocumentChatMessage).filter(DocumentChatMessage.document_id.in_(doc_ids)).delete(synchronize_session=False)
+            db.query(DocumentVersion).filter(DocumentVersion.document_id.in_(doc_ids)).delete(synchronize_session=False)
+            db.query(DocumentRecipient).filter(DocumentRecipient.document_id.in_(doc_ids)).delete(synchronize_session=False)
+            db.query(PricingLineItem).filter(PricingLineItem.document_id.in_(doc_ids)).delete(synchronize_session=False)
+            db.query(Document).filter(Document.session_id == sid).delete(synchronize_session=False)
+        
+        # 2. Delete NodeHistory via raw SQL to bypass the ORM immutability
+        #    listener (SEC-2.4).  This is intentional: when the *project*
+        #    itself is deleted, the audit trail goes with it.
+        db.execute(
+            text("DELETE FROM node_history WHERE session_id = :sid"),
+            {"sid": str(sid)},
+        )
+        
+        # 3. Delete other session-scoped rows that might block cascade
+        db.query(SessionChatMessage).filter(SessionChatMessage.session_id == sid).delete(synchronize_session=False)
+        db.query(WebSocketPresence).filter(WebSocketPresence.session_id == sid).delete(synchronize_session=False)
+        db.query(NotificationPreference).filter(NotificationPreference.session_id == sid).delete(synchronize_session=False)
+        
+        # 4. Now safe to delete the session; remaining cascades are clean
         db.delete(session)
         db.commit()
         
@@ -404,6 +463,12 @@ async def update_session(
         if update_data.document_filename is not None:
             session.document_filename = update_data.document_filename
             logger.info(f"Updating session {session_id} name to: {update_data.document_filename}")
+
+            # Sync: rename the project channel
+            try:
+                rename_project_channel(db, UUID(session_id), update_data.document_filename)
+            except Exception as ch_err:
+                logger.warning(f"Channel rename failed: {ch_err}")
         
         db.commit()
         db.refresh(session)

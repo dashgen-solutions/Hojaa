@@ -59,6 +59,7 @@ class ScopeChangeDetector:
         format_hint: Optional[str] = None,
         meeting_type_hint: Optional[str] = None,
         min_confidence: float = 0.0,
+        user_id=None,
     ) -> Dict[str, Any]:
         """
         Analyse *content* for scope changes relative to the graph of *session_id*.
@@ -93,6 +94,7 @@ class ScopeChangeDetector:
         result = await cached_agent_run(
             self._agent, user_prompt, task="scope_change",
             session_id=session_id,
+            user_id=user_id,
         )
         output: MeetingNotesOutput = result.output
 

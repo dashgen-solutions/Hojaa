@@ -181,7 +181,7 @@ class PlanningService:
         elif not is_out_of_scope and title:
             # Manual card with title but no node_id → auto-place in graph via LLM
             try:
-                placed_node_id = await self._auto_place_in_graph(database, session_id, title, description)
+                placed_node_id = await self._auto_place_in_graph(database, session_id, title, description, user_id=created_by)
                 if placed_node_id:
                     node_id = placed_node_id
                     logger.info(f"LLM auto-placed card '{title[:40]}' under node {node_id}")
@@ -726,6 +726,7 @@ class PlanningService:
         session_id: UUID,
         title: str,
         description: Optional[str],
+        user_id=None,
     ) -> Optional[UUID]:
         """
         Use the LLM to decide which parent node a new card should live under,
@@ -780,6 +781,7 @@ class PlanningService:
         result = await cached_agent_run(
             agent, prompt, task="tree_building",
             session_id=str(session_id),
+            user_id=user_id,
         )
 
         placement = result.output

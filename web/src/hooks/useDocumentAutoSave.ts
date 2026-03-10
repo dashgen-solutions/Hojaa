@@ -8,6 +8,7 @@ interface UseDocumentAutoSaveOptions {
   content: unknown[] | null;
   enabled?: boolean;
   debounceMs?: number;
+  skipRef?: React.MutableRefObject<boolean>;
 }
 
 interface UseDocumentAutoSaveReturn {
@@ -22,6 +23,7 @@ export function useDocumentAutoSave({
   content,
   enabled = true,
   debounceMs = 2000,
+  skipRef,
 }: UseDocumentAutoSaveOptions): UseDocumentAutoSaveReturn {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -38,6 +40,13 @@ export function useDocumentAutoSave({
 
   const doSave = useCallback(async () => {
     if (!documentId || !contentRef.current) return;
+
+    // Skip this save cycle if flagged (e.g. AI auto-applied content already saved server-side)
+    if (skipRef?.current) {
+      skipRef.current = false;
+      lastSavedContentRef.current = JSON.stringify(contentRef.current);
+      return;
+    }
 
     const contentStr = JSON.stringify(contentRef.current);
     // Skip if content hasn't actually changed

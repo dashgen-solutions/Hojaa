@@ -10,10 +10,11 @@ from pydantic import BaseModel
 import re
 
 from app.db.session import get_db
-from app.models.database import User, UserRole, Organization, OrgRole, SessionMember
+from app.models.database import User, UserRole, Organization, OrgRole, SessionMember, Integration, IntegrationType
 from app.models.schemas import UserRegister, UserLogin, UserResponse, Token, OrganizationResponse
 from app.core.auth import create_access_token, get_current_active_user
 from app.core.logger import get_logger
+from app.services.ai_usage_limit_service import get_user_usage_info
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -90,6 +91,18 @@ async def register_user(
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+
+        # If the user provided an OpenAI API key, store it as an Integration
+        if user_data.openai_api_key and org:
+            integration = Integration(
+                organization_id=org.id,
+                integration_type=IntegrationType.LLM_OPENAI,
+                config={"api_key": user_data.openai_api_key},
+                is_active=True,
+                created_by=new_user.id,
+            )
+            db.add(integration)
+            db.commit()
         
         logger.info(f"Registered user: {new_user.id}" + (f" with org: {org.name}" if org else ""))
         return new_user
@@ -208,6 +221,11 @@ async def get_current_user_info(
                 "is_active": org.is_active,
                 "created_at": org.created_at.isoformat(),
             }
+
+    # Include AI usage info for free-tier limiting
+    usage_info = get_user_usage_info(db, current_user)
+    result.update(usage_info)
+
     return result
 
 

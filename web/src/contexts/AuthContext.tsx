@@ -27,6 +27,9 @@ interface User {
   job_title: string | null;
   created_at: string;
   organization?: Organization | null;
+  has_own_api_key?: boolean;
+  ai_usage_usd?: number;
+  ai_usage_limit_usd?: number;
 }
 
 interface AuthContextType {
@@ -41,6 +44,7 @@ interface AuthContextType {
     industry?: string;
     company_size?: string;
     website?: string;
+    openai_api_key?: string;
   }) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -114,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     industry?: string;
     company_size?: string;
     website?: string;
+    openai_api_key?: string;
   }) => {
     try {
       await axios.post(`${API_URL}/api/auth/register`, {

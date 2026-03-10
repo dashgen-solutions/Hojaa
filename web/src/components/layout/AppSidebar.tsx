@@ -24,6 +24,9 @@ import {
   DocumentTextIcon,
   SunIcon,
   MoonIcon,
+  PencilIcon,
+  CheckIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { getMessagingUnreadCount } from "@/lib/api";
 import HojaaLogo from '@/components/brand/HojaaLogo';
@@ -83,6 +86,8 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [editingSidebarId, setEditingSidebarId] = useState<string | null>(null);
+  const [editingSidebarName, setEditingSidebarName] = useState("");
 
   // Extract current project ID from URL
   const projectIdMatch = pathname.match(/\/projects\/([^/]+)/);
@@ -106,6 +111,36 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
   useEffect(() => {
     fetchRecentProjects();
   }, [fetchRecentProjects]);
+
+  // Listen for project rename events from other components
+  useEffect(() => {
+    const handleRenamed = (e: Event) => {
+      const { id, name } = (e as CustomEvent).detail;
+      setRecentProjects(prev =>
+        prev.map(p => p.id === id ? { ...p, document_filename: name } : p)
+      );
+    };
+    window.addEventListener('projectRenamed', handleRenamed);
+    return () => window.removeEventListener('projectRenamed', handleRenamed);
+  }, []);
+
+  const handleSidebarRename = async (projectId: string) => {
+    if (!token || !editingSidebarName.trim()) return;
+    try {
+      await axios.patch(
+        `${API_URL}/api/sessions/${projectId}`,
+        { document_filename: editingSidebarName.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setRecentProjects(prev =>
+        prev.map(p => p.id === projectId ? { ...p, document_filename: editingSidebarName.trim() } : p)
+      );
+      setEditingSidebarId(null);
+      window.dispatchEvent(new CustomEvent('projectRenamed', { detail: { id: projectId, name: editingSidebarName.trim() } }));
+    } catch (err) {
+      console.error("Failed to rename project:", err);
+    }
+  };
 
   // Fetch unread message count
   useEffect(() => {
@@ -321,20 +356,63 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
             {isAuthenticated && recentProjects.map((project) => {
               const displayName = getProjectDisplayName(project);
               const color = getProjectColor(project.id);
+
+              if (editingSidebarId === project.id) {
+                return (
+                  <div
+                    key={project.id}
+                    className="flex items-center gap-1 px-2 py-1"
+                  >
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editingSidebarName}
+                      onChange={(e) => setEditingSidebarName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSidebarRename(project.id);
+                        if (e.key === "Escape") setEditingSidebarId(null);
+                      }}
+                      className="flex-1 min-w-0 text-[12px] bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded px-1.5 py-0.5 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                    />
+                    <button onClick={() => handleSidebarRename(project.id)} className="p-0.5 text-green-600 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded" title="Save">
+                      <CheckIcon className="w-3 h-3" />
+                    </button>
+                    <button onClick={() => setEditingSidebarId(null)} className="p-0.5 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded" title="Cancel">
+                      <XMarkIcon className="w-3 h-3" />
+                    </button>
+                  </div>
+                );
+              }
+
               return (
-                <Link
+                <div
                   key={project.id}
-                  href={`/projects/${project.id}/discovery`}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 text-[13px] rounded transition-colors block ${navItemCls(project.id === currentProjectId)}`}
+                  className={`group/sidebar-proj w-full flex items-center gap-2 px-2 py-1.5 text-[13px] rounded transition-colors ${navItemCls(project.id === currentProjectId)}`}
                   style={{ borderRadius: "6px" }}
                 >
-                  <div className={`w-5 h-5 rounded ${color} flex items-center justify-center flex-shrink-0`}>
-                    <span className="text-white text-[10px] font-bold">{getProjectInitial(displayName)}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate">{displayName}</div>
-                  </div>
-                </Link>
+                  <Link
+                    href={`/projects/${project.id}/discovery`}
+                    className="flex items-center gap-2 flex-1 min-w-0"
+                  >
+                    <div className={`w-5 h-5 rounded ${color} flex items-center justify-center flex-shrink-0`}>
+                      <span className="text-white text-[10px] font-bold">{getProjectInitial(displayName)}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate">{displayName}</div>
+                    </div>
+                  </Link>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingSidebarId(project.id);
+                      setEditingSidebarName(displayName);
+                    }}
+                    className="p-0.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-400 opacity-0 group-hover/sidebar-proj:opacity-100 transition-opacity flex-shrink-0"
+                    title="Rename"
+                  >
+                    <PencilIcon className="w-3 h-3" />
+                  </button>
+                </div>
               );
             })}
 

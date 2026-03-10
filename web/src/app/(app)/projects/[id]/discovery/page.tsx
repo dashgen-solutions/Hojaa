@@ -8,7 +8,6 @@ import { useStore } from "@/stores/useStore";
 import ResizableSplitPane from "@/components/layout/ResizableSplitPane";
 import TreeVisualization from "@/components/tree/TreeVisualization";
 import ChatInterface from "@/components/chat/ChatInterface";
-import SessionChatbot from "@/components/chat/SessionChatbot";
 import DocumentUpload from "@/components/upload/DocumentUpload";
 import InitialQuestions from "@/components/questions/InitialQuestions";
 import SuggestionReview from "@/components/sources/SuggestionReview";
@@ -260,8 +259,6 @@ export default function DiscoveryPage() {
         )}
       </div>
 
-      {/* Project AI Chatbot */}
-      {currentStep === "tree" && <SessionChatbot sessionId={projectId} />}
     </div>
   );
 }

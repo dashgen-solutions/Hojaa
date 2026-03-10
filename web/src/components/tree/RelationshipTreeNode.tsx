@@ -196,15 +196,16 @@ export default function RelationshipTreeNode({
     }
   };
 
-  const handleDeleteNode = async (cascade: boolean) => {
+  const handleDeleteNode = async () => {
     if (!sessionId) return;
-    const message = cascade
-      ? "Delete this node and all its children?"
-      : "Delete this node but keep its children?";
+    const hasChildren = (node.children || []).length > 0;
+    const message = hasChildren
+      ? `This node has ${node.children!.length} child${node.children!.length > 1 ? 'ren' : ''} that will also be deleted. Continue?`
+      : "Delete this node?";
     if (!confirm(message)) return;
 
     try {
-      await deleteNode(node.id, cascade);
+      await deleteNode(node.id, true);
       setShowMenu(false);
       if (onUpdate) onUpdate();
     } catch (error: any) {
@@ -749,22 +750,12 @@ export default function RelationshipTreeNode({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteNode(false);
-                          }}
-                          className="w-full px-3 py-2 text-left text-[13px] text-warning-600 hover:bg-warning-50 flex items-center gap-2 transition-colors"
-                        >
-                          <TrashIcon className="w-3.5 h-3.5" />
-                          Delete (Keep Children)
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteNode(true);
+                            handleDeleteNode();
                           }}
                           className="w-full px-3 py-2 text-left text-[13px] text-danger-600 hover:bg-danger-50 flex items-center gap-2 transition-colors"
                         >
                           <TrashIcon className="w-3.5 h-3.5" />
-                          Delete (With Children)
+                          Delete
                         </button>
                       </div>
                     )}

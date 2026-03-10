@@ -8,6 +8,7 @@ Features:
 - Clean agent factory for multi-agent workflows
 """
 import hashlib
+import inspect
 import json
 import os
 from typing import TypeVar, Type, Optional
@@ -18,6 +19,10 @@ from app.core.config import settings
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
+
+# Detect whether this pydantic-ai version uses "output_type" or "result_type"
+_agent_params = inspect.signature(Agent.__init__).parameters
+_OUTPUT_KWARG = "output_type" if "output_type" in _agent_params else "result_type"
 
 # Ensure API keys are available in environment for Pydantic AI
 if settings.openai_api_key:
@@ -199,6 +204,7 @@ async def cached_agent_run(
     task: str = "",
     session_id=None,
     org_id=None,
+    user_id=None,
 ):
     """
     Run an agent with optional Redis response caching **and** timeout
@@ -211,9 +217,32 @@ async def cached_agent_run(
 
     RISK-2.3C: Every call (including cache hits) is persisted to
     ``ai_usage_logs`` for budget monitoring.
+
+    Free-tier enforcement: when *user_id* is provided the call is gated
+    by ``enforce_ai_limit`` before the LLM is invoked.
     """
     import asyncio
     import time
+
+    # ── Free-tier usage gate ──
+    if user_id:
+        try:
+            from app.db.session import SessionLocal
+            from app.services.ai_usage_limit_service import enforce_ai_limit
+            from app.models.database import User as _User
+            _db = SessionLocal()
+            try:
+                _user = _db.query(_User).filter(_User.id == user_id).first()
+                if _user:
+                    enforce_ai_limit(_db, _user)
+            finally:
+                _db.close()
+        except Exception as limit_exc:
+            from app.core.exceptions import AIUsageLimitExceeded
+            if isinstance(limit_exc, AIUsageLimitExceeded):
+                raise
+            logger.debug(f"Usage-limit pre-check skipped: {limit_exc}")
+
     r = _get_redis()
     key = _cache_key(prompt, model_name) if r and cache_ttl > 0 else ""
 
@@ -230,10 +259,11 @@ async def cached_agent_run(
                     cache_hit=True,
                     session_id=session_id,
                     org_id=org_id,
+                    user_id=user_id,
                 )
-                output_type = agent._output_type  # noqa: access private
+                _otype = getattr(agent, 'output_type', None) or getattr(agent, 'result_type', None)
                 return type("CachedResult", (), {
-                    "output": output_type.model_validate_json(cached),
+                    "output": _otype.model_validate_json(cached) if _otype else cached,
                     "usage": lambda: "cached",
                 })()
         except Exception:
@@ -278,6 +308,7 @@ async def cached_agent_run(
         cache_hit=False,
         session_id=session_id,
         org_id=org_id,
+        user_id=user_id,
     )
 
     return result
@@ -349,15 +380,15 @@ class AIService:
         """
         model_str = self._get_model_name(task)
         model = _resolve_model(model_str)
-        agent = Agent(
-            model,
-            output_type=output_type,
-            deps_type=deps_type,
-            retries=retries,
-            system_prompt=system_prompt
-        )
+        agent_kwargs = {
+            _OUTPUT_KWARG: output_type,
+            "deps_type": deps_type,
+            "retries": retries,
+            "system_prompt": system_prompt,
+        }
+        agent = Agent(model, **agent_kwargs)
 
-        logger.info(f"Created agent with output_type={output_type.__name__}, model={model_str}")
+        logger.info(f"Created agent with {_OUTPUT_KWARG}={output_type.__name__}, model={model_str}")
         return agent
 
     def create_streaming_agent(

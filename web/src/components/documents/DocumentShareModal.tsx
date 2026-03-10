@@ -18,6 +18,7 @@ import {
   shareDocument,
   getDocumentRecipients,
   sendDocument,
+  removeDocumentRecipient,
 } from '@/lib/api';
 
 interface DocumentShareModalProps {
@@ -60,6 +61,7 @@ export default function DocumentShareModal({
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<'viewer' | 'approver'>('viewer');
   const [adding, setAdding] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -119,6 +121,20 @@ export default function DocumentShareModal({
       setError('Failed to add recipient.');
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleRemoveRecipient = async (recipientId: string) => {
+    setRemovingId(recipientId);
+    setError(null);
+    try {
+      await removeDocumentRecipient(documentId, recipientId);
+      setRecipients((prev) => prev.filter((r) => r.id !== recipientId));
+    } catch (err) {
+      console.error('Failed to remove recipient:', err);
+      setError('Failed to remove recipient.');
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -267,9 +283,19 @@ export default function DocumentShareModal({
                     </div>
                     <p className="text-xs text-neutral-500 truncate">{r.email}</p>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className={`h-2 w-2 rounded-full ${dot.color}`} />
-                    <span className="text-xs text-neutral-500">{dot.label}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`h-2 w-2 rounded-full ${dot.color}`} />
+                      <span className="text-xs text-neutral-500">{dot.label}</span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveRecipient(r.id)}
+                      disabled={removingId === r.id}
+                      className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-neutral-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                      title="Remove recipient"
+                    >
+                      <TrashIcon className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
               );

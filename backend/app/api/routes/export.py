@@ -20,9 +20,11 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.schemas import ExportRequest
+from app.models.database import User
 from app.services.export_service import export_service
 from app.services.pdf_generator import PDFGenerator
 from app.core.config import settings
+from app.core.auth import get_optional_user
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -277,6 +279,7 @@ async def export_json(
 async def export_summary(
     request: ExportRequest,
     database: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """
     Generate an AI executive summary for the scope document.
@@ -284,7 +287,10 @@ async def export_summary(
     """
     try:
         from app.services.ai_features_service import generate_export_summary
-        summary = await generate_export_summary(database, request.session_id)
+        summary = await generate_export_summary(
+            database, request.session_id,
+            user_id=current_user.id if current_user else None,
+        )
         return summary
     except Exception as error:
         logger.error(f"Error generating AI summary: {error}")

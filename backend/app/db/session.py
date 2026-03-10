@@ -59,50 +59,53 @@ def get_db() -> Generator[Session, None, None]:
 def init_db() -> None:
     """Initialize database tables and run pending Alembic migrations."""
     logger.info("Initializing database tables")
+
+    is_postgres = settings.database_url.startswith(("postgresql://", "postgres://"))
+
+    if is_postgres:
+        # For PostgreSQL, Alembic manages the schema exclusively.
+        # The Dockerfile CMD runs `alembic upgrade head` before the app starts,
+        # so we only verify connectivity here (and auto-create the DB if needed).
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.info("PostgreSQL connection verified — schema managed by Alembic")
+            return
+        except OperationalError as e:
+            auto_create = os.getenv("MOMETRIC_AUTO_CREATE_DB", "1") == "1"
+            db_url = settings.database_url
+            if auto_create and "does not exist" in str(e).lower():
+                url = make_url(db_url)
+                target_db = url.database
+                if not target_db:
+                    raise
+
+                logger.warning(f"Database '{target_db}' does not exist. Attempting to create it...")
+                server_url = url.set(database="postgres")
+                admin_engine = create_engine(server_url, isolation_level="AUTOCOMMIT")
+                try:
+                    with admin_engine.connect() as conn:
+                        conn.execute(text(f'CREATE DATABASE "{target_db}"'))
+                    logger.info(f"Created database '{target_db}' successfully")
+                except OperationalError as create_err:
+                    if "already exists" not in str(create_err).lower():
+                        logger.error(f"Failed to create database '{target_db}': {create_err}")
+                        raise
+                finally:
+                    admin_engine.dispose()
+
+                # Run Alembic migrations on the freshly-created DB
+                _run_alembic_migrations()
+                return
+            raise
+
+    # For SQLite (dev / test), use create_all + stamp.
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
         _run_alembic_migrations()
         return
-    except OperationalError as e:
-        # If we're using Postgres and the database doesn't exist yet, optionally
-        # auto-create it (common local dev setup).
-        auto_create = os.getenv("MOMETRIC_AUTO_CREATE_DB", "1") == "1"
-        db_url = settings.database_url
-        if (
-            auto_create
-            and "does not exist" in str(e).lower()
-            and (db_url.startswith("postgresql://") or db_url.startswith("postgres://"))
-        ):
-            url = make_url(db_url)
-            target_db = url.database
-            if not target_db:
-                raise
-
-            logger.warning(f"Database '{target_db}' does not exist. Attempting to create it...")
-
-            # Connect to a server-level database to run CREATE DATABASE.
-            server_url = url.set(database="postgres")
-            admin_engine = create_engine(server_url, isolation_level="AUTOCOMMIT")
-            try:
-                with admin_engine.connect() as conn:
-                    conn.execute(text(f'CREATE DATABASE "{target_db}"'))
-                logger.info(f"Created database '{target_db}' successfully")
-            except OperationalError as create_err:
-                # If it was created concurrently or already exists, proceed.
-                if "already exists" not in str(create_err).lower():
-                    logger.error(f"Failed to create database '{target_db}': {create_err}")
-                    raise
-            finally:
-                admin_engine.dispose()
-
-            # Retry table creation now that the DB exists.
-            Base.metadata.create_all(bind=engine)
-            logger.info("Database tables created successfully")
-            _run_alembic_migrations()
-            return
-
-        # Anything else: re-raise so caller can handle/log.
+    except OperationalError:
         raise
 
 
