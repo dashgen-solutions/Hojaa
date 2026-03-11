@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -68,6 +68,7 @@ export default function RelationshipTreeNode({
   const hasChildren = node.children && node.children.length > 0;
   const isSelected = selectedNodeId === node.id;
   const hasAnswer = node.answer && node.answer.trim().length > 0;
+  const nodeRef = useRef<HTMLDivElement>(null);
 
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -174,6 +175,43 @@ export default function RelationshipTreeNode({
   const statusIndicator = getStatusIndicator();
 
   const [showTooltip, setShowTooltip] = useState(false);
+
+  // Close menus/dropdowns on outside click
+  useEffect(() => {
+    if (!showMenu && !showStatusDropdown && !showAssignDropdown) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (nodeRef.current && !nodeRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+        setShowStatusDropdown(false);
+        setShowAssignDropdown(false);
+        setPendingStatus(null);
+        setDeferredReason("");
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowMenu(false);
+        setShowStatusDropdown(false);
+        setShowAssignDropdown(false);
+        setPendingStatus(null);
+        setDeferredReason("");
+      }
+    };
+
+    // Use a slight delay so the click that opened the menu doesn't immediately close it
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showMenu, showStatusDropdown, showAssignDropdown]);
 
   const handleNodeClick = () => {
     if (onNodeClick && hasAnswer) {
@@ -380,7 +418,7 @@ export default function RelationshipTreeNode({
   return (
     <div className="flex flex-col items-center">
       {/* Node Card */}
-      <div className="relative group z-20">
+      <div ref={nodeRef} className="relative group z-20">
         <div
           className={`
             relative bg-white dark:bg-neutral-900 border ${

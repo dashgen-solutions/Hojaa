@@ -34,13 +34,13 @@ function formatMessageContent(content: string): React.ReactNode {
       if (part.startsWith('```') && part.endsWith('```')) {
         const code = part.slice(3, -3).replace(/^\n/, '');
         nodes.push(
-          <pre key={i} className="bg-[#1a1d21] text-green-400 px-3 py-2 rounded text-xs font-mono my-1 overflow-x-auto border border-[#383a3f]">
+          <pre key={i} className="bg-neutral-100 dark:bg-[#1a1d21] text-green-700 dark:text-green-400 px-3 py-2 rounded text-xs font-mono my-1 overflow-x-auto border border-neutral-200 dark:border-[#383a3f]">
             {code}
           </pre>
         );
       } else if (part.startsWith('`') && part.endsWith('`')) {
         nodes.push(
-          <code key={i} className="bg-[#383a3f] text-orange-300 px-1 py-0.5 rounded text-xs font-mono">
+          <code key={i} className="bg-neutral-200 dark:bg-[#383a3f] text-orange-600 dark:text-orange-300 px-1 py-0.5 rounded text-xs font-mono">
             {part.slice(1, -1)}
           </code>
         );
@@ -140,19 +140,19 @@ export default function ThreadPanel({
   };
 
   return (
-    <div className="w-[400px] border-l border-[#383a3f] bg-[#1e2024] flex flex-col h-full">
+    <div className="w-[400px] border-l border-neutral-200 dark:border-[#383a3f] bg-white dark:bg-[#1e2024] flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#383a3f]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-[#383a3f]">
         <div className="flex items-center gap-2">
-          <ChatBubbleLeftIcon className="w-5 h-5 text-gray-400" />
-          <h3 className="text-sm font-bold text-gray-200">Thread</h3>
-          <span className="text-xs text-gray-500">
+          <ChatBubbleLeftIcon className="w-5 h-5 text-neutral-400 dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-neutral-800 dark:text-gray-200">Thread</h3>
+          <span className="text-xs text-neutral-400 dark:text-gray-500">
             {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
           </span>
         </div>
         <button
           onClick={onClose}
-          className="p-1 rounded text-gray-400 hover:text-gray-200 hover:bg-[#383a3f] transition-colors"
+          className="p-1 rounded text-neutral-400 dark:text-gray-400 hover:text-neutral-600 dark:hover:text-gray-200 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
         >
           <XMarkIcon className="w-5 h-5" />
         </button>
@@ -161,7 +161,7 @@ export default function ThreadPanel({
       {/* Thread content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {/* Parent message */}
-        <div className="px-4 py-3 border-b border-[#383a3f]/50">
+        <div className="px-4 py-3 border-b border-neutral-200 dark:border-[#383a3f]/50">
           <div className="flex items-start gap-2.5">
             <div
               className={`w-9 h-9 rounded-lg bg-gradient-to-br ${getAvatarColor(parentMessage.sender_name)} flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}
@@ -170,12 +170,12 @@ export default function ThreadPanel({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2">
-                <span className="text-sm font-bold text-gray-200">{parentMessage.sender_name}</span>
-                <span className="text-[10px] text-gray-500">
+                <span className="text-sm font-bold text-neutral-800 dark:text-gray-200">{parentMessage.sender_name}</span>
+                <span className="text-[10px] text-neutral-400 dark:text-gray-500">
                   {new Date(parentMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
-              <div className="text-[13px] text-gray-300 mt-0.5 break-words">
+              <div className="text-[13px] text-neutral-700 dark:text-gray-300 mt-0.5 break-words">
                 {formatMessageContent(parentMessage.content)}
               </div>
               {/* Parent reactions */}
@@ -195,7 +195,7 @@ export default function ThreadPanel({
                         className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors ${
                           iReacted
                             ? 'bg-blue-600/20 border-blue-500/40 text-blue-300'
-                            : 'bg-[#222529] border-[#383a3f] text-gray-400 hover:border-gray-500'
+                            : 'bg-neutral-100 dark:bg-[#222529] border-neutral-200 dark:border-[#383a3f] text-neutral-500 dark:text-gray-400 hover:border-neutral-400 dark:hover:border-gray-500'
                         }`}
                       >
                         <span>{r.emoji}</span>
@@ -207,10 +207,10 @@ export default function ThreadPanel({
               )}
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
-            <div className="h-px flex-1 bg-[#383a3f]" />
+          <div className="mt-3 flex items-center gap-2 text-xs text-neutral-400 dark:text-gray-500">
+            <div className="h-px flex-1 bg-neutral-200 dark:bg-[#383a3f]" />
             <span>{replies.length} {replies.length === 1 ? 'reply' : 'replies'}</span>
-            <div className="h-px flex-1 bg-[#383a3f]" />
+            <div className="h-px flex-1 bg-neutral-200 dark:bg-[#383a3f]" />
           </div>
         </div>
 
@@ -229,7 +229,7 @@ export default function ThreadPanel({
                 new Date(reply.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60 * 1000;
 
               return (
-                <div key={reply.id} className={`flex gap-2.5 px-4 py-0.5 hover:bg-[#222529]/50 ${isGrouped ? '' : 'mt-2.5'}`}>
+                <div key={reply.id} className={`flex gap-2.5 px-4 py-0.5 hover:bg-neutral-50 dark:hover:bg-[#222529]/50 ${isGrouped ? '' : 'mt-2.5'}`}>
                   <div className="flex-shrink-0 w-8">
                     {!isGrouped && (
                       <div
@@ -242,19 +242,19 @@ export default function ThreadPanel({
                   <div className="flex-1 min-w-0">
                     {!isGrouped && (
                       <div className="flex items-baseline gap-2 mb-0.5">
-                        <span className="text-sm font-bold text-gray-200">{reply.sender_name}</span>
-                        <span className="text-[10px] text-gray-500">
+                        <span className="text-sm font-bold text-neutral-800 dark:text-gray-200">{reply.sender_name}</span>
+                        <span className="text-[10px] text-neutral-400 dark:text-gray-500">
                           {new Date(reply.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     )}
-                    <div className="text-[13px] text-gray-300 break-words">
+                    <div className="text-[13px] text-neutral-700 dark:text-gray-300 break-words">
                       {formatMessageContent(reply.content)}
                     </div>
                     {reply.reactions && reply.reactions.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {reply.reactions.map((r) => (
-                          <span key={r.emoji} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs bg-[#222529] border border-[#383a3f] text-gray-400">
+                          <span key={r.emoji} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs bg-neutral-100 dark:bg-[#222529] border border-neutral-200 dark:border-[#383a3f] text-neutral-500 dark:text-gray-400">
                             {r.emoji} {r.count}
                           </span>
                         ))}

@@ -18,6 +18,11 @@ interface ChannelListProps {
   currentUserId: string;
 }
 
+/** Strip @[username](userId) mention syntax to just @username */
+function stripMentions(text: string): string {
+  return text.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
+}
+
 function formatTime(isoStr: string | null): string {
   if (!isoStr) return '';
   const dt = new Date(isoStr);
@@ -75,8 +80,8 @@ export default function ChannelListEnhanced({
         onClick={() => onSelectChannel(ch.id)}
         className={`w-full group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-left transition-all ${
           isActive
-            ? 'bg-blue-600/20 text-white'
-            : 'text-gray-400 hover:bg-[#2a2d32] hover:text-gray-200'
+            ? 'bg-blue-600/20 text-neutral-900 dark:text-white'
+            : 'text-neutral-600 dark:text-gray-400 hover:bg-neutral-100 dark:hover:bg-[#2a2d32] hover:text-neutral-800 dark:hover:text-gray-200'
         }`}
       >
         {/* Icon / Avatar */}
@@ -86,15 +91,15 @@ export default function ChannelListEnhanced({
               {(ch.other_user?.username || '?')[0]?.toUpperCase()}
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-[#383a3f] flex items-center justify-center">
-              <HashtagIcon className="w-4 h-4 text-gray-400" />
+            <div className="w-8 h-8 rounded-lg bg-neutral-200 dark:bg-[#383a3f] flex items-center justify-center">
+              <HashtagIcon className="w-4 h-4 text-neutral-500 dark:text-gray-400" />
             </div>
           )}
           {/* Online indicator */}
           {ch.is_direct && (
             <div
-              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1a1d21] ${
-                isOnline ? 'bg-green-500' : 'bg-gray-600'
+              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-[#1a1d21] ${
+                isOnline ? 'bg-green-500' : 'bg-neutral-300 dark:bg-gray-600'
               }`}
             />
           )}
@@ -105,23 +110,23 @@ export default function ChannelListEnhanced({
           <div className="flex items-center justify-between">
             <span
               className={`text-sm truncate ${
-                ch.unread_count > 0 ? 'font-bold text-white' : ''
+                ch.unread_count > 0 ? 'font-bold text-neutral-900 dark:text-white' : ''
               }`}
             >
               {ch.is_direct ? ch.other_user?.username || 'DM' : ch.name || 'Unnamed'}
             </span>
             {ch.last_message?.created_at && (
-              <span className="text-[10px] text-gray-600 flex-shrink-0 ml-1">
+              <span className="text-[10px] text-neutral-400 dark:text-gray-600 flex-shrink-0 ml-1">
                 {formatTime(ch.last_message.created_at)}
               </span>
             )}
           </div>
           {ch.last_message?.content && (
-            <p className="text-[11px] text-gray-500 truncate mt-0.5">
+            <p className="text-[11px] text-neutral-500 dark:text-gray-500 truncate mt-0.5">
               {ch.last_message.sender_name && (
-                <span className="text-gray-400">{ch.last_message.sender_name}: </span>
+                <span className="text-neutral-600 dark:text-gray-400">{ch.last_message.sender_name}: </span>
               )}
-              {ch.last_message.content}
+              {stripMentions(ch.last_message.content)}
             </p>
           )}
         </div>
@@ -137,17 +142,17 @@ export default function ChannelListEnhanced({
   };
 
   return (
-    <div className="w-[280px] bg-[#1a1d21] border-r border-[#383a3f] flex flex-col h-full">
+    <div className="w-[280px] bg-neutral-50 dark:bg-[#1a1d21] border-r border-neutral-200 dark:border-[#383a3f] flex flex-col h-full">
       {/* Workspace header */}
-      <div className="px-4 py-3 border-b border-[#383a3f]">
+      <div className="px-4 py-3 border-b border-neutral-200 dark:border-[#383a3f]">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
+          <h2 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
             <ChatBubbleLeftRightIcon className="w-5 h-5 text-blue-400" />
             Messages
           </h2>
           <button
             onClick={onNewChannel}
-            className="p-1.5 rounded-md bg-[#383a3f] text-gray-300 hover:bg-[#484b50] hover:text-white transition-colors"
+            className="p-1.5 rounded-md bg-neutral-200 dark:bg-[#383a3f] text-neutral-600 dark:text-gray-300 hover:bg-neutral-300 dark:hover:bg-[#484b50] hover:text-neutral-900 dark:hover:text-white transition-colors"
             title="New conversation"
           >
             <PlusIcon className="w-4 h-4" />
@@ -155,13 +160,13 @@ export default function ChannelListEnhanced({
         </div>
         {/* Search */}
         <div className="relative">
-          <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+          <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 dark:text-gray-500" />
           <input
             type="text"
             placeholder="Search conversations..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#222529] border border-[#383a3f] rounded-md pl-8 pr-3 py-1.5 text-xs text-gray-300 placeholder-gray-500 focus:outline-none focus:border-[#565856]"
+            className="w-full bg-white dark:bg-[#222529] border border-neutral-200 dark:border-[#383a3f] rounded-md pl-8 pr-3 py-1.5 text-xs text-neutral-700 dark:text-gray-300 placeholder-neutral-400 dark:placeholder-gray-500 focus:outline-none focus:border-neutral-400 dark:focus:border-[#565856]"
           />
         </div>
       </div>
@@ -173,13 +178,13 @@ export default function ChannelListEnhanced({
           <div className="mb-3">
             <button
               onClick={() => toggleSection('channels')}
-              className="w-full flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+              className="w-full flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-neutral-500 dark:text-gray-500 uppercase tracking-wider hover:text-neutral-700 dark:hover:text-gray-300 transition-colors"
             >
               <span className={`transform transition-transform ${collapsedSections.channels ? '-rotate-90' : ''}`}>
                 ▾
               </span>
               Channels
-              <span className="ml-auto text-gray-600">{groupChannels.length}</span>
+              <span className="ml-auto text-neutral-400 dark:text-gray-600">{groupChannels.length}</span>
             </button>
             {!collapsedSections.channels && (
               <div className="mt-0.5 space-y-0.5">
@@ -194,13 +199,13 @@ export default function ChannelListEnhanced({
           <div className="mb-3">
             <button
               onClick={() => toggleSection('dms')}
-              className="w-full flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+              className="w-full flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-neutral-500 dark:text-gray-500 uppercase tracking-wider hover:text-neutral-700 dark:hover:text-gray-300 transition-colors"
             >
               <span className={`transform transition-transform ${collapsedSections.dms ? '-rotate-90' : ''}`}>
                 ▾
               </span>
               Direct Messages
-              <span className="ml-auto text-gray-600">{dmChannels.length}</span>
+              <span className="ml-auto text-neutral-400 dark:text-gray-600">{dmChannels.length}</span>
             </button>
             {!collapsedSections.dms && (
               <div className="mt-0.5 space-y-0.5">
@@ -211,8 +216,8 @@ export default function ChannelListEnhanced({
         )}
 
         {channels.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-            <ChatBubbleLeftRightIcon className="w-8 h-8 mb-2 text-gray-600" />
+          <div className="flex flex-col items-center justify-center py-12 text-neutral-400 dark:text-gray-500">
+            <ChatBubbleLeftRightIcon className="w-8 h-8 mb-2 text-neutral-300 dark:text-gray-600" />
             <p className="text-sm">No conversations yet</p>
             <button
               onClick={onNewChannel}

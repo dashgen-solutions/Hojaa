@@ -13,7 +13,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen w-screen overflow-hidden bg-neutral-50 dark:bg-[#060606] transition-colors">
       {/* One-time API key setup prompt for new users */}
       <APIKeySetupDialog />
-
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <div
@@ -33,7 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <AppHeader onToggleSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)} />
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 min-h-0 overflow-hidden">
           {children}
         </main>
       </div>

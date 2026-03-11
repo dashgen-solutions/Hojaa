@@ -127,19 +127,31 @@ class QuestionGenerationOutput(BaseModel):
 # ===== Tree Building Models =====
 
 class FeatureNode(BaseModel):
-    """A feature/component in the requirements tree."""
+    """A feature/component in the requirements tree. Can contain nested children to form a deep hierarchy."""
     name: str = Field(description="Clear, business-focused name for this component")
     description: str = Field(description="What business value this provides")
     rationale: str = Field(description="Why this is critical based on user answers")
     priority: Literal["high", "medium", "low"] = Field(description="Priority level")
+    node_type: Literal["feature", "detail"] = Field(
+        default="feature",
+        description="'feature' if this node can/should have children, 'detail' if it is a leaf-level requirement"
+    )
+    children: List["FeatureNode"] = Field(
+        default_factory=list,
+        description="Sub-components or sub-requirements under this node. Generate children when a feature logically decomposes into smaller parts. Leave empty only for leaf-level details."
+    )
+
+
+# Allow recursive self-reference
+FeatureNode.model_rebuild()
 
 
 class TreeStructureOutput(BaseModel):
-    """Output from tree building agent."""
+    """Output from tree building agent — a full hierarchical requirements tree."""
     project_name: str = Field(description="Brief, business-focused project name")
     project_description: str = Field(description="One sentence describing business value")
     features: List[FeatureNode] = Field(
-        description="Main solution components (decide exact count based on requirements)",
+        description="Top-level solution components. Each can contain nested children forming a multi-level tree. Generate as many levels as the requirements warrant.",
         min_length=1
     )
 

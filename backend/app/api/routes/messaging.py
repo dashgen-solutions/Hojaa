@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query, status
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query, UploadFile, File, status
 from jose import JWTError, jwt
 from pydantic import BaseModel, Field
 from sqlalchemy import func, and_, or_, desc, asc
@@ -26,6 +26,7 @@ from app.db.session import get_db, SessionLocal
 from app.models.database import (
     User, ChatChannel, ChatChannelMember, ChatChannelMessage,
     MessageReaction, MessageAttachment, PinnedMessage,
+    CallTranscription,
 )
 from app.services.messaging_ws_manager import messaging_ws_manager
 
@@ -93,8 +94,9 @@ def _serialize_message(msg: ChatChannelMessage, include_reactions: bool = True) 
         "id": str(msg.id),
         "channel_id": str(msg.channel_id),
         "sender_id": str(msg.sender_id) if msg.sender_id else None,
-        "sender_name": msg.sender.username if msg.sender else "Unknown",
+        "sender_name": msg.sender.username if msg.sender else "System",
         "content": msg.content,
+        "message_type": msg.message_type,
         "reference_type": msg.reference_type,
         "reference_id": msg.reference_id,
         "reference_name": msg.reference_name,
@@ -133,7 +135,44 @@ def _serialize_member(member: ChatChannelMember) -> dict:
         "email": member.user.email if member.user else "",
         "joined_at": member.joined_at.isoformat(),
         "is_online": messaging_ws_manager.is_user_online(str(member.user_id)),
+        "custom_status": member.user.custom_status if member.user else None,
+        "status_emoji": member.user.status_emoji if member.user else None,
     }
+
+
+async def _create_call_event_message(
+    db: Session,
+    channel_id: str,
+    sender_id: str,
+    sender_name: str,
+    message_type: str,
+    content: str,
+) -> dict:
+    """Create a system message for call events and broadcast it via WebSocket."""
+    from uuid import UUID as UUIDType
+    msg = ChatChannelMessage(
+        channel_id=UUIDType(channel_id),
+        sender_id=UUIDType(sender_id),
+        content=content,
+        message_type=message_type,
+    )
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+    # Load sender relationship
+    msg.sender = db.query(User).filter(User.id == msg.sender_id).first()
+
+    serialized = _serialize_message(msg, include_reactions=False)
+    # Broadcast to all channel members
+    members = db.query(ChatChannelMember).filter(
+        ChatChannelMember.channel_id == msg.channel_id
+    ).all()
+    for m in members:
+        await messaging_ws_manager.send_to_user(str(m.user_id), {
+            "type": "new_message",
+            "message": serialized,
+        })
+    return serialized
 
 
 def _get_unread_count(db: Session, channel_id: UUID, user_id: UUID) -> int:
@@ -1102,9 +1141,67 @@ def get_online_users(
             "user_id": str(u.id),
             "username": u.username,
             "is_online": messaging_ws_manager.is_user_online(str(u.id)),
+            "custom_status": u.custom_status,
+            "status_emoji": u.status_emoji,
         }
         for u in users
     ]
+
+
+# ── User Status (Slack-style) ────────────────────────────────────────
+
+@router.get("/status")
+def get_my_status(
+    current_user: User = Depends(get_current_user),
+):
+    """Get the current user's custom status."""
+    return {
+        "custom_status": current_user.custom_status,
+        "status_emoji": current_user.status_emoji,
+    }
+
+
+@router.put("/status")
+async def update_my_status(
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Set or clear the current user's custom status and broadcast to org."""
+    custom_status = body.get("custom_status") or None
+    status_emoji = body.get("status_emoji") or None
+
+    # Validate lengths
+    if custom_status and len(custom_status) > 200:
+        raise HTTPException(400, "Status text must be 200 characters or less")
+    if status_emoji and len(status_emoji) > 10:
+        raise HTTPException(400, "Status emoji must be 10 characters or less")
+
+    current_user.custom_status = custom_status
+    current_user.status_emoji = status_emoji
+    db.commit()
+    db.refresh(current_user)
+
+    # Broadcast status change to org members via WS
+    if current_user.organization_id:
+        org_users = db.query(User.id).filter(
+            User.organization_id == current_user.organization_id,
+            User.id != current_user.id,
+            User.is_active == True,
+        ).all()
+        for (uid,) in org_users:
+            await messaging_ws_manager.send_to_user(str(uid), {
+                "type": "status_update",
+                "user_id": str(current_user.id),
+                "username": current_user.username,
+                "custom_status": custom_status,
+                "status_emoji": status_emoji,
+            })
+
+    return {
+        "custom_status": current_user.custom_status,
+        "status_emoji": current_user.status_emoji,
+    }
 
 
 # ── Read Tracking ─────────────────────────────────────────────────────
@@ -1200,6 +1297,241 @@ def _authenticate_messaging_ws(token: str) -> dict | None:
         return None
 
 
+# ── Call Transcription Endpoints ───────────────────────────────────────────
+
+class UploadTranscriptionRequest(BaseModel):
+    call_type: str = "audio"
+    duration_seconds: Optional[int] = None
+    participants: Optional[List[dict]] = None
+
+
+@router.post("/channels/{channel_id}/transcriptions")
+async def upload_call_transcription(
+    channel_id: str,
+    call_type: str = "audio",
+    duration_seconds: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Upload call audio for transcription. The audio data is sent as raw body.
+    Returns the transcription result.
+    """
+    from app.services.transcription_service import transcription_service
+    import io
+
+    # Verify membership
+    member = db.query(ChatChannelMember).filter_by(
+        channel_id=channel_id, user_id=current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a channel member")
+
+    # Get participants for this channel
+    members = db.query(ChatChannelMember).filter(
+        ChatChannelMember.channel_id == channel_id
+    ).options(joinedload(ChatChannelMember.user)).all()
+    participants = [
+        {"user_id": str(m.user_id), "username": m.user.username if m.user else "Unknown"}
+        for m in members
+    ]
+
+    # Create transcription record
+    tx = CallTranscription(
+        channel_id=channel_id,
+        call_initiator_id=current_user.id,
+        call_type=call_type,
+        duration_seconds=duration_seconds,
+        participants=participants,
+        status="pending",
+    )
+    db.add(tx)
+    db.commit()
+    db.refresh(tx)
+
+    return {
+        "id": str(tx.id),
+        "channel_id": channel_id,
+        "status": tx.status,
+        "message": "Transcription record created. Upload audio via the transcribe endpoint.",
+    }
+
+
+@router.post("/channels/{channel_id}/transcriptions/{transcription_id}/transcribe")
+async def transcribe_call_audio(
+    channel_id: str,
+    transcription_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Trigger transcription for a call. Called after audio file upload.
+    For now, accepts the transcription text directly.
+    """
+    tx = db.query(CallTranscription).filter(
+        CallTranscription.id == transcription_id,
+        CallTranscription.channel_id == channel_id,
+    ).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    return {"id": str(tx.id), "status": tx.status, "transcription_text": tx.transcription_text}
+
+
+@router.post("/channels/{channel_id}/transcriptions/save")
+async def save_call_transcription(
+    channel_id: str,
+    transcription_text: str = "",
+    call_type: str = "audio",
+    duration_seconds: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Save a completed call transcription (text provided by the client after Whisper processing).
+    """
+    member = db.query(ChatChannelMember).filter_by(
+        channel_id=channel_id, user_id=current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a channel member")
+
+    members = db.query(ChatChannelMember).filter(
+        ChatChannelMember.channel_id == channel_id
+    ).options(joinedload(ChatChannelMember.user)).all()
+    participants = [
+        {"user_id": str(m.user_id), "username": m.user.username if m.user else "Unknown"}
+        for m in members
+    ]
+
+    tx = CallTranscription(
+        channel_id=channel_id,
+        call_initiator_id=current_user.id,
+        call_type=call_type,
+        duration_seconds=duration_seconds,
+        transcription_text=transcription_text,
+        participants=participants,
+        status="completed" if transcription_text else "failed",
+    )
+    db.add(tx)
+    db.commit()
+    db.refresh(tx)
+
+    return {
+        "id": str(tx.id),
+        "channel_id": channel_id,
+        "status": tx.status,
+        "transcription_text": tx.transcription_text,
+    }
+
+
+@router.get("/channels/{channel_id}/transcriptions")
+def list_call_transcriptions(
+    channel_id: str,
+    limit: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List transcriptions for a channel, newest first."""
+    member = db.query(ChatChannelMember).filter_by(
+        channel_id=channel_id, user_id=current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a channel member")
+
+    txs = (
+        db.query(CallTranscription)
+        .filter(CallTranscription.channel_id == channel_id, CallTranscription.status == "completed")
+        .order_by(desc(CallTranscription.created_at))
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": str(t.id),
+            "channel_id": str(t.channel_id),
+            "call_initiator_id": str(t.call_initiator_id) if t.call_initiator_id else None,
+            "call_type": t.call_type,
+            "duration_seconds": t.duration_seconds,
+            "transcription_text": t.transcription_text,
+            "language": t.language,
+            "participants": t.participants,
+            "status": t.status,
+            "created_at": t.created_at.isoformat(),
+        }
+        for t in txs
+    ]
+
+
+@router.post("/channels/{channel_id}/transcriptions/upload")
+async def upload_and_transcribe_call(
+    channel_id: str,
+    audio: UploadFile = File(...),
+    call_type: str = Query("audio"),
+    duration_seconds: int = Query(0),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Upload an audio recording and transcribe it using Whisper.
+    Saves the transcription text for the channel.
+    """
+    member = db.query(ChatChannelMember).filter_by(
+        channel_id=channel_id, user_id=current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a channel member")
+
+    # Get channel participants
+    members = db.query(ChatChannelMember).filter(
+        ChatChannelMember.channel_id == channel_id
+    ).options(joinedload(ChatChannelMember.user)).all()
+    participants = [
+        {"user_id": str(m.user_id), "username": m.user.username if m.user else "Unknown"}
+        for m in members
+    ]
+
+    transcription_text = ""
+    detected_language = "en"
+    tx_status = "failed"
+
+    try:
+        from app.services.transcription_service import transcription_service
+
+        result = await transcription_service.transcribe_audio(
+            audio_file=audio.file,
+            filename=audio.filename or "recording.webm",
+        )
+        transcription_text = result.get("text", "")
+        detected_language = result.get("language", "en")
+        tx_status = "completed" if transcription_text else "failed"
+    except Exception as e:
+        logger.error(f"Transcription failed for channel {channel_id}: {e}")
+        tx_status = "failed"
+
+    tx = CallTranscription(
+        channel_id=channel_id,
+        call_initiator_id=current_user.id,
+        call_type=call_type,
+        duration_seconds=duration_seconds,
+        transcription_text=transcription_text,
+        language=detected_language,
+        participants=participants,
+        status=tx_status,
+    )
+    db.add(tx)
+    db.commit()
+    db.refresh(tx)
+
+    return {
+        "id": str(tx.id),
+        "channel_id": channel_id,
+        "status": tx.status,
+        "transcription_text": tx.transcription_text,
+        "language": tx.language,
+    }
+
+
 @router.websocket("/ws/messaging")
 async def messaging_websocket(
     websocket: WebSocket,
@@ -1272,29 +1604,211 @@ async def messaging_websocket(
                     )
 
             elif msg_type == "presence_update":
-                # User manually sets status (away, dnd, etc.)
+                # User manually sets status (away, dnd, etc.) and/or custom status
                 user_status = msg.get("status", "online")
+                custom_status = msg.get("custom_status")
+                status_emoji = msg.get("status_emoji")
                 try:
                     db = SessionLocal()
                     try:
                         user = db.query(User).filter(User.id == auth["user_id"]).first()
-                        if user and user.organization_id:
-                            org_users = db.query(User.id).filter(
-                                User.organization_id == user.organization_id,
-                                User.id != user.id,
-                                User.is_active == True,
-                            ).all()
-                            for (uid,) in org_users:
-                                await messaging_ws_manager.send_to_user(str(uid), {
+                        if user:
+                            # Persist custom status if provided
+                            if custom_status is not None:
+                                user.custom_status = custom_status or None
+                            if status_emoji is not None:
+                                user.status_emoji = status_emoji or None
+                            if custom_status is not None or status_emoji is not None:
+                                db.commit()
+                                db.refresh(user)
+
+                            if user.organization_id:
+                                org_users = db.query(User.id).filter(
+                                    User.organization_id == user.organization_id,
+                                    User.id != user.id,
+                                    User.is_active == True,
+                                ).all()
+                                broadcast = {
                                     "type": "presence",
                                     "user_id": auth["user_id"],
                                     "username": auth["username"],
                                     "status": user_status,
-                                })
+                                    "custom_status": user.custom_status,
+                                    "status_emoji": user.status_emoji,
+                                }
+                                for (uid,) in org_users:
+                                    await messaging_ws_manager.send_to_user(str(uid), broadcast)
                     finally:
                         db.close()
                 except Exception:
                     pass
+
+            # ---- WebRTC call signaling ----
+
+            elif msg_type == "call_initiate":
+                # Caller sends call_initiate to ring the target user(s)
+                target_user_id = msg.get("target_user_id")
+                target_user_ids = msg.get("target_user_ids")  # Group calls
+                channel_id = msg.get("channel_id")
+                call_type = msg.get("call_type", "audio")  # audio | video
+                is_group = msg.get("is_group", False)
+
+                # Create a system message for call started
+                if channel_id:
+                    try:
+                        db = SessionLocal()
+                        try:
+                            call_label = "video call" if call_type == "video" else "audio call"
+                            if is_group:
+                                call_label = f"group {call_label}"
+                            await _create_call_event_message(
+                                db, channel_id, auth["user_id"], auth["username"],
+                                "call_started",
+                                f"📞 {auth['username']} started a {call_label}",
+                            )
+                        finally:
+                            db.close()
+                    except Exception as e:
+                        logger.error(f"Failed to create call_started message: {e}")
+
+                targets = []
+                if target_user_ids and isinstance(target_user_ids, list):
+                    targets = target_user_ids
+                elif target_user_id:
+                    targets = [target_user_id]
+
+                for tid in targets:
+                    if tid != auth["user_id"]:
+                        await messaging_ws_manager.send_to_user(tid, {
+                            "type": "call_incoming",
+                            "caller_id": auth["user_id"],
+                            "caller_name": auth["username"],
+                            "channel_id": channel_id,
+                            "call_type": call_type,
+                            "is_group": is_group,
+                        })
+
+            elif msg_type == "group_call_join":
+                # A user joined the group call — notify all other participants
+                channel_id = msg.get("channel_id")
+                participant_ids = msg.get("participant_ids", [])
+                for pid in participant_ids:
+                    if pid != auth["user_id"]:
+                        await messaging_ws_manager.send_to_user(pid, {
+                            "type": "group_call_participant_joined",
+                            "user_id": auth["user_id"],
+                            "username": auth["username"],
+                            "channel_id": channel_id,
+                        })
+
+            elif msg_type == "group_call_leave":
+                # A user left the group call — notify all other participants
+                channel_id = msg.get("channel_id")
+                participant_ids = msg.get("participant_ids", [])
+                for pid in participant_ids:
+                    if pid != auth["user_id"]:
+                        await messaging_ws_manager.send_to_user(pid, {
+                            "type": "group_call_participant_left",
+                            "user_id": auth["user_id"],
+                            "username": auth["username"],
+                            "channel_id": channel_id,
+                        })
+
+            elif msg_type == "call_accept":
+                # Callee accepts -> notify caller
+                caller_id = msg.get("caller_id")
+                if caller_id:
+                    await messaging_ws_manager.send_to_user(caller_id, {
+                        "type": "call_accepted",
+                        "callee_id": auth["user_id"],
+                        "callee_name": auth["username"],
+                        "channel_id": msg.get("channel_id"),
+                    })
+
+            elif msg_type == "call_reject":
+                # Callee rejects -> notify caller
+                caller_id = msg.get("caller_id")
+                channel_id = msg.get("channel_id")
+                if caller_id:
+                    await messaging_ws_manager.send_to_user(caller_id, {
+                        "type": "call_rejected",
+                        "callee_id": auth["user_id"],
+                        "callee_name": auth["username"],
+                        "reason": msg.get("reason", "rejected"),
+                    })
+                # Create missed call system message
+                if channel_id:
+                    try:
+                        db = SessionLocal()
+                        try:
+                            await _create_call_event_message(
+                                db, channel_id, auth["user_id"], auth["username"],
+                                "call_missed",
+                                f"📵 Missed call from {auth['username']}",
+                            )
+                        finally:
+                            db.close()
+                    except Exception as e:
+                        logger.error(f"Failed to create call_missed message: {e}")
+
+            elif msg_type == "call_hangup":
+                # Either party hangs up -> notify the other
+                target_user_id = msg.get("target_user_id")
+                channel_id = msg.get("channel_id")
+                duration = msg.get("duration", 0)  # seconds
+                if target_user_id:
+                    await messaging_ws_manager.send_to_user(target_user_id, {
+                        "type": "call_ended",
+                        "user_id": auth["user_id"],
+                        "username": auth["username"],
+                        "reason": msg.get("reason", "hangup"),
+                    })
+                # Create call ended system message
+                if channel_id and duration and int(duration) > 0:
+                    try:
+                        db = SessionLocal()
+                        try:
+                            mins, secs = divmod(int(duration), 60)
+                            dur_str = f"{mins}:{secs:02d}" if mins else f"0:{secs:02d}"
+                            await _create_call_event_message(
+                                db, channel_id, auth["user_id"], auth["username"],
+                                "call_ended",
+                                f"📞 Call ended · {dur_str}",
+                            )
+                        finally:
+                            db.close()
+                    except Exception as e:
+                        logger.error(f"Failed to create call_ended message: {e}")
+
+            elif msg_type == "webrtc_offer":
+                # Forward SDP offer to target
+                target_user_id = msg.get("target_user_id")
+                if target_user_id:
+                    await messaging_ws_manager.send_to_user(target_user_id, {
+                        "type": "webrtc_offer",
+                        "from_user_id": auth["user_id"],
+                        "sdp": msg.get("sdp"),
+                    })
+
+            elif msg_type == "webrtc_answer":
+                # Forward SDP answer to target
+                target_user_id = msg.get("target_user_id")
+                if target_user_id:
+                    await messaging_ws_manager.send_to_user(target_user_id, {
+                        "type": "webrtc_answer",
+                        "from_user_id": auth["user_id"],
+                        "sdp": msg.get("sdp"),
+                    })
+
+            elif msg_type == "webrtc_ice_candidate":
+                # Forward ICE candidate to target
+                target_user_id = msg.get("target_user_id")
+                if target_user_id:
+                    await messaging_ws_manager.send_to_user(target_user_id, {
+                        "type": "webrtc_ice_candidate",
+                        "from_user_id": auth["user_id"],
+                        "candidate": msg.get("candidate"),
+                    })
 
     except WebSocketDisconnect:
         await messaging_ws_manager.disconnect(conn)

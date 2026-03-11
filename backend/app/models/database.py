@@ -189,6 +189,10 @@ class User(Base):
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
     org_role = Column(SQLEnum(OrgRole), default=OrgRole.MEMBER, nullable=False)
     job_title = Column(String(100), nullable=True)
+
+    # Slack-style custom status
+    custom_status = Column(String(200), nullable=True)   # e.g. "In a meeting", "On vacation"
+    status_emoji = Column(String(10), nullable=True)      # e.g. "🏖️", "📅", "🎯"
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -999,6 +1003,10 @@ class ChatChannelMessage(Base):
     sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     content = Column(Text, nullable=False)
 
+    # System / call event message type
+    # null = normal message, "call_started", "call_ended", "call_missed"
+    message_type = Column(String(50), nullable=True)
+
     # Thread support — if set, this message is a reply in a thread
     parent_message_id = Column(UUID(as_uuid=True), ForeignKey("chat_channel_messages.id", ondelete="CASCADE"), nullable=True)
     thread_reply_count = Column(Integer, default=0, nullable=False)  # denormalized counter on parent
@@ -1031,6 +1039,58 @@ class ChatChannelMessage(Base):
         Index("idx_chat_msg_created", "created_at"),
         Index("idx_chat_msg_sender", "sender_id"),
         Index("idx_chat_msg_parent", "parent_message_id"),
+        Index("idx_chat_msg_type", "message_type"),
+    )
+
+
+class CallTranscription(Base):
+    """Audio transcription of a call in a channel."""
+    __tablename__ = "call_transcriptions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    channel_id = Column(UUID(as_uuid=True), ForeignKey("chat_channels.id", ondelete="CASCADE"), nullable=False)
+    call_initiator_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    call_type = Column(String(20), nullable=False, default="audio")  # audio | video
+    duration_seconds = Column(Integer, nullable=True)
+    transcription_text = Column(Text, nullable=True)
+    language = Column(String(20), nullable=True)
+    participants = Column(JSON, nullable=True)  # [{"user_id": ..., "username": ...}]
+    status = Column(String(20), nullable=False, default="pending")  # pending | completed | failed
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    channel = relationship("ChatChannel")
+    initiator = relationship("User", foreign_keys=[call_initiator_id])
+
+    __table_args__ = (
+        Index("idx_call_tx_channel", "channel_id"),
+        Index("idx_call_tx_created", "created_at"),
+    )
+
+
+class MessagingChatMessage(Base):
+    """AI chatbot conversation history per channel."""
+    __tablename__ = "messaging_chat_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    channel_id = Column(UUID(as_uuid=True), ForeignKey("chat_channels.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    role = Column(String(20), nullable=False)  # "user" | "assistant"
+    content = Column(Text, nullable=False)
+    tool_calls = Column(JSON, nullable=True)
+    message_metadata = Column(JSON, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    channel = relationship("ChatChannel")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_msg_chat_channel", "channel_id"),
+        Index("idx_msg_chat_user", "user_id"),
     )
 
 

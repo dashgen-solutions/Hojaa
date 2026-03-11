@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getSharedDocument, type SharedDocumentView, type PricingLineItemInfo } from '@/lib/api';
-import MermaidDiagram from '@/components/documents/MermaidDiagram';
 
 /**
  * Extract text from a table cell in any format (array, object, string, nested).
@@ -83,15 +82,15 @@ function renderBlock(block: any, idx: number): JSX.Element | null {
           {text || props.code || ''}
         </pre>
       );
-    case 'mermaid': {
-      const mermaidCode = props.code || text || '';
-      if (!mermaidCode.trim()) return null;
+    case 'mermaid':
       return (
-        <div key={idx} className="my-4">
-          <MermaidDiagram code={mermaidCode} caption={props.caption} />
-        </div>
+        <pre
+          key={idx}
+          className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-xs font-mono my-3 whitespace-pre-wrap"
+        >
+          {props.code || text || '[Mermaid Diagram]'}
+        </pre>
       );
-    }
     case 'table': {
       const rows = block?.content?.rows || (Array.isArray(block?.content) ? block.content : []);
       if (!Array.isArray(rows) || rows.length === 0) return null;

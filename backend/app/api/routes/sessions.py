@@ -16,7 +16,7 @@ from app.models.database import (
 from app.core.auth import get_optional_user, get_current_active_user, get_current_user
 from app.core.logger import get_logger
 from app.services.project_channel_service import (
-    create_project_channel, sync_shared_user, rename_project_channel,
+    sync_shared_user, rename_project_channel,
 )
 
 logger = get_logger(__name__)
@@ -76,15 +76,6 @@ async def create_session(
         )
         
         db.add(new_session)
-        db.flush()  # get new_session.id before channel creation
-
-        # Auto-create a project group channel for authenticated users
-        if current_user:
-            try:
-                create_project_channel(db, new_session, current_user.id)
-            except Exception as ch_err:
-                logger.warning(f"Project channel creation failed (session created OK): {ch_err}")
-
         db.commit()
         db.refresh(new_session)
         

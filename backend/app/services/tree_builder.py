@@ -39,12 +39,17 @@ class AITreeBuilder:
         def tree_system_prompt(ctx: RunContext[UserContext]) -> str:
             """Generate system prompt based on user type."""
             return (
-                f"You are a solution architect analyzing business requirements.\n"
+                f"You are a senior solution architect analyzing business requirements.\n"
                 f"CLIENT TYPE: {ctx.deps.user_type}\n\n"
                 f"**NON-TECHNICAL client:** Focus on business capabilities, user-facing features\n"
                 f"**TECHNICAL client:** Can include both business AND technical components\n\n"
-                f"CRITICAL: Generate the EXACT number of components that the requirements need.\n"
-                f"Don't force a specific count - let the actual requirements determine the structure.\n"
+                f"CRITICAL RULES:\n"
+                f"1. Generate the EXACT number of components that the requirements need.\n"
+                f"2. Don't force a specific count - let the actual requirements determine the structure.\n"
+                f"3. BUILD A DEEP TREE: Every top-level feature MUST have children (sub-features or details).\n"
+                f"4. If a sub-feature is complex enough, give it children too. Aim for 2-4 levels of depth.\n"
+                f"5. Leaf nodes should be specific, actionable requirements (node_type='detail').\n"
+                f"6. Branch nodes that have children should use node_type='feature'.\n"
             )
         
         # Agent for extracting sub-requirements
@@ -159,41 +164,20 @@ class AITreeBuilder:
                 session_id=session_id,
             )
             
-            # Create feature nodes from validated output
-            for idx, feature in enumerate(tree_output.features):
-                feature_node = Node(
-                    session_id=session_id,
-                    parent_id=root_node.id,
-                    question=feature.name,
-                    answer=feature.description,
-                    node_type=NodeType.FEATURE,
-                    status=NodeStatus.NEW,
-                    depth=1,
-                    order_index=idx,
-                    can_expand=True,
-                    is_expanded=False,
-                    node_metadata={
-                        "priority": feature.priority,
-                        "rationale": feature.rationale
-                    }
-                )
-                db.add(feature_node)
-                db.flush()
-
-                # Audit trail for each feature node
-                audit_service.record_change(
-                    database=db,
-                    node_id=feature_node.id,
-                    change_type=ChangeType.CREATED,
-                    new_value=feature.description,
-                    change_reason=f"Feature '{feature.name}' created during initial tree build",
-                    session_id=session_id,
-                )
+            # Recursively create all nodes from the tree output
+            total_nodes = self._create_nodes_recursive(
+                db=db,
+                session_id=session_id,
+                parent_id=root_node.id,
+                features=tree_output.features,
+                parent_depth=0,
+                audit_service=audit_service,
+            )
             
             db.commit()
             db.refresh(root_node)
             
-            logger.info(f"Successfully built tree with {len(tree_output.features)} features")
+            logger.info(f"Successfully built tree with {total_nodes} total nodes (multi-level)")
             return root_node
             
         except Exception as e:
@@ -327,6 +311,72 @@ class AITreeBuilder:
             db.rollback()
             raise
     
+    def _create_nodes_recursive(
+        self,
+        db: Session,
+        session_id: UUID,
+        parent_id: UUID,
+        features: list,
+        parent_depth: int,
+        audit_service,
+    ) -> int:
+        """
+        Recursively create nodes in the database from the LLM's hierarchical output.
+        Returns total number of nodes created.
+        """
+        total = 0
+        for idx, feature in enumerate(features):
+            # Determine node type based on the feature's declared type and whether it has children
+            has_children = bool(feature.children)
+            feat_type = getattr(feature, 'node_type', 'feature')
+            if feat_type == 'detail' or (not has_children and parent_depth >= 1):
+                node_type = NodeType.DETAIL
+            else:
+                node_type = NodeType.FEATURE
+
+            node = Node(
+                session_id=session_id,
+                parent_id=parent_id,
+                question=feature.name,
+                answer=feature.description,
+                node_type=node_type,
+                status=NodeStatus.NEW,
+                depth=parent_depth + 1,
+                order_index=idx,
+                can_expand=True,
+                is_expanded=has_children,
+                node_metadata={
+                    "priority": feature.priority,
+                    "rationale": feature.rationale,
+                }
+            )
+            db.add(node)
+            db.flush()  # Get node.id for children
+            total += 1
+
+            # Audit trail
+            audit_service.record_change(
+                database=db,
+                node_id=node.id,
+                change_type=ChangeType.CREATED,
+                new_value=feature.description,
+                change_reason=f"Node '{feature.name}' created during initial tree build (depth {parent_depth + 1})",
+                session_id=session_id,
+            )
+
+            # Recurse into children
+            if has_children:
+                total += self._create_nodes_recursive(
+                    db=db,
+                    session_id=session_id,
+                    parent_id=node.id,
+                    features=feature.children,
+                    parent_depth=parent_depth + 1,
+                    audit_service=audit_service,
+                )
+
+        return total
+
     def _format_answers_for_prompt(self, questions: List[Question]) -> str:
         """Format question-answer pairs for prompt."""
         formatted = []
@@ -385,23 +435,41 @@ class AITreeBuilder:
     
     def _create_tree_building_prompt(self, answers_text: str, user_type: str) -> str:
         """Create prompt for tree building."""
-        return f"""Analyze these business requirements and identify the main solution components.
+        return f"""Analyze these business requirements and build a COMPREHENSIVE, MULTI-LEVEL requirements tree.
 
-Based on the user's answers, identify what capabilities/components are needed to solve their problem.
+Your job is to break down the project into a DEEP hierarchical tree — not just top-level features, but also their sub-features, sub-requirements, and leaf-level details.
 
-IMPORTANT: Decide the EXACT number of components based on what the requirements actually need.
-- If the project is simple and only needs 2-3 components, return 2-3
-- If it's complex and needs 8-10 components, return 8-10
-- Focus on distinct, meaningful components - don't force artificial splits or combine unrelated things
+TREE STRUCTURE RULES:
+1. Create top-level features (major capabilities/modules)
+2. For EACH top-level feature, create children that represent its sub-features or sub-components
+3. For each sub-feature, if it can be further decomposed, add children under it too
+4. Continue nesting until you reach leaf-level details that are specific, actionable requirements
+5. Mark leaf nodes as node_type="detail" and parent/branch nodes as node_type="feature"
 
-For each component:
+DEPTH GUIDELINES:
+- Aim for 2-4 levels of depth depending on complexity
+- A simple feature might have 2 levels: Feature → Details
+- A complex feature might have 3-4 levels: Feature → Sub-feature → Sub-sub-feature → Details
+- Every feature with children should have at least 2 children
+- Don't stop at just the first level — ALWAYS decompose features into sub-components
+
+QUANTITY GUIDELINES:
+- Generate as many nodes as the requirements actually warrant
+- A typical project should have 5-12 top-level features
+- Each feature should have 2-6 sub-items
+- Don't artificially limit the tree — if the requirements are rich, the tree should be rich
+- Don't pad with filler nodes either — every node should represent real value
+
+For each node at every level:
 - Give it a clear, business-focused name
-- Describe what business value it provides
-- Explain why it matters based on their answers
-- Assign priority based on business impact
+- Describe what business value it provides or what it specifies
+- Explain why it matters
+- Assign priority (high/medium/low) based on business impact
 
 User's answers to discovery questions:
 {answers_text}
+
+Remember: Build a COMPLETE tree with multiple levels. Do NOT just list top-level features — decompose each one into its constituent parts.
 """
     
     def _create_sub_requirements_prompt(self, context: SubRequirementContext) -> str:

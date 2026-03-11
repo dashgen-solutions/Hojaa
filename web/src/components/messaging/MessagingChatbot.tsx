@@ -8,54 +8,60 @@ import {
   TrashIcon,
   ArrowPathIcon,
   CommandLineIcon,
-  ChevronDownIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  sendSessionChatMessage,
-  getSessionChatHistory,
-  clearSessionChatHistory,
-  SessionChatMessage,
-  SessionChatResponse,
+  sendMessagingChatMessage,
+  getMessagingChatHistory,
+  clearMessagingChatHistory,
+  MessagingChatMessage,
+  MessagingChatResponse,
 } from '@/lib/api';
-import { useOptionalProject } from '@/contexts/ProjectContext';
 
-interface SessionChatbotProps {
-  sessionId: string;
+interface MessagingChatbotProps {
+  channelId: string;
 }
 
 const QUICK_ACTIONS = [
-  { label: 'Project overview', prompt: 'Give me an overview of this project' },
-  { label: 'Team performance', prompt: 'How is the team performing? Show me the metrics' },
-  { label: 'Scope analytics', prompt: 'What are the scope analytics? Completion rate, risk indicators?' },
-  { label: 'Recent changes', prompt: 'What are the most recent changes to the scope?' },
-  { label: 'Card status', prompt: 'Show me all planning cards grouped by status' },
+  { label: 'Summarize recent discussion', prompt: 'Summarize what has been discussed recently in this channel' },
+  { label: 'What was discussed in calls?', prompt: 'What was discussed during the recent calls? Show me the call transcriptions' },
+  { label: 'Key decisions made', prompt: 'What are the key decisions or conclusions from recent discussions?' },
+  { label: 'Search for a topic', prompt: 'Search messages for important topics and give me a summary' },
+  { label: 'Who is most active?', prompt: 'Who are the most active members in this channel and what do they discuss?' },
 ];
 
-export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
-  const { user, isAuthenticated } = useAuth();
+export default function MessagingChatbot({ channelId }: MessagingChatbotProps) {
+  const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<SessionChatMessage[]>([]);
+  const [messages, setMessages] = useState<MessagingChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showQuickActions, setShowQuickActions] = useState(true);
-  const [toolsInProgress, setToolsInProgress] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const projectCtx = useOptionalProject();
+  const prevChannelIdRef = useRef<string | null>(null);
 
-  // Only show for authenticated users
-  const canAccess = isAuthenticated && user?.role && ['owner', 'admin'].includes(user.role);
+  // Reset when channel changes
+  useEffect(() => {
+    if (prevChannelIdRef.current && prevChannelIdRef.current !== channelId) {
+      setMessages([]);
+      setShowQuickActions(true);
+      setError(null);
+      setIsOpen(false);
+    }
+    prevChannelIdRef.current = channelId;
+  }, [channelId]);
 
   // Load history when opened
   useEffect(() => {
-    if (isOpen && sessionId && messages.length === 0) {
+    if (isOpen && channelId && messages.length === 0) {
       loadHistory();
     }
-  }, [isOpen, sessionId]);
+  }, [isOpen, channelId]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -74,13 +80,13 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
   const loadHistory = async () => {
     setIsLoadingHistory(true);
     try {
-      const data = await getSessionChatHistory(sessionId);
+      const data = await getMessagingChatHistory(channelId);
       setMessages(data.messages || []);
       if (data.messages && data.messages.length > 0) {
         setShowQuickActions(false);
       }
     } catch {
-      // Silent — might be unauthorized
+      // Silent
     } finally {
       setIsLoadingHistory(false);
     }
@@ -94,8 +100,8 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
     setError(null);
     setShowQuickActions(false);
 
-    // Optimistically add user message
-    const userMsg: SessionChatMessage = {
+    // Optimistic user message
+    const userMsg: MessagingChatMessage = {
       id: `temp-${Date.now()}`,
       role: 'user',
       content: msg,
@@ -103,13 +109,11 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
     };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
-    setToolsInProgress([]);
 
     try {
-      const response: SessionChatResponse = await sendSessionChatMessage(sessionId, msg);
+      const response: MessagingChatResponse = await sendMessagingChatMessage(channelId, msg);
 
-      // Add assistant response
-      const assistantMsg: SessionChatMessage = {
+      const assistantMsg: MessagingChatMessage = {
         id: response.message_id,
         role: 'assistant',
         content: response.response,
@@ -117,15 +121,10 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
         created_at: new Date().toISOString(),
       };
       setMessages(prev => [...prev, assistantMsg]);
-
-      // If the chatbot renamed the project, refresh context + notify sidebar
-      if (response.tool_calls?.some((tc: { name: string }) => tc.name === 'rename_project')) {
-        projectCtx?.refreshProject();
-      }
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 403) {
-        setError('Access denied. This feature is available to project owners and admins only.');
+        setError('Access denied. You must be a member of this channel.');
       } else if (status === 401) {
         setError('Please log in to use the chatbot.');
       } else {
@@ -133,9 +132,8 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
       }
     } finally {
       setIsLoading(false);
-      setToolsInProgress([]);
     }
-  }, [input, isLoading, sessionId]);
+  }, [input, isLoading, channelId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -146,7 +144,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
 
   const handleClearHistory = async () => {
     try {
-      await clearSessionChatHistory(sessionId);
+      await clearMessagingChatHistory(channelId);
       setMessages([]);
       setShowQuickActions(true);
     } catch {
@@ -154,39 +152,45 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
     }
   };
 
-  // Don't render for non-admin/owner users or unauthenticated
   if (!isAuthenticated) return null;
 
   return (
     <>
-      {/* Floating trigger button */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-neutral-900
-                     text-white shadow-lg hover:shadow-xl hover:bg-neutral-800 transition-all duration-200
-                     flex items-center justify-center z-50 group"
-          title="Project AI Assistant"
-        >
-          <SparklesIcon className="w-6 h-6 group-hover:animate-pulse" />
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
-        </button>
-      )}
+      {/* Floating trigger / close button — always visible */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200
+                   flex items-center justify-center z-[60] group
+                   ${isOpen
+                     ? 'bg-neutral-800 hover:bg-red-600 text-white'
+                     : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                   }`}
+        title={isOpen ? 'Close chatbot' : 'Channel AI Assistant'}
+      >
+        {isOpen ? (
+          <XMarkIcon className="w-6 h-6" />
+        ) : (
+          <>
+            <ChatBubbleLeftRightIcon className="w-6 h-6 group-hover:animate-pulse" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
+          </>
+        )}
+      </button>
 
-      {/* Chat panel */}
+      {/* Chat panel — positioned above the FAB */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-[min(420px,calc(100vw-2rem))] bg-white dark:bg-neutral-900 rounded-md shadow-lg
+        <div className="fixed bottom-24 right-4 w-[min(420px,calc(100vw-2rem))] bg-white dark:bg-neutral-900 rounded-md shadow-lg
                         border border-neutral-200 dark:border-neutral-700 flex flex-col z-50 overflow-hidden
                         animate-in slide-in-from-bottom-4 duration-200"
-             style={{ maxHeight: 'calc(100vh - 5rem)', height: '600px' }}>
+             style={{ maxHeight: 'calc(100vh - 7rem)', height: '560px' }}>
           {/* Header */}
-          <div className="bg-neutral-900 px-4 py-3 flex items-center gap-3">
+          <div className="bg-indigo-600 px-4 py-3 flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-              <SparklesIcon className="w-5 h-5 text-white" />
+              <ChatBubbleLeftRightIcon className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-white font-semibold text-sm">Project Assistant</h3>
-              <p className="text-white/70 text-[10px]">AI-powered project intelligence</p>
+              <h3 className="text-white font-semibold text-sm">Channel Assistant</h3>
+              <p className="text-white/70 text-[10px]">Ask about discussions, calls & transcriptions</p>
             </div>
             <div className="flex items-center gap-1">
               <button
@@ -215,11 +219,11 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
             ) : messages.length === 0 ? (
               <div className="text-center py-6">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950 flex items-center justify-center mx-auto mb-3">
-                  <CommandLineIcon className="w-6 h-6 text-indigo-500" />
+                  <SparklesIcon className="w-6 h-6 text-indigo-500" />
                 </div>
-                <h4 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 mb-1">Project Intelligence</h4>
+                <h4 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 mb-1">Channel Intelligence</h4>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 max-w-[280px] mx-auto">
-                  Ask me anything about this project — scope, team, progress, or tell me to make changes.
+                  Ask me about group discussions, call transcriptions, or search through channel messages.
                 </p>
               </div>
             ) : null}
@@ -251,7 +255,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
                 <div
                   className={`max-w-[85%] rounded-md px-3.5 py-2.5 text-sm leading-relaxed
                     ${msg.role === 'user'
-                      ? 'bg-brand-lime text-brand-dark rounded-br-sm shadow-[0_2px_12px_-4px_rgba(228,255,26,0.3)]'
+                      ? 'bg-indigo-600 text-white rounded-br-sm shadow-sm'
                       : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-bl-sm'
                     }`}
                 >
@@ -302,7 +306,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
                       <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                       <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
-                    <span className="text-xs text-neutral-500">Thinking...</span>
+                    <span className="text-xs text-neutral-500">Analyzing channel...</span>
                   </div>
                 </div>
               </div>
@@ -326,11 +330,11 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about scope, team, progress..."
+                placeholder="Ask about discussions, calls, topics..."
                 rows={1}
                 className="flex-1 resize-none rounded-md border border-neutral-200 dark:border-neutral-700 px-3 py-2 text-sm
                            bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100
-                           focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none
+                           focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 dark:focus:ring-indigo-700 outline-none
                            placeholder:text-neutral-400 max-h-24 overflow-y-auto"
                 style={{ minHeight: '38px' }}
                 onInput={(e) => {
@@ -342,7 +346,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
               <button
                 onClick={() => sendMessage()}
                 disabled={!input.trim() || isLoading}
-                className="p-2 rounded-md bg-neutral-900 text-white hover:bg-neutral-800
+                className="p-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-500
                            disabled:opacity-40 disabled:cursor-not-allowed transition-colors
                            flex-shrink-0"
               >
@@ -350,7 +354,7 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
               </button>
             </div>
             <p className="text-[9px] text-neutral-400 mt-1 text-center">
-              AI assistant scoped to this project · Admin access only
+              AI assistant for this channel · Searches messages & call transcriptions
             </p>
           </div>
         </div>
@@ -363,7 +367,6 @@ export default function SessionChatbot({ sessionId }: SessionChatbotProps) {
 // ── Simple Markdown Renderer ───────────────────────────────────
 
 function MarkdownRenderer({ content }: { content: string }) {
-  // Convert markdown to safe HTML-like components
   const lines = content.split('\n');
   const elements: JSX.Element[] = [];
   let inCodeBlock = false;
@@ -374,7 +377,6 @@ function MarkdownRenderer({ content }: { content: string }) {
 
   const processInline = (text: string): JSX.Element[] => {
     const parts: JSX.Element[] = [];
-    // Process **bold**, `code`, *italic*
     const regex = /(\*\*(.+?)\*\*)|(`(.+?)`)|(\*(.+?)\*)/g;
     let lastIndex = 0;
     let match;
@@ -406,7 +408,6 @@ function MarkdownRenderer({ content }: { content: string }) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Code blocks
     if (line.trim().startsWith('```')) {
       if (inCodeBlock) {
         elements.push(
@@ -426,11 +427,9 @@ function MarkdownRenderer({ content }: { content: string }) {
       continue;
     }
 
-    // Tables
     if (line.trim().startsWith('|')) {
       const cells = line.split('|').filter(c => c.trim()).map(c => c.trim());
       if (cells.every(c => /^[-:]+$/.test(c))) {
-        // Separator row — skip but mark header done
         isHeaderRow = false;
         continue;
       }
@@ -438,7 +437,6 @@ function MarkdownRenderer({ content }: { content: string }) {
       inTable = true;
       continue;
     } else if (inTable) {
-      // Flush table
       elements.push(
         <div key={`table-${i}`} className="overflow-x-auto my-1.5">
           <table className="w-full text-[11px] border-collapse">
@@ -472,13 +470,11 @@ function MarkdownRenderer({ content }: { content: string }) {
       isHeaderRow = true;
     }
 
-    // Empty line
     if (!line.trim()) {
       elements.push(<div key={`br-${i}`} className="h-1" />);
       continue;
     }
 
-    // Headers
     if (line.startsWith('### ')) {
       elements.push(
         <h4 key={`h3-${i}`} className="font-semibold text-neutral-800 dark:text-neutral-200 text-xs mt-2 mb-0.5">
@@ -504,7 +500,6 @@ function MarkdownRenderer({ content }: { content: string }) {
       continue;
     }
 
-    // Bullets
     if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
       const indent = line.match(/^\s*/)?.[0].length || 0;
       const text = line.trim().slice(2);
@@ -517,7 +512,6 @@ function MarkdownRenderer({ content }: { content: string }) {
       continue;
     }
 
-    // Numbered lists
     const numMatch = line.trim().match(/^(\d+)\.\s(.+)/);
     if (numMatch) {
       elements.push(
@@ -529,13 +523,11 @@ function MarkdownRenderer({ content }: { content: string }) {
       continue;
     }
 
-    // Horizontal rule
     if (line.trim() === '---' || line.trim() === '***') {
       elements.push(<hr key={`hr-${i}`} className="border-neutral-200 dark:border-neutral-700 my-2" />);
       continue;
     }
 
-    // Default paragraph
     elements.push(
       <p key={`p-${i}`} className="text-sm leading-relaxed">
         {processInline(line)}
@@ -543,7 +535,6 @@ function MarkdownRenderer({ content }: { content: string }) {
     );
   }
 
-  // Flush any remaining table
   if (inTable && tableRows.length > 0) {
     elements.push(
       <div key="table-end" className="overflow-x-auto my-1.5">

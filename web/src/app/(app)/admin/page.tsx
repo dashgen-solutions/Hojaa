@@ -348,9 +348,9 @@ export default function AdminPage() {
   /* ─── UI ──────────────────────────────────────────────── */
 
   return (
-    <div className="h-full bg-neutral-50 dark:bg-[#060606] flex flex-col">
+    <div className="h-full overflow-y-auto bg-neutral-50 dark:bg-[#060606]">
 
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-8">
+      <main className="max-w-6xl mx-auto w-full px-4 py-8">
         {/* Page Header */}
         <div className="flex items-start justify-between mb-6">
           <div>

@@ -5,9 +5,7 @@ import {
   PaperAirplaneIcon,
   FaceSmileIcon,
   AtSymbolIcon,
-  PaperClipIcon,
   CodeBracketIcon,
-  BoldIcon,
 } from '@heroicons/react/24/outline';
 import EmojiPicker from './EmojiPicker';
 import { getMentionableUsers, MentionableUser } from '@/lib/api';
@@ -42,6 +40,7 @@ export default function MessageComposer({
   const [mentionUsers, setMentionUsers] = useState<MentionableUser[]>([]);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [collectedMentions, setCollectedMentions] = useState<string[]>([]);
+  const [mentionMap, setMentionMap] = useState<Map<string, string>>(new Map()); // username -> userId
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
@@ -74,9 +73,11 @@ export default function MessageComposer({
     const atIndex = textBefore.lastIndexOf('@');
     if (atIndex === -1) return;
 
-    const newText = textBefore.substring(0, atIndex) + `@[${user.username}](${user.id}) ` + textAfter;
+    // Show only @username in the textarea (human-readable)
+    const newText = textBefore.substring(0, atIndex) + `@${user.username} ` + textAfter;
     setContent(newText);
     setCollectedMentions((prev) => [...prev, user.id]);
+    setMentionMap((prev) => new Map(prev).set(user.username, user.id));
     setShowMentions(false);
     setMentionQuery('');
     textarea.focus();
@@ -116,12 +117,21 @@ export default function MessageComposer({
     const trimmed = content.trim();
     if (!trimmed || disabled) return;
 
-    onSend(trimmed, {
+    // Reconstruct @[username](userId) syntax for the server
+    let messageToSend = trimmed;
+    mentionMap.forEach((userId, username) => {
+      // Replace all occurrences of @username with @[username](userId)
+      const pattern = new RegExp(`@${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\w)`, 'g');
+      messageToSend = messageToSend.replace(pattern, `@[${username}](${userId})`);
+    });
+
+    onSend(messageToSend, {
       parent_message_id: replyTo?.id,
       mentions: collectedMentions.length > 0 ? collectedMentions : undefined,
     });
     setContent('');
     setCollectedMentions([]);
+    setMentionMap(new Map());
     if (onCancelReply) onCancelReply();
 
     if (textareaRef.current) {
@@ -192,17 +202,17 @@ export default function MessageComposer({
   };
 
   return (
-    <div className="border-t border-[#383a3f] px-4 py-3 flex-shrink-0 bg-[#1a1d21]">
+    <div className="border-t border-neutral-200 dark:border-[#383a3f] px-4 py-3 flex-shrink-0 bg-white dark:bg-[#1a1d21]">
       {/* Reply preview */}
       {replyTo && (
-        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-[#222529] rounded-lg border-l-2 border-blue-500">
+        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-neutral-50 dark:bg-[#222529] rounded-lg border-l-2 border-blue-500">
           <div className="flex-1 min-w-0">
             <span className="text-xs text-blue-400 font-medium">Replying to {replyTo.sender_name}</span>
-            <p className="text-xs text-gray-400 truncate">{replyTo.content}</p>
+            <p className="text-xs text-neutral-500 dark:text-gray-400 truncate">{replyTo.content}</p>
           </div>
           <button
             onClick={onCancelReply}
-            className="text-gray-500 hover:text-gray-300 text-lg leading-none"
+            className="text-neutral-400 dark:text-gray-500 hover:text-neutral-600 dark:hover:text-gray-300 text-lg leading-none"
           >
             ×
           </button>
@@ -213,50 +223,50 @@ export default function MessageComposer({
       <div className="flex items-center gap-1 mb-1.5 px-1">
         <button
           onClick={() => insertFormatting('**', '**')}
-          className="p-1 rounded text-gray-500 hover:text-gray-300 hover:bg-[#383a3f] transition-colors"
+          className="p-1 rounded text-neutral-400 dark:text-gray-500 hover:text-neutral-600 dark:hover:text-gray-300 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
           title="Bold (Ctrl+B)"
         >
           <span className="text-xs font-bold">B</span>
         </button>
         <button
           onClick={() => insertFormatting('*', '*')}
-          className="p-1 rounded text-gray-500 hover:text-gray-300 hover:bg-[#383a3f] transition-colors"
+          className="p-1 rounded text-neutral-400 dark:text-gray-500 hover:text-neutral-600 dark:hover:text-gray-300 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
           title="Italic (Ctrl+I)"
         >
           <span className="text-xs italic">I</span>
         </button>
         <button
           onClick={() => insertFormatting('~~', '~~')}
-          className="p-1 rounded text-gray-500 hover:text-gray-300 hover:bg-[#383a3f] transition-colors"
+          className="p-1 rounded text-neutral-400 dark:text-gray-500 hover:text-neutral-600 dark:hover:text-gray-300 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
           title="Strikethrough"
         >
           <span className="text-xs line-through">S</span>
         </button>
         <button
           onClick={() => insertFormatting('`', '`')}
-          className="p-1 rounded text-gray-500 hover:text-gray-300 hover:bg-[#383a3f] transition-colors"
+          className="p-1 rounded text-neutral-400 dark:text-gray-500 hover:text-neutral-600 dark:hover:text-gray-300 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
           title="Inline code"
         >
           <CodeBracketIcon className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={() => insertFormatting('\n```\n', '\n```\n')}
-          className="p-1 rounded text-gray-500 hover:text-gray-300 hover:bg-[#383a3f] transition-colors"
+          className="p-1 rounded text-neutral-400 dark:text-gray-500 hover:text-neutral-600 dark:hover:text-gray-300 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
           title="Code block"
         >
           <span className="text-[10px] font-mono">{'{}'}</span>
         </button>
-        <div className="w-px h-4 bg-[#383a3f] mx-1" />
+        <div className="w-px h-4 bg-neutral-200 dark:bg-[#383a3f] mx-1" />
         <button
           onClick={() => insertFormatting('> ', '')}
-          className="p-1 rounded text-gray-500 hover:text-gray-300 hover:bg-[#383a3f] transition-colors"
+          className="p-1 rounded text-neutral-400 dark:text-gray-500 hover:text-neutral-600 dark:hover:text-gray-300 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
           title="Quote"
         >
           <span className="text-xs">"</span>
         </button>
         <button
           onClick={() => insertFormatting('- ', '')}
-          className="p-1 rounded text-gray-500 hover:text-gray-300 hover:bg-[#383a3f] transition-colors"
+          className="p-1 rounded text-neutral-400 dark:text-gray-500 hover:text-neutral-600 dark:hover:text-gray-300 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
           title="Bullet list"
         >
           <span className="text-xs">• List</span>
@@ -268,14 +278,14 @@ export default function MessageComposer({
         {showMentions && mentionUsers.length > 0 && (
           <div
             ref={mentionRef}
-            className="absolute bottom-full left-0 mb-1 w-64 bg-[#1a1d21] border border-[#383a3f] rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto"
+            className="absolute bottom-full left-0 mb-1 w-64 bg-white dark:bg-[#1a1d21] border border-neutral-200 dark:border-[#383a3f] rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto"
           >
             {mentionUsers.map((user, idx) => (
               <button
                 key={user.id}
                 onClick={() => insertMention(user)}
                 className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${
-                  idx === mentionIndex ? 'bg-blue-600/20 text-blue-300' : 'text-gray-300 hover:bg-[#383a3f]'
+                  idx === mentionIndex ? 'bg-blue-600/20 text-blue-300' : 'text-neutral-700 dark:text-gray-300 hover:bg-neutral-100 dark:hover:bg-[#383a3f]'
                 }`}
               >
                 <div className="relative">
@@ -283,12 +293,12 @@ export default function MessageComposer({
                     {user.username[0]?.toUpperCase()}
                   </div>
                   {user.is_online && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-[#1a1d21]" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white dark:border-[#1a1d21]" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{user.username}</div>
-                  <div className="text-[10px] text-gray-500 truncate">{user.email}</div>
+                  <div className="text-[10px] text-neutral-400 dark:text-gray-500 truncate">{user.email}</div>
                 </div>
               </button>
             ))}
@@ -313,7 +323,7 @@ export default function MessageComposer({
               placeholder={placeholder}
               disabled={disabled}
               rows={1}
-              className="w-full resize-none text-[13px] text-gray-200 bg-[#222529] border border-[#383a3f] rounded-lg px-3 py-2.5 pr-24 focus:outline-none focus:border-[#565856] placeholder-gray-500 disabled:opacity-50"
+              className="w-full resize-none text-[13px] text-neutral-800 dark:text-gray-200 bg-neutral-50 dark:bg-[#222529] border border-neutral-200 dark:border-[#383a3f] rounded-lg px-3 py-2.5 pr-24 focus:outline-none focus:border-neutral-400 dark:focus:border-[#565856] placeholder-neutral-400 dark:placeholder-gray-500 disabled:opacity-50"
               style={{ maxHeight: '160px' }}
             />
             <div className="absolute right-2 bottom-2 flex items-center gap-0.5">
@@ -332,23 +342,17 @@ export default function MessageComposer({
                     }, 0);
                   }
                 }}
-                className="p-1 rounded text-gray-500 hover:text-blue-400 hover:bg-[#383a3f] transition-colors"
+                className="p-1 rounded text-neutral-400 dark:text-gray-500 hover:text-blue-400 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
                 title="Mention someone (@)"
               >
                 <AtSymbolIcon className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="p-1 rounded text-gray-500 hover:text-yellow-400 hover:bg-[#383a3f] transition-colors"
+                className="p-1 rounded text-neutral-400 dark:text-gray-500 hover:text-yellow-400 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
                 title="Emoji"
               >
                 <FaceSmileIcon className="w-4 h-4" />
-              </button>
-              <button
-                className="p-1 rounded text-gray-500 hover:text-gray-300 hover:bg-[#383a3f] transition-colors"
-                title="Attach file (coming soon)"
-              >
-                <PaperClipIcon className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -362,8 +366,8 @@ export default function MessageComposer({
           </button>
         </div>
       </div>
-      <p className="text-[10px] text-gray-600 mt-1 px-1">
-        <span className="text-gray-500">Enter</span> to send · <span className="text-gray-500">Shift+Enter</span> for new line · <span className="text-gray-500">@</span> to mention · <span className="text-gray-500">**bold**</span> · <span className="text-gray-500">*italic*</span>
+      <p className="text-[10px] text-neutral-400 dark:text-gray-600 mt-1 px-1">
+        <span className="text-neutral-500 dark:text-gray-500">Enter</span> to send · <span className="text-neutral-500 dark:text-gray-500">Shift+Enter</span> for new line · <span className="text-neutral-500 dark:text-gray-500">@</span> to mention · <span className="text-neutral-500 dark:text-gray-500">**bold**</span> · <span className="text-neutral-500 dark:text-gray-500">*italic*</span>
       </p>
     </div>
   );

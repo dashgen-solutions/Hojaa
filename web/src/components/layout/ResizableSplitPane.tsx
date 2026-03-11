@@ -122,7 +122,7 @@ export default function ResizableSplitPane({
     >
       {/* Left Panel */}
       <div
-        className="overflow-hidden relative"
+        className="overflow-hidden relative h-full"
         style={{ width: `${leftWidth}%` }}
       >
         {leftPanel}
@@ -227,7 +227,7 @@ export default function ResizableSplitPane({
 
       {/* Right Panel */}
       <div
-        className="overflow-hidden flex-1"
+        className="overflow-hidden h-full"
         style={{ width: `${100 - leftWidth}%` }}
       >
         {rightPanel}

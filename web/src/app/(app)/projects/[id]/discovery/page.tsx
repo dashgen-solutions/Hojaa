@@ -67,7 +67,7 @@ export default function DiscoveryPage() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Guest User Banner */}
       {!isAuthenticated && currentStep === "upload" && (
         <div className="bg-neutral-900 text-white px-4 py-2.5 text-center text-sm flex-shrink-0">
@@ -80,7 +80,7 @@ export default function DiscoveryPage() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden flex">
+      <div className="flex-1 min-h-0 overflow-hidden flex">
         {currentStep === "upload" && (
           <div className="w-full h-full overflow-y-auto">
             <div className="min-h-full flex items-center justify-center p-6">
@@ -206,7 +206,7 @@ export default function DiscoveryPage() {
                     onSelectInput={() => setShowSourceSuggestions(true)}
                   />
                 </div>
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 min-h-0 overflow-hidden">
                   <ResizableSplitPane
                     leftPanel={
                       <div className="h-full bg-white dark:bg-neutral-900 overflow-hidden rounded-bl-md shadow-sm ml-2 mr-1">
@@ -220,7 +220,7 @@ export default function DiscoveryPage() {
                       </div>
                     }
                     rightPanel={
-                      <div className="h-full flex flex-col rounded-br-md shadow-sm mr-2 ml-1 overflow-hidden bg-white dark:bg-neutral-900">
+                      <div className="h-full rounded-br-md shadow-sm mr-2 ml-1 bg-white dark:bg-neutral-900" style={{ overflow: 'clip' }}>
                         <ChatInterface
                           sessionId={projectId}
                           selectedNodeId={selectedNode}

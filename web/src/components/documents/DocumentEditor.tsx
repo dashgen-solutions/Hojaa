@@ -519,31 +519,7 @@ export default function DocumentEditor({
               )}
 
               {activePanel === 'pricing' && (
-                <PricingTableBlock
-                  documentId={doc.id}
-                  sessionId={doc.session_id}
-                  onInsertBlock={() => {
-                    // Insert a pricingTable block at the current cursor position
-                    try {
-                      const currentBlock = editor.getTextCursorPosition().block;
-                      editor.insertBlocks(
-                        [{ type: 'pricingTable' as any, props: {}, content: [] }],
-                        currentBlock,
-                        'after',
-                      );
-                    } catch {
-                      // Fallback: append at end
-                      const lastBlock = editor.document[editor.document.length - 1];
-                      if (lastBlock) {
-                        editor.insertBlocks(
-                          [{ type: 'pricingTable' as any, props: {}, content: [] }],
-                          lastBlock,
-                          'after',
-                        );
-                      }
-                    }
-                  }}
-                />
+                <PricingTableBlock documentId={doc.id} sessionId={doc.session_id} />
               )}
 
               {activePanel === 'share' && (

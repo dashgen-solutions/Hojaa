@@ -1006,6 +1006,8 @@ export interface ChatChannelMemberInfo {
   email: string;
   joined_at: string;
   is_online: boolean;
+  custom_status?: string | null;
+  status_emoji?: string | null;
 }
 
 export interface ChatMessagePreview {
@@ -1048,6 +1050,7 @@ export interface ChatMessageItem {
   sender_id: string | null;
   sender_name: string;
   content: string;
+  message_type?: string | null; // null = normal, "call_started", "call_ended", "call_missed"
   reference_type: string | null;
   reference_id: string | null;
   reference_name: string | null;
@@ -1097,6 +1100,8 @@ export interface UserPresenceInfo {
   user_id: string;
   username: string;
   is_online: boolean;
+  custom_status?: string | null;
+  status_emoji?: string | null;
 }
 
 // -- Channel APIs --
@@ -1248,6 +1253,22 @@ export const getMessagingUsers = async (): Promise<MessagingUser[]> => {
 
 export const getOnlinePresence = async (): Promise<UserPresenceInfo[]> => {
   const response = await api.get('/api/messaging/presence');
+  return response.data;
+};
+
+// -- User Status (Slack-style) --
+export interface UserStatusPayload {
+  custom_status?: string | null;
+  status_emoji?: string | null;
+}
+
+export const getMyStatus = async (): Promise<UserStatusPayload> => {
+  const response = await api.get('/api/messaging/status');
+  return response.data;
+};
+
+export const updateMyStatus = async (data: UserStatusPayload): Promise<UserStatusPayload> => {
+  const response = await api.put('/api/messaging/status', data);
   return response.data;
 };
 
@@ -1675,6 +1696,108 @@ export const submitRoadmapFeedback = async (data: {
   email?: string;
 }) => {
   const response = await api.post('/api/roadmap/feedback', data);
+  return response.data;
+};
+
+
+// ===== Call Transcription API =====
+
+export interface CallTranscriptionItem {
+  id: string;
+  channel_id: string;
+  call_initiator_id: string | null;
+  call_type: string;
+  duration_seconds: number | null;
+  transcription_text: string | null;
+  language: string | null;
+  participants: Array<{ user_id: string; username: string }> | null;
+  status: string;
+  created_at: string;
+}
+
+export const saveCallTranscription = async (
+  channelId: string,
+  data: {
+    transcription_text: string;
+    call_type?: string;
+    duration_seconds?: number;
+  },
+): Promise<CallTranscriptionItem> => {
+  const params = new URLSearchParams({
+    transcription_text: data.transcription_text,
+    call_type: data.call_type || 'audio',
+    duration_seconds: String(data.duration_seconds || 0),
+  });
+  const response = await api.post(`/api/messaging/channels/${channelId}/transcriptions/save?${params}`);
+  return response.data;
+};
+
+export const getChannelTranscriptions = async (
+  channelId: string,
+  limit: number = 20,
+): Promise<CallTranscriptionItem[]> => {
+  const response = await api.get(`/api/messaging/channels/${channelId}/transcriptions?limit=${limit}`);
+  return response.data;
+};
+
+export const uploadCallRecording = async (
+  channelId: string,
+  audioBlob: Blob,
+  callType: string = 'audio',
+  durationSeconds: number = 0,
+): Promise<{ id: string; status: string; transcription_text: string; language: string }> => {
+  const formData = new FormData();
+  formData.append('audio', audioBlob, 'recording.webm');
+  const params = new URLSearchParams({
+    call_type: callType,
+    duration_seconds: String(durationSeconds),
+  });
+  const response = await api.post(
+    `/api/messaging/channels/${channelId}/transcriptions/upload?${params}`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return response.data;
+};
+
+
+// ===== Messaging Channel Chatbot API =====
+
+export interface MessagingChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  tool_calls?: Array<{ name: string; args: Record<string, any>; result_preview?: string }>;
+  created_at: string;
+}
+
+export interface MessagingChatResponse {
+  response: string;
+  tool_calls: Array<{ name: string; args: Record<string, any>; result_preview?: string }>;
+  message_id: string;
+}
+
+export const sendMessagingChatMessage = async (
+  channelId: string,
+  message: string,
+): Promise<MessagingChatResponse> => {
+  const response = await api.post('/api/messaging-chat/send', {
+    channel_id: channelId,
+    message,
+  });
+  return response.data;
+};
+
+export const getMessagingChatHistory = async (
+  channelId: string,
+  limit: number = 50,
+): Promise<{ messages: MessagingChatMessage[] }> => {
+  const response = await api.get(`/api/messaging-chat/history/${channelId}?limit=${limit}`);
+  return response.data;
+};
+
+export const clearMessagingChatHistory = async (channelId: string) => {
+  const response = await api.delete(`/api/messaging-chat/history/${channelId}`);
   return response.data;
 };
 

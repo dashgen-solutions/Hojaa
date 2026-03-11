@@ -24,6 +24,17 @@ interface UseMessagingWebSocketOptions {
   onThreadReply?: (msg: WSMessage) => void;
   onPresence?: (msg: WSMessage) => void;
   onMessagePinned?: (msg: WSMessage) => void;
+  // Call signaling
+  onCallIncoming?: (msg: WSMessage) => void;
+  onCallAccepted?: (msg: WSMessage) => void;
+  onCallRejected?: (msg: WSMessage) => void;
+  onCallEnded?: (msg: WSMessage) => void;
+  onWebRTCOffer?: (msg: WSMessage) => void;
+  onWebRTCAnswer?: (msg: WSMessage) => void;
+  onWebRTCIceCandidate?: (msg: WSMessage) => void;
+  onGroupCallParticipantJoined?: (msg: WSMessage) => void;
+  onGroupCallParticipantLeft?: (msg: WSMessage) => void;
+  onStatusUpdate?: (msg: WSMessage) => void;
   enabled?: boolean;
 }
 
@@ -33,25 +44,25 @@ interface UseMessagingWebSocketOptions {
  * Connects to /api/ws/messaging?token=...
  * Auto-reconnects with exponential back-off.
  * Heartbeat keep-alive every 25s.
+ *
+ * IMPORTANT: All handler callbacks are stored in a single ref so that
+ * the `connect` function identity is stable and the WebSocket is NOT
+ * torn down / re-opened when callbacks change between renders.
  */
-export function useMessagingWebSocket({
-  token,
-  onNewMessage,
-  onTyping,
-  onChannelUpdate,
-  onMessageEdited,
-  onMessageDeleted,
-  onReactionAdded,
-  onReactionRemoved,
-  onThreadReply,
-  onPresence,
-  onMessagePinned,
-  enabled = true,
-}: UseMessagingWebSocketOptions) {
+export function useMessagingWebSocket(opts: UseMessagingWebSocketOptions) {
+  const {
+    token,
+    enabled = true,
+  } = opts;
+
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retriesRef = useRef(0);
+
+  // ── Store ALL handlers in a single ref so `connect` never depends on them ──
+  const handlersRef = useRef(opts);
+  handlersRef.current = opts; // always latest
 
   const [connected, setConnected] = useState(false);
 
@@ -90,37 +101,69 @@ export function useMessagingWebSocket({
     ws.onmessage = (event) => {
       try {
         const msg: WSMessage = JSON.parse(event.data);
+        const h = handlersRef.current; // always latest handlers
 
         switch (msg.type) {
           case "new_message":
-            onNewMessage?.(msg);
+            h.onNewMessage?.(msg);
             break;
           case "typing":
-            onTyping?.(msg);
+            h.onTyping?.(msg);
             break;
           case "channel_update":
-            onChannelUpdate?.(msg);
+            h.onChannelUpdate?.(msg);
             break;
           case "message_edited":
-            onMessageEdited?.(msg);
+            h.onMessageEdited?.(msg);
             break;
           case "message_deleted":
-            onMessageDeleted?.(msg);
+            h.onMessageDeleted?.(msg);
             break;
           case "reaction_added":
-            onReactionAdded?.(msg);
+            h.onReactionAdded?.(msg);
             break;
           case "reaction_removed":
-            onReactionRemoved?.(msg);
+            h.onReactionRemoved?.(msg);
             break;
           case "thread_reply":
-            onThreadReply?.(msg);
+            h.onThreadReply?.(msg);
             break;
           case "presence":
-            onPresence?.(msg);
+            h.onPresence?.(msg);
             break;
           case "message_pinned":
-            onMessagePinned?.(msg);
+            h.onMessagePinned?.(msg);
+            break;
+          // Call signaling
+          case "call_incoming":
+            h.onCallIncoming?.(msg);
+            break;
+          case "call_accepted":
+            h.onCallAccepted?.(msg);
+            break;
+          case "call_rejected":
+            h.onCallRejected?.(msg);
+            break;
+          case "call_ended":
+            h.onCallEnded?.(msg);
+            break;
+          case "webrtc_offer":
+            h.onWebRTCOffer?.(msg);
+            break;
+          case "webrtc_answer":
+            h.onWebRTCAnswer?.(msg);
+            break;
+          case "webrtc_ice_candidate":
+            h.onWebRTCIceCandidate?.(msg);
+            break;
+          case "group_call_participant_joined":
+            h.onGroupCallParticipantJoined?.(msg);
+            break;
+          case "group_call_participant_left":
+            h.onGroupCallParticipantLeft?.(msg);
+            break;
+          case "status_update":
+            h.onStatusUpdate?.(msg);
             break;
         }
       } catch {
@@ -140,7 +183,7 @@ export function useMessagingWebSocket({
     ws.onerror = () => {
       ws.close();
     };
-  }, [token, enabled, onNewMessage, onTyping, onChannelUpdate, onMessageEdited, onMessageDeleted, onReactionAdded, onReactionRemoved, onThreadReply, onPresence, onMessagePinned, cleanup]);
+  }, [token, enabled, cleanup]);
 
   useEffect(() => {
     connect();
@@ -165,5 +208,15 @@ export function useMessagingWebSocket({
     [],
   );
 
-  return { connected, sendTyping, sendPresenceUpdate };
+  /** Send raw WS message (used by call signaling) */
+  const sendWsMessage = useCallback(
+    (data: Record<string, unknown>) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify(data));
+      }
+    },
+    [],
+  );
+
+  return { connected, sendTyping, sendPresenceUpdate, sendWsMessage };
 }

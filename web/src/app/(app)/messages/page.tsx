@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessagingWebSocket, WSMessage } from '@/hooks/useMessagingWebSocket';
 import {
@@ -9,6 +10,9 @@ import {
   sendChannelMessage,
   markChannelRead,
   getPinnedMessages,
+  getMyStatus,
+  updateMyStatus,
+  uploadCallRecording,
   ChatChannel,
   ChatMessageItem,
   PinnedMessageItem,
@@ -19,16 +23,26 @@ import MessageComposerEnhanced from '@/components/messaging/MessageComposerEnhan
 import NewChannelModal from '@/components/messaging/NewChannelModal';
 import ThreadPanel from '@/components/messaging/ThreadPanel';
 import MessageSearch from '@/components/messaging/MessageSearch';
+import CallOverlay from '@/components/messaging/CallOverlay';
+import GroupMembersPanel from '@/components/messaging/GroupMembersPanel';
+import StatusPicker from '@/components/messaging/StatusPicker';
+import MessagingChatbot from '@/components/messaging/MessagingChatbot';
+import { useWebRTCCall } from '@/hooks/useWebRTCCall';
 import {
   ChatBubbleLeftRightIcon,
   MagnifyingGlassIcon,
-  PhoneIcon,
-  UserGroupIcon,
   MapPinIcon,
   HashtagIcon,
   XMarkIcon,
-  SignalIcon,
+  PhoneIcon,
+  VideoCameraIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
+
+/** Strip @[username](userId) mention syntax to just @username */
+function stripMentions(text: string): string {
+  return text.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
+}
 
 export default function MessagesPage() {
   const { user, token, isAuthenticated } = useAuth();
@@ -46,11 +60,19 @@ export default function MessagesPage() {
   const [threadMessage, setThreadMessage] = useState<ChatMessageItem | null>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showPins, setShowPins] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
   const [pinnedMessages, setPinnedMessages] = useState<PinnedMessageItem[]>([]);
   const [replyTo, setReplyTo] = useState<{ id: string; sender_name: string; content: string } | null>(null);
 
-  // Huddle state (UI only)
-  const [huddleActive, setHuddleActive] = useState(false);
+  // User status (Slack-style)
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [myStatus, setMyStatus] = useState<string | null>(null);
+  const [myStatusEmoji, setMyStatusEmoji] = useState<string | null>(null);
+
+  // Huddle state removed (not implemented)
+
+  const statusBarRef = useRef<HTMLDivElement>(null);
+  const [statusPickerPos, setStatusPickerPos] = useState<{ bottom: number; left: number } | null>(null);
 
   const selectedChannel = channels.find((c) => c.id === selectedChannelId) || null;
 
@@ -71,6 +93,17 @@ export default function MessagesPage() {
   useEffect(() => {
     refreshChannels();
   }, [refreshChannels]);
+
+  // Load user status on mount
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    getMyStatus()
+      .then((s) => {
+        setMyStatus(s.custom_status || null);
+        setMyStatusEmoji(s.status_emoji || null);
+      })
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!selectedChannelId) {
@@ -94,6 +127,7 @@ export default function MessagesPage() {
     // Reset side panels on channel switch
     setThreadMessage(null);
     setShowPins(false);
+    setShowMembers(false);
     setReplyTo(null);
   }, [selectedChannelId, refreshChannels]);
 
@@ -203,9 +237,42 @@ export default function MessagesPage() {
       const userId = msg.user_id as string;
       const status = msg.status as string;
       setOnlineUsers((prev) => ({ ...prev, [userId]: status === 'online' }));
+      // Also update custom_status/status_emoji in channels
+      if (msg.custom_status !== undefined || msg.status_emoji !== undefined) {
+        setChannels((prev) =>
+          prev.map((ch) => ({
+            ...ch,
+            members: ch.members.map((m) =>
+              m.user_id === userId
+                ? { ...m, custom_status: msg.custom_status as string | null, status_emoji: msg.status_emoji as string | null }
+                : m,
+            ),
+          })),
+        );
+      }
       refreshChannels();
     },
     [refreshChannels],
+  );
+
+  const handleStatusUpdate = useCallback(
+    (msg: WSMessage) => {
+      const userId = msg.user_id as string;
+      const customStatus = (msg.custom_status as string) || null;
+      const statusEmoji = (msg.status_emoji as string) || null;
+      // Update member info in all channels
+      setChannels((prev) =>
+        prev.map((ch) => ({
+          ...ch,
+          members: ch.members.map((m) =>
+            m.user_id === userId
+              ? { ...m, custom_status: customStatus, status_emoji: statusEmoji }
+              : m,
+          ),
+        })),
+      );
+    },
+    [],
   );
 
   const handleMessagePinned = useCallback(
@@ -217,7 +284,16 @@ export default function MessagesPage() {
     [selectedChannelId],
   );
 
-  const { connected, sendTyping } = useMessagingWebSocket({
+  // ---- WebRTC call hook ----
+  // Use a ref so the call hook always has the latest sendWsMessage without re-renders.
+  const sendWsFnRef = React.useRef<(data: Record<string, unknown>) => void>(() => {});
+  const stableSendWs = useCallback((data: Record<string, unknown>) => {
+    sendWsFnRef.current(data);
+  }, []);
+
+  const webrtcCall = useWebRTCCall({ currentUserId: user?.id || '', currentUserName: user?.username || '', sendWsMessage: stableSendWs });
+
+  const { connected, sendTyping, sendWsMessage } = useMessagingWebSocket({
     token,
     onNewMessage: handleNewMessage,
     onTyping: handleTyping,
@@ -229,8 +305,54 @@ export default function MessagesPage() {
     onThreadReply: handleThreadReply,
     onPresence: handlePresence,
     onMessagePinned: handleMessagePinned,
+    onCallIncoming: webrtcCall.handleCallIncoming,
+    onCallAccepted: webrtcCall.handleCallAccepted,
+    onCallRejected: webrtcCall.handleCallRejected,
+    onCallEnded: webrtcCall.handleCallEnded,
+    onWebRTCOffer: webrtcCall.handleWebRTCOffer,
+    onWebRTCAnswer: webrtcCall.handleWebRTCAnswer,
+    onWebRTCIceCandidate: webrtcCall.handleWebRTCIceCandidate,
+    onGroupCallParticipantJoined: webrtcCall.handleGroupCallParticipantJoined,
+    onGroupCallParticipantLeft: webrtcCall.handleGroupCallParticipantLeft,
+    onStatusUpdate: handleStatusUpdate,
     enabled: isAuthenticated,
   });
+
+  // Wire up the send function now that we have it from the WS hook
+  sendWsFnRef.current = sendWsMessage;
+
+  // ---- Auto-upload call recording for transcription ----
+  const transcriptionUploadedRef = useRef(false);
+
+  useEffect(() => {
+    // When a call ends and there's a recording blob, upload it for transcription
+    if (
+      webrtcCall.callState === 'idle' &&
+      webrtcCall.recordingBlob &&
+      selectedChannelId &&
+      !transcriptionUploadedRef.current
+    ) {
+      transcriptionUploadedRef.current = true;
+      const callType = webrtcCall.callInfo?.callType || 'audio';
+      const duration = webrtcCall.callDuration || 0;
+
+      uploadCallRecording(selectedChannelId, webrtcCall.recordingBlob, callType, duration)
+        .then((res) => {
+          console.log('Call transcription saved:', res.status, res.transcription_text?.slice(0, 100));
+        })
+        .catch((err) => {
+          console.error('Failed to upload call recording:', err);
+        })
+        .finally(() => {
+          webrtcCall.clearRecording();
+        });
+    }
+
+    // Reset the ref when a new call starts
+    if (webrtcCall.callState !== 'idle') {
+      transcriptionUploadedRef.current = false;
+    }
+  }, [webrtcCall.callState, webrtcCall.recordingBlob, selectedChannelId]);
 
   // ---- actions ----
 
@@ -314,37 +436,91 @@ export default function MessagesPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center h-full bg-[#1e2024]">
+      <div className="flex items-center justify-center h-full bg-white dark:bg-[#1e2024]">
         <div className="text-center">
-          <ChatBubbleLeftRightIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">Please sign in to use messaging.</p>
+          <ChatBubbleLeftRightIcon className="w-12 h-12 text-neutral-400 dark:text-gray-600 mx-auto mb-3" />
+          <p className="text-neutral-500 dark:text-gray-400 text-sm">Please sign in to use messaging.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full overflow-hidden bg-[#1e2024]">
+    <div className="flex h-full overflow-hidden bg-white dark:bg-[#1e2024]">
       {/* Channel sidebar */}
-      <ChannelListEnhanced
-        channels={channels}
-        activeChannelId={selectedChannelId}
-        onSelectChannel={setSelectedChannelId}
-        onNewChannel={() => setShowNewChannelModal(true)}
-        currentUserId={user?.id || ''}
-      />
+      <div className="flex flex-col h-full">
+        <ChannelListEnhanced
+          channels={channels}
+          activeChannelId={selectedChannelId}
+          onSelectChannel={setSelectedChannelId}
+          onNewChannel={() => setShowNewChannelModal(true)}
+          currentUserId={user?.id || ''}
+        />
+        {/* User status bar at bottom of sidebar */}
+        <div ref={statusBarRef} className="relative border-t border-neutral-200 dark:border-[#383a3f] bg-white dark:bg-[#1a1d21] px-3 py-2">
+          <button
+            onClick={() => {
+              if (!showStatusPicker && statusBarRef.current) {
+                const rect = statusBarRef.current.getBoundingClientRect();
+                setStatusPickerPos({
+                  bottom: window.innerHeight - rect.top + 8,
+                  left: rect.left,
+                });
+              }
+              setShowStatusPicker(!showStatusPicker);
+            }}
+            className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-left hover:bg-neutral-100 dark:hover:bg-[#2a2d32] transition-colors group"
+            title="Set your status"
+          >
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              {(user?.username || '?')[0]?.toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-neutral-800 dark:text-gray-200 truncate">{user?.username || 'Me'}</p>
+              {(myStatus || myStatusEmoji) ? (
+                <p className="text-[11px] text-neutral-500 dark:text-gray-400 truncate">
+                  {myStatusEmoji && <span className="mr-1">{myStatusEmoji}</span>}
+                  {myStatus}
+                </p>
+              ) : (
+                <p className="text-[11px] text-neutral-400 dark:text-gray-600 group-hover:text-neutral-500 dark:group-hover:text-gray-500">Set a status</p>
+              )}
+            </div>
+          </button>
+          {showStatusPicker && statusPickerPos && createPortal(
+            <div className="fixed" style={{ bottom: statusPickerPos.bottom, left: statusPickerPos.left, zIndex: 9999 }}>
+              <StatusPicker
+                currentStatus={myStatus}
+                currentEmoji={myStatusEmoji}
+                onSave={async (status, emoji) => {
+                  try {
+                    const res = await updateMyStatus({ custom_status: status, status_emoji: emoji });
+                    setMyStatus(res.custom_status || null);
+                    setMyStatusEmoji(res.status_emoji || null);
+                  } catch {
+                    // ignore
+                  }
+                  setShowStatusPicker(false);
+                }}
+                onClose={() => setShowStatusPicker(false)}
+              />
+            </div>,
+            document.body
+          )}
+        </div>
+      </div>
 
       {/* Main area */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#1e2024]">
+      <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-[#1e2024]">
         {selectedChannel ? (
           <>
             {/* Channel header */}
-            <div className="flex items-center justify-between px-5 py-2.5 border-b border-[#383a3f] flex-shrink-0 bg-[#1e2024]">
+            <div className="flex items-center justify-between px-5 py-2.5 border-b border-neutral-200 dark:border-[#383a3f] flex-shrink-0 bg-white dark:bg-[#1e2024]">
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div>
                   <div className="flex items-center gap-2">
-                    {!selectedChannel.is_direct && <HashtagIcon className="w-4 h-4 text-gray-400" />}
-                    <h2 className="text-sm font-bold text-white">
+                    {!selectedChannel.is_direct && <HashtagIcon className="w-4 h-4 text-neutral-400 dark:text-gray-400" />}
+                    <h2 className="text-sm font-bold text-neutral-900 dark:text-white">
                       {selectedChannel.is_direct
                         ? selectedChannel.other_user?.username || 'Direct Message'
                         : selectedChannel.name || 'Group'}
@@ -355,37 +531,33 @@ export default function MessagesPage() {
                       )}
                   </div>
                   {selectedChannel.topic ? (
-                    <p className="text-[11px] text-gray-500 truncate mt-0.5 max-w-[400px]">{selectedChannel.topic}</p>
+                    <p className="text-[11px] text-neutral-500 dark:text-gray-500 truncate mt-0.5 max-w-[400px]">{selectedChannel.topic}</p>
+                  ) : selectedChannel.is_direct ? (
+                    (() => {
+                      const otherMember = selectedChannel.members.find((m) => m.user_id !== user?.id);
+                      if (otherMember?.custom_status || otherMember?.status_emoji) {
+                        return (
+                          <p className="text-[11px] text-neutral-500 dark:text-gray-500 truncate mt-0.5 max-w-[400px]">
+                            {otherMember.status_emoji && <span className="mr-1">{otherMember.status_emoji}</span>}
+                            {otherMember.custom_status}
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()
                   ) : (
-                    !selectedChannel.is_direct && (
-                      <p className="text-[11px] text-gray-600 mt-0.5">
-                        {selectedChannel.member_count} member{selectedChannel.member_count !== 1 ? 's' : ''}
-                      </p>
-                    )
+                    <p className="text-[11px] text-neutral-400 dark:text-gray-600 mt-0.5">
+                      {selectedChannel.member_count} member{selectedChannel.member_count !== 1 ? 's' : ''}
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setHuddleActive(!huddleActive)}
-                  className={`p-2 rounded-md transition-colors ${
-                    huddleActive ? 'bg-green-600/20 text-green-400' : 'text-gray-400 hover:text-gray-200 hover:bg-[#383a3f]'
-                  }`}
-                  title={huddleActive ? 'Leave huddle' : 'Start huddle'}
-                >
-                  <SignalIcon className="w-4 h-4" />
-                </button>
-                <button className="p-2 rounded-md text-gray-400 hover:text-gray-200 hover:bg-[#383a3f] transition-colors" title="Start call">
-                  <PhoneIcon className="w-4 h-4" />
-                </button>
-                <button className="p-2 rounded-md text-gray-400 hover:text-gray-200 hover:bg-[#383a3f] transition-colors" title="View members">
-                  <UserGroupIcon className="w-4 h-4" />
-                </button>
-                <button
                   onClick={loadPins}
                   className={`p-2 rounded-md transition-colors ${
-                    showPins ? 'bg-yellow-600/20 text-yellow-400' : 'text-gray-400 hover:text-gray-200 hover:bg-[#383a3f]'
+                    showPins ? 'bg-yellow-600/20 text-yellow-400' : 'text-neutral-400 dark:text-gray-400 hover:text-neutral-600 dark:hover:text-gray-200 hover:bg-neutral-100 dark:hover:bg-[#383a3f]'
                   }`}
                   title="Pinned messages"
                 >
@@ -394,32 +566,86 @@ export default function MessagesPage() {
                 <button
                   onClick={() => { setShowSearch(!showSearch); setShowPins(false); setThreadMessage(null); }}
                   className={`p-2 rounded-md transition-colors ${
-                    showSearch ? 'bg-blue-600/20 text-blue-400' : 'text-gray-400 hover:text-gray-200 hover:bg-[#383a3f]'
+                    showSearch ? 'bg-blue-600/20 text-blue-400' : 'text-neutral-400 dark:text-gray-400 hover:text-neutral-600 dark:hover:text-gray-200 hover:bg-neutral-100 dark:hover:bg-[#383a3f]'
                   }`}
                   title="Search messages"
                 >
                   <MagnifyingGlassIcon className="w-4 h-4" />
                 </button>
+
+                {/* Audio call — DM or Group */}
+                {(selectedChannel.is_direct ? selectedChannel.other_user : !selectedChannel.is_direct) && (
+                  <button
+                    onClick={() => {
+                      if (selectedChannel.is_direct && selectedChannel.other_user) {
+                        webrtcCall.startCall(
+                          selectedChannel.other_user.user_id,
+                          selectedChannel.other_user.username,
+                          selectedChannel.id,
+                          'audio',
+                        );
+                      } else if (!selectedChannel.is_direct && selectedChannel.members) {
+                        webrtcCall.startGroupCall(
+                          selectedChannel.members.map((m) => m.user_id),
+                          selectedChannel.id,
+                          selectedChannel.name || 'Group',
+                          'audio',
+                        );
+                      }
+                    }}
+                    className="p-2 rounded-md text-neutral-400 dark:text-gray-400 hover:text-neutral-600 dark:hover:text-gray-200 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
+                    title={selectedChannel.is_direct ? 'Audio call' : 'Group audio call'}
+                    disabled={webrtcCall.callState !== 'idle'}
+                  >
+                    <PhoneIcon className="w-4 h-4" />
+                  </button>
+                )}
+                {/* Video call — DM or Group */}
+                {(selectedChannel.is_direct ? selectedChannel.other_user : !selectedChannel.is_direct) && (
+                  <button
+                    onClick={() => {
+                      if (selectedChannel.is_direct && selectedChannel.other_user) {
+                        webrtcCall.startCall(
+                          selectedChannel.other_user.user_id,
+                          selectedChannel.other_user.username,
+                          selectedChannel.id,
+                          'video',
+                        );
+                      } else if (!selectedChannel.is_direct && selectedChannel.members) {
+                        webrtcCall.startGroupCall(
+                          selectedChannel.members.map((m) => m.user_id),
+                          selectedChannel.id,
+                          selectedChannel.name || 'Group',
+                          'video',
+                        );
+                      }
+                    }}
+                    className="p-2 rounded-md text-neutral-400 dark:text-gray-400 hover:text-neutral-600 dark:hover:text-gray-200 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
+                    title={selectedChannel.is_direct ? 'Video call' : 'Group video call'}
+                    disabled={webrtcCall.callState !== 'idle'}
+                  >
+                    <VideoCameraIcon className="w-4 h-4" />
+                  </button>
+                )}
+
+                {/* Members button — group channels only */}
+                {!selectedChannel.is_direct && (
+                  <button
+                    onClick={() => { setShowMembers(!showMembers); setShowSearch(false); setShowPins(false); setThreadMessage(null); }}
+                    className={`p-2 rounded-md transition-colors ${
+                      showMembers ? 'bg-blue-600/20 text-blue-400' : 'text-neutral-400 dark:text-gray-400 hover:text-neutral-600 dark:hover:text-gray-200 hover:bg-neutral-100 dark:hover:bg-[#383a3f]'
+                    }`}
+                    title="Members"
+                  >
+                    <UserGroupIcon className="w-4 h-4" />
+                  </button>
+                )}
+
                 <div className="ml-2 flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
                 </div>
               </div>
             </div>
-
-            {/* Huddle bar */}
-            {huddleActive && (
-              <div className="flex items-center gap-3 px-5 py-2 bg-green-600/10 border-b border-green-600/20">
-                <SignalIcon className="w-4 h-4 text-green-400 animate-pulse" />
-                <span className="text-xs text-green-400 font-medium">Huddle active</span>
-                <span className="text-xs text-gray-500">
-                  {selectedChannel.is_direct ? selectedChannel.other_user?.username : `${selectedChannel.member_count} members`}
-                </span>
-                <div className="flex-1" />
-                <button onClick={() => setHuddleActive(false)} className="text-xs text-red-400 hover:text-red-300 font-medium">
-                  Leave
-                </button>
-              </div>
-            )}
 
             {/* Messages */}
             {isLoadingMessages ? (
@@ -451,11 +677,11 @@ export default function MessagesPage() {
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <ChatBubbleLeftRightIcon className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-              <p className="text-gray-400 text-base font-medium">
+              <ChatBubbleLeftRightIcon className="w-16 h-16 text-neutral-300 dark:text-gray-700 mx-auto mb-4" />
+              <p className="text-neutral-500 dark:text-gray-400 text-base font-medium">
                 {channels.length === 0 ? 'No conversations yet' : 'Select a conversation'}
               </p>
-              <p className="text-gray-600 text-sm mt-1">
+              <p className="text-neutral-400 dark:text-gray-600 text-sm mt-1">
                 {channels.length === 0 ? 'Start a new conversation to get going' : 'Choose from the sidebar or start a new one'}
               </p>
               {channels.length === 0 && (
@@ -502,35 +728,35 @@ export default function MessagesPage() {
 
       {/* Pinned messages panel (right side) */}
       {showPins && selectedChannelId && (
-        <div className="w-[350px] border-l border-[#383a3f] bg-[#1e2024] flex flex-col h-full">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#383a3f]">
+        <div className="w-[350px] border-l border-neutral-200 dark:border-[#383a3f] bg-white dark:bg-[#1e2024] flex flex-col h-full">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-[#383a3f]">
             <div className="flex items-center gap-2">
               <MapPinIcon className="w-5 h-5 text-yellow-400" />
-              <h3 className="text-sm font-bold text-gray-200">Pinned Messages</h3>
+              <h3 className="text-sm font-bold text-neutral-800 dark:text-gray-200">Pinned Messages</h3>
             </div>
-            <button onClick={() => setShowPins(false)} className="p-1 rounded text-gray-400 hover:text-gray-200 hover:bg-[#383a3f] transition-colors">
+            <button onClick={() => setShowPins(false)} className="p-1 rounded text-neutral-400 dark:text-gray-400 hover:text-neutral-600 dark:hover:text-gray-200 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors">
               <XMarkIcon className="w-5 h-5" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
             {pinnedMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                <MapPinIcon className="w-8 h-8 mb-2 text-gray-600" />
+              <div className="flex flex-col items-center justify-center py-12 text-neutral-400 dark:text-gray-500">
+                <MapPinIcon className="w-8 h-8 mb-2 text-neutral-300 dark:text-gray-600" />
                 <p className="text-sm">No pinned messages</p>
               </div>
             ) : (
               pinnedMessages.map((pin) => (
-                <div key={pin.id} className="px-4 py-3 border-b border-[#383a3f]/30 hover:bg-[#222529]">
+                <div key={pin.id} className="px-4 py-3 border-b border-neutral-100 dark:border-[#383a3f]/30 hover:bg-neutral-50 dark:hover:bg-[#222529]">
                   {pin.message && (
                     <>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium text-gray-300">{pin.message.sender_name}</span>
-                        <span className="text-[10px] text-gray-600">
+                        <span className="text-xs font-medium text-neutral-700 dark:text-gray-300">{pin.message.sender_name}</span>
+                        <span className="text-[10px] text-neutral-400 dark:text-gray-600">
                           {new Date(pin.message.created_at).toLocaleDateString()}
                         </span>
                       </div>
-                      <p className="text-[13px] text-gray-400 line-clamp-3">{pin.message.content}</p>
-                      <p className="text-[10px] text-gray-600 mt-1">Pinned by {pin.pinned_by}</p>
+                      <p className="text-[13px] text-neutral-500 dark:text-gray-400 line-clamp-3">{stripMentions(pin.message.content)}</p>
+                      <p className="text-[10px] text-neutral-400 dark:text-gray-600 mt-1">Pinned by {pin.pinned_by}</p>
                     </>
                   )}
                 </div>
@@ -540,10 +766,57 @@ export default function MessagesPage() {
         </div>
       )}
 
+      {/* Group members panel (right side) */}
+      {showMembers && selectedChannel && !selectedChannel.is_direct && (
+        <GroupMembersPanel
+          members={selectedChannel.members || []}
+          onClose={() => setShowMembers(false)}
+          channelName={selectedChannel.name || 'Group'}
+          channelId={selectedChannel.id}
+          onMembersChanged={refreshChannels}
+        />
+      )}
+
       {/* New channel modal */}
       {showNewChannelModal && (
         <NewChannelModal onClose={() => setShowNewChannelModal(false)} onCreated={handleChannelCreated} />
       )}
+
+      {/* Call overlay */}
+      {webrtcCall.callState !== 'idle' && webrtcCall.callInfo && (
+        <CallOverlay
+          callState={webrtcCall.callState}
+          callType={webrtcCall.callInfo.callType}
+          remoteUserName={webrtcCall.callInfo.remoteUserName}
+          isCaller={webrtcCall.callInfo.isCaller}
+          isGroup={webrtcCall.callInfo.isGroup}
+          isMuted={webrtcCall.isMuted}
+          isVideoOff={webrtcCall.isVideoOff}
+          callDuration={webrtcCall.callDuration}
+          participants={webrtcCall.participants}
+          localVideoRef={webrtcCall.localVideoRef}
+          remoteVideoRef={webrtcCall.remoteVideoRef}
+          remoteAudioRef={webrtcCall.remoteAudioRef}
+          onAccept={() => {
+            if (webrtcCall.callInfo?.isGroup) {
+              webrtcCall.acceptGroupCall(webrtcCall.callInfo.remoteUserId);
+            } else {
+              webrtcCall.acceptCall(webrtcCall.callInfo!.remoteUserId);
+            }
+          }}
+          onReject={webrtcCall.rejectCall}
+          onHangUp={webrtcCall.endCall}
+          onToggleMute={webrtcCall.toggleMute}
+          onToggleVideo={webrtcCall.toggleVideo}
+          isRecording={webrtcCall.isRecording}
+          onToggleRecording={() =>
+            webrtcCall.isRecording ? webrtcCall.stopRecording() : webrtcCall.startRecording()
+          }
+        />
+      )}
+
+      {/* Messaging AI chatbot */}
+      {selectedChannelId && <MessagingChatbot channelId={selectedChannelId} />}
     </div>
   );
 }

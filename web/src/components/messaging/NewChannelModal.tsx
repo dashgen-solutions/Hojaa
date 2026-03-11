@@ -84,26 +84,26 @@ export default function NewChannelModal({ onClose, onCreated }: NewChannelModalP
 
       {/* Modal */}
       <div className="fixed inset-0 z-[101] flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+        <div className="bg-white dark:bg-[#1a1d21] rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 flex-shrink-0">
-            <h3 className="text-sm font-semibold text-neutral-900">New Conversation</h3>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 dark:border-[#383a3f] flex-shrink-0">
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">New Conversation</h3>
             <button
               onClick={onClose}
-              className="p-1 rounded hover:bg-neutral-100 transition-colors"
+              className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
             >
-              <XMarkIcon className="w-5 h-5 text-neutral-500" />
+              <XMarkIcon className="w-5 h-5 text-neutral-500 dark:text-gray-400" />
             </button>
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-neutral-200 flex-shrink-0">
+          <div className="flex border-b border-neutral-200 dark:border-[#383a3f] flex-shrink-0">
             <button
               onClick={() => { setTab("dm"); setSelectedUsers([]); }}
               className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
                 tab === "dm"
-                  ? "text-neutral-900 border-b-2 border-neutral-900"
-                  : "text-neutral-500 hover:text-neutral-700"
+                  ? "text-neutral-900 dark:text-white border-b-2 border-neutral-900 dark:border-white"
+                  : "text-neutral-500 dark:text-gray-500 hover:text-neutral-700 dark:hover:text-gray-300"
               }`}
             >
               Direct Message
@@ -112,8 +112,8 @@ export default function NewChannelModal({ onClose, onCreated }: NewChannelModalP
               onClick={() => { setTab("group"); setSelectedUsers([]); }}
               className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
                 tab === "group"
-                  ? "text-neutral-900 border-b-2 border-neutral-900"
-                  : "text-neutral-500 hover:text-neutral-700"
+                  ? "text-neutral-900 dark:text-white border-b-2 border-neutral-900 dark:border-white"
+                  : "text-neutral-500 dark:text-gray-500 hover:text-neutral-700 dark:hover:text-gray-300"
               }`}
             >
               Group
@@ -125,26 +125,26 @@ export default function NewChannelModal({ onClose, onCreated }: NewChannelModalP
             {/* Group name input */}
             {tab === "group" && (
               <div className="mb-3">
-                <label className="block text-xs font-medium text-neutral-700 mb-1">Group Name</label>
+                <label className="block text-xs font-medium text-neutral-700 dark:text-gray-300 mb-1">Group Name</label>
                 <input
                   type="text"
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
                   placeholder="e.g. Design Team"
-                  className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-md focus:outline-none focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200"
+                  className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-[#383a3f] rounded-md bg-white dark:bg-[#222529] text-neutral-900 dark:text-gray-200 focus:outline-none focus:border-neutral-400 dark:focus:border-[#565856] focus:ring-1 focus:ring-neutral-200 dark:focus:ring-[#383a3f]"
                 />
               </div>
             )}
 
             {/* Search */}
             <div className="relative mb-3">
-              <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+              <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 dark:text-gray-500" />
               <input
                 type="text"
                 placeholder="Search people..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 text-sm border border-neutral-200 rounded-md focus:outline-none focus:border-neutral-400 focus:ring-1 focus:ring-neutral-200"
+                className="w-full pl-8 pr-3 py-2 text-sm border border-neutral-200 dark:border-[#383a3f] rounded-md bg-white dark:bg-[#222529] text-neutral-900 dark:text-gray-200 focus:outline-none focus:border-neutral-400 dark:focus:border-[#565856] focus:ring-1 focus:ring-neutral-200 dark:focus:ring-[#383a3f]"
               />
             </div>
 
@@ -156,12 +156,12 @@ export default function NewChannelModal({ onClose, onCreated }: NewChannelModalP
                   return (
                     <span
                       key={uid}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-neutral-100 text-neutral-700 rounded-full text-xs"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-[#383a3f] text-neutral-700 dark:text-gray-300 rounded-full text-xs"
                     >
                       {u?.username || uid}
                       <button
                         onClick={() => toggleUser(uid)}
-                        className="hover:text-neutral-900"
+                        className="hover:text-neutral-900 dark:hover:text-white"
                       >
                         <XMarkIcon className="w-3 h-3" />
                       </button>
@@ -189,7 +189,7 @@ export default function NewChannelModal({ onClose, onCreated }: NewChannelModalP
                       key={u.id}
                       onClick={() => toggleUser(u.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${
-                        isSelected ? "bg-neutral-100" : "hover:bg-neutral-50"
+                        isSelected ? "bg-neutral-100 dark:bg-[#222529]" : "hover:bg-neutral-50 dark:hover:bg-[#222529]/50"
                       }`}
                     >
                       <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
@@ -198,11 +198,11 @@ export default function NewChannelModal({ onClose, onCreated }: NewChannelModalP
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] text-neutral-900 truncate">{u.username}</p>
-                        <p className="text-[11px] text-neutral-500 truncate">{u.email}</p>
+                        <p className="text-[13px] text-neutral-900 dark:text-gray-200 truncate">{u.username}</p>
+                        <p className="text-[11px] text-neutral-500 dark:text-gray-500 truncate">{u.email}</p>
                       </div>
                       {isSelected && (
-                        <div className="w-5 h-5 rounded-full bg-neutral-900 flex items-center justify-center flex-shrink-0">
+                        <div className="w-5 h-5 rounded-full bg-neutral-900 dark:bg-blue-500 flex items-center justify-center flex-shrink-0">
                           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                           </svg>
@@ -217,23 +217,23 @@ export default function NewChannelModal({ onClose, onCreated }: NewChannelModalP
 
           {/* Error */}
           {error && (
-            <div className="px-5 py-2 text-xs text-red-600 bg-red-50 border-t border-red-100">
+            <div className="px-5 py-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border-t border-red-100 dark:border-red-500/20">
               {error}
             </div>
           )}
 
           {/* Footer */}
-          <div className="px-5 py-3 border-t border-neutral-200 flex items-center justify-end gap-2 flex-shrink-0">
+          <div className="px-5 py-3 border-t border-neutral-200 dark:border-[#383a3f] flex items-center justify-end gap-2 flex-shrink-0">
             <button
               onClick={onClose}
-              className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors"
+              className="px-3 py-1.5 text-sm text-neutral-600 dark:text-gray-400 hover:bg-neutral-100 dark:hover:bg-[#383a3f] rounded-md transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleCreate}
               disabled={isCreating || selectedUsers.length === 0}
-              className="px-4 py-1.5 text-sm bg-neutral-900 text-white rounded-md hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-1.5 text-sm bg-neutral-900 dark:bg-blue-600 text-white rounded-md hover:bg-neutral-800 dark:hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isCreating ? "Creating..." : tab === "dm" ? "Start Chat" : "Create Group"}
             </button>

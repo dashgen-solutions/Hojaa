@@ -7,9 +7,7 @@ sharing/recipients, templates, variable resolution, and PDF export.
 from __future__ import annotations
 
 import io
-import base64
 import secrets
-import tempfile
 from datetime import datetime, date
 from typing import List, Optional
 from uuid import UUID
@@ -33,27 +31,6 @@ from app.models.database import (
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
-
-
-def _render_mermaid_to_png(code: str, timeout: float = 15.0) -> Optional[bytes]:
-    """Render Mermaid diagram code to PNG bytes via mermaid.ink API.
-
-    Returns PNG bytes on success, or None if rendering fails.
-    """
-    try:
-        import httpx
-
-        # mermaid.ink expects base64-encoded mermaid definition
-        encoded = base64.urlsafe_b64encode(code.encode("utf-8")).decode("ascii")
-        url = f"https://mermaid.ink/img/{encoded}?type=png&bgColor=white"
-
-        resp = httpx.get(url, timeout=timeout, follow_redirects=True)
-        if resp.status_code == 200 and resp.headers.get("content-type", "").startswith("image/"):
-            return resp.content
-        logger.warning(f"mermaid.ink returned {resp.status_code} for diagram")
-    except Exception as exc:
-        logger.warning(f"Failed to render Mermaid diagram to image: {exc}")
-    return None
 
 
 # -- Pydantic Schemas --------------------------------------------------------
@@ -1530,7 +1507,7 @@ def _extract_cell_text_export(cell) -> str:
 
 def _render_block_to_docx_v2(word, block: dict) -> None:
     """Render a single content block to a python-docx Document with proper styling."""
-    from docx.shared import Pt, Inches, RGBColor
+    from docx.shared import Pt, RGBColor
     from docx.oxml.ns import qn
 
     block_type = block.get("type", "paragraph")
@@ -1611,50 +1588,40 @@ def _render_block_to_docx_v2(word, block: dict) -> None:
 
     elif block_type == "mermaid":
         code = props.get("code", plain_text)
+        # Styled placeholder for mermaid diagram
+        para = word.add_paragraph()
+        para.paragraph_format.space_before = Pt(8)
+        para.paragraph_format.space_after = Pt(4)
+        # Box header
+        run = para.add_run("📊 Diagram")
+        run.bold = True
+        run.font.name = "Inter"
+        run.font.size = Pt(10)
+        run.font.color.rgb = RGBColor(59, 130, 246)
 
-        # Try to render Mermaid code to a real PNG image
-        png_bytes = _render_mermaid_to_png(code)
-        if png_bytes:
-            # Insert the rendered diagram as an image
-            img_stream = io.BytesIO(png_bytes)
-            para = word.add_paragraph()
-            para.paragraph_format.space_before = Pt(8)
-            para.paragraph_format.space_after = Pt(8)
-            run = para.add_run()
-            run.add_picture(img_stream, width=Inches(5.5))
-        else:
-            # Fallback: styled placeholder with raw code
-            para = word.add_paragraph()
-            para.paragraph_format.space_before = Pt(8)
-            para.paragraph_format.space_after = Pt(4)
-            run = para.add_run("📊 Diagram")
-            run.bold = True
-            run.font.name = "Inter"
-            run.font.size = Pt(10)
-            run.font.color.rgb = RGBColor(59, 130, 246)
+        # Description line
+        desc_para = word.add_paragraph()
+        desc_run = desc_para.add_run("(This diagram is rendered as an interactive chart in the web editor. Below is the diagram definition.)")
+        desc_run.font.name = "Inter"
+        desc_run.font.size = Pt(8)
+        desc_run.font.italic = True
+        desc_run.font.color.rgb = RGBColor(156, 163, 175)
 
-            desc_para = word.add_paragraph()
-            desc_run = desc_para.add_run(
-                "(Could not render diagram image. Below is the diagram definition.)"
-            )
-            desc_run.font.name = "Inter"
-            desc_run.font.size = Pt(8)
-            desc_run.font.italic = True
-            desc_run.font.color.rgb = RGBColor(156, 163, 175)
-
-            code_para = word.add_paragraph()
-            code_para.paragraph_format.space_after = Pt(8)
-            code_run = code_para.add_run(code)
-            code_run.font.name = "Courier New"
-            code_run.font.size = Pt(8)
-            code_run.font.color.rgb = RGBColor(30, 41, 59)
-            pPr = code_para._element.get_or_add_pPr()
-            shading = pPr.makeelement(qn("w:shd"), {
-                qn("w:val"): "clear",
-                qn("w:color"): "auto",
-                qn("w:fill"): "EFF6FF",
-            })
-            pPr.append(shading)
+        # Diagram code in styled block
+        code_para = word.add_paragraph()
+        code_para.paragraph_format.space_after = Pt(8)
+        code_run = code_para.add_run(code)
+        code_run.font.name = "Courier New"
+        code_run.font.size = Pt(8)
+        code_run.font.color.rgb = RGBColor(30, 41, 59)
+        # Shading
+        pPr = code_para._element.get_or_add_pPr()
+        shading = pPr.makeelement(qn("w:shd"), {
+            qn("w:val"): "clear",
+            qn("w:color"): "auto",
+            qn("w:fill"): "EFF6FF",
+        })
+        pPr.append(shading)
 
     elif block_type == "table":
         # Render BlockNote table
@@ -1954,43 +1921,24 @@ def _render_block_to_pdf_v2(pdf: "FPDF", block: dict, page_w: float, list_counte
         pdf.ln(3)
 
     elif block_type == "mermaid":
-        code = props.get("code", plain_text)
+        code = _safe_text(props.get("code", plain_text))
         pdf.ln(4)
-
-        # Try to render Mermaid code to a real PNG image
-        png_bytes = _render_mermaid_to_png(code)
-        if png_bytes:
-            tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-            try:
-                tmp.write(png_bytes)
-                tmp.flush()
-                tmp.close()
-                # Calculate image width to fit page (max PAGE_W mm)
-                img_w = min(page_w, 170)
-                pdf.image(tmp.name, x=pdf.l_margin, w=img_w)
-                pdf.ln(4)
-            finally:
-                import os
-                try:
-                    os.unlink(tmp.name)
-                except OSError:
-                    pass
-        else:
-            # Fallback: raw code
-            code = _safe_text(code)
-            pdf.set_font("Helvetica", "B", 10)
-            pdf.set_text_color(59, 130, 246)
-            pdf.cell(0, 6, "Diagram", new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("Helvetica", "I", 7)
-            pdf.set_text_color(156, 163, 175)
-            pdf.cell(0, 4, "(Could not render diagram image. Definition below.)", new_x="LMARGIN", new_y="NEXT")
-            pdf.ln(1)
-            pdf.set_fill_color(239, 246, 255)
-            pdf.set_font("Courier", "", 7)
-            pdf.set_text_color(30, 41, 59)
-            for line in code.split("\n"):
-                pdf.cell(0, 4, "  " + _safe_text(line), fill=True, new_x="LMARGIN", new_y="NEXT")
-            pdf.ln(4)
+        # Header
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(59, 130, 246)
+        pdf.cell(0, 6, "Diagram", new_x="LMARGIN", new_y="NEXT")
+        # Description
+        pdf.set_font("Helvetica", "I", 7)
+        pdf.set_text_color(156, 163, 175)
+        pdf.cell(0, 4, "(Interactive chart in web editor. Diagram definition below.)", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(1)
+        # Code block
+        pdf.set_fill_color(239, 246, 255)  # blue-50
+        pdf.set_font("Courier", "", 7)
+        pdf.set_text_color(30, 41, 59)
+        for line in code.split("\n"):
+            pdf.cell(0, 4, "  " + _safe_text(line), fill=True, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(4)
 
     elif block_type == "table":
         table_content = content

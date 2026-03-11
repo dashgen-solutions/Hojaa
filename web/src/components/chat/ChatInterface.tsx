@@ -49,6 +49,7 @@ export default function ChatInterface({
   const [isTranscribing, setIsTranscribing] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const {
     isRecording,
@@ -62,7 +63,10 @@ export default function ChatInterface({
   } = useAudioRecorder();
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -264,38 +268,37 @@ export default function ChatInterface({
   }
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-neutral-900 overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-neutral-900" style={{ overflow: 'clip' }}>
       {/* Chat Header */}
-      <div className="flex-shrink-0 border-b border-neutral-200/60 dark:border-neutral-700 p-4 bg-white dark:bg-neutral-900 relative z-10">
-        <div className="bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-700 rounded-md p-3">
-          <div className="flex items-start justify-between gap-3">
+      <div className="flex-shrink-0 border-b border-neutral-200/60 dark:border-neutral-700 px-3 py-2 bg-white dark:bg-neutral-900 relative z-10">
+        <div className="bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-700 rounded-md px-2.5 py-2">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-warning-700 dark:text-warning-400 min-w-0 flex-1">
-              <div className="w-8 h-8 rounded-md bg-warning-100 dark:bg-warning-800/30 flex items-center justify-center flex-shrink-0">
-                <SparklesIcon className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-md bg-warning-100 dark:bg-warning-800/30 flex items-center justify-center flex-shrink-0">
+                <SparklesIcon className="w-3.5 h-3.5" />
               </div>
-              <span className="text-sm font-semibold truncate">
-                Feature Exploration Active
+              <span className="text-xs font-semibold truncate">
+                Feature Exploration
               </span>
             </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
               {messages.length > 2 && !readOnly && (
                 <button
                   onClick={handleConfirmRequirements}
                   disabled={isLoading}
-                  className="btn bg-brand-lime text-brand-dark hover:bg-brand-lime/90 text-xs py-1.5 px-2.5 disabled:opacity-50 shadow-sm"
+                  className="btn bg-brand-lime text-brand-dark hover:bg-brand-lime/90 text-[11px] py-1 px-2 disabled:opacity-50 shadow-sm whitespace-nowrap"
                 >
-                  <CheckIcon className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">Confirm & Add</span>
-                  <span className="md:hidden">Add</span>
+                  <CheckIcon className="w-3 h-3" />
+                  <span>Confirm & Add</span>
                 </button>
               )}
               {onClose && (
                 <button
                   onClick={onClose}
-                  className="p-1.5 hover:bg-danger-50 dark:hover:bg-danger-900/20 text-neutral-500 dark:text-neutral-400 hover:text-danger-600 dark:hover:text-danger-400 rounded-md transition-all border border-transparent hover:border-danger-200 dark:hover:border-danger-700"
+                  className="p-1 hover:bg-danger-50 dark:hover:bg-danger-900/20 text-neutral-500 dark:text-neutral-400 hover:text-danger-600 dark:hover:text-danger-400 rounded-md transition-all border border-transparent hover:border-danger-200 dark:hover:border-danger-700"
                   title="Close chat"
                 >
-                  <XMarkIcon className="w-5 h-5" />
+                  <XMarkIcon className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -304,15 +307,15 @@ export default function ChatInterface({
 
         {/* Error Message */}
         {error && (
-          <div className="mt-3 p-3 bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 rounded-md text-danger-700 dark:text-danger-400 text-sm animate-fade-in">
+          <div className="mt-2 p-2 bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 rounded-md text-danger-700 dark:text-danger-400 text-xs animate-fade-in">
             {error}
           </div>
         )}
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4">
-        <div className="py-4 md:py-6 space-y-4 md:space-y-6">
+      <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto px-3">
+        <div className="py-3 space-y-3">
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
@@ -336,11 +339,11 @@ export default function ChatInterface({
 
       {/* Suggestions */}
       {!isLoading && suggestions.length > 0 && (
-        <div className="flex-none bg-neutral-50 dark:bg-[#0a0a0a] border-t border-neutral-200/60 dark:border-neutral-700 px-4 py-3">
-          <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
+        <div className="flex-shrink-0 bg-neutral-50 dark:bg-[#0a0a0a] border-t border-neutral-200/60 dark:border-neutral-700 px-3 py-2">
+          <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 mb-1.5">
             Quick suggestions:
           </div>
-          <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+          <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
             {suggestions.map((suggestion, index) => (
               <button
                 key={index}
@@ -367,7 +370,7 @@ export default function ChatInterface({
           </div>
         </div>
       ) : (
-      <div className="flex-none bg-white dark:bg-neutral-900 border-t border-neutral-200/60 dark:border-neutral-700 px-4 py-4">
+      <div className="flex-shrink-0 bg-white dark:bg-neutral-900 border-t border-neutral-200/60 dark:border-neutral-700 px-3 py-2">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -375,21 +378,21 @@ export default function ChatInterface({
           }}
           className="w-full"
         >
-          <div className="flex items-end gap-2 bg-neutral-50 dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700 p-3 focus-within:border-neutral-400 dark:focus-within:border-neutral-500 focus-within:ring-2 focus-within:ring-neutral-100 dark:focus-within:ring-neutral-700 transition-all">
+          <div className="flex items-end gap-2 bg-neutral-50 dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700 p-2 focus-within:border-neutral-400 dark:focus-within:border-neutral-500 focus-within:ring-2 focus-within:ring-neutral-100 dark:focus-within:ring-neutral-700 transition-all">
             <textarea
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type your answer here... (Enter to send)"
               disabled={isLoading || isTranscribing}
-              className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none resize-none min-h-[44px] max-h-[120px]"
-              rows={2}
+              className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none resize-none min-h-[36px] max-h-[80px]"
+              rows={1}
             />
             <button
               type="button"
               onClick={handleAudioRecord}
               disabled={isLoading || isProcessing || isTranscribing}
-              className={`flex-shrink-0 w-10 h-10 rounded-md border-2 transition-all duration-200 flex items-center justify-center ${
+              className={`flex-shrink-0 w-8 h-8 rounded-md border-2 transition-all duration-200 flex items-center justify-center ${
                 isRecording
                   ? "bg-danger-500 border-danger-600 text-white animate-pulse"
                   : "bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-200 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-neutral-100"
@@ -397,18 +400,18 @@ export default function ChatInterface({
               title={isRecording ? "Stop recording" : "Start voice recording"}
             >
               {isRecording ? (
-                <StopIcon className="w-5 h-5" />
+                <StopIcon className="w-4 h-4" />
               ) : (
-                <MicrophoneIcon className="w-5 h-5" />
+                <MicrophoneIcon className="w-4 h-4" />
               )}
             </button>
             <button
               type="submit"
               disabled={!inputMessage.trim() || isLoading || isTranscribing}
-              className="flex-shrink-0 w-10 h-10 bg-brand-lime text-brand-dark rounded-md hover:bg-brand-lime/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-[0_0_12px_-4px_rgba(228,255,26,0.4)]"
+              className="flex-shrink-0 w-8 h-8 bg-brand-lime text-brand-dark rounded-md hover:bg-brand-lime/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-[0_0_12px_-4px_rgba(228,255,26,0.4)]"
               title="Send message"
             >
-              <PaperAirplaneIcon className="w-5 h-5" />
+              <PaperAirplaneIcon className="w-4 h-4" />
             </button>
           </div>
 

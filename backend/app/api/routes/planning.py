@@ -461,6 +461,7 @@ async def add_out_of_scope_to_graph(
 async def generate_acceptance_criteria(
     card_id: str,
     database: Session = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     """AI-generate acceptance criteria for a planning card's linked node."""
     try:
@@ -470,7 +471,7 @@ async def generate_acceptance_criteria(
             raise HTTPException(status_code=404, detail="Card not found or has no linked node")
 
         from app.services.ai_features_service import generate_acceptance_criteria as _gen_ac
-        criteria = await _gen_ac(database, UUID(card.node_id))
+        criteria = await _gen_ac(database, UUID(card.node_id), user_id=current_user.id if current_user else None)
         return {"acceptance_criteria": criteria}
     except HTTPException:
         raise
