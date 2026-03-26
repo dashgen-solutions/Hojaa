@@ -24,6 +24,8 @@ SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = sys.argv[1] if len(sys.argv) > 1 else os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = sys.argv[2] if len(sys.argv) > 2 else os.getenv("SMTP_PASSWORD", "")
+# Match app behavior: Gmail app passwords are often pasted with spaces
+SMTP_PASSWORD = SMTP_PASSWORD.replace(" ", "").strip()
 FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USERNAME)
 FROM_NAME = os.getenv("SMTP_FROM_NAME", "Hojaa")
 

@@ -47,6 +47,7 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportedContent, setExportedContent] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const { downloadMarkdown, downloadJson, downloadPdf } = useStore();
 
@@ -80,9 +81,9 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
   };
 
   const handleExport = async () => {
-    // Clear previous export state FIRST so the user sees a fresh loading state
     setExportedContent(null);
     setExportSuccess(false);
+    setExportError(null);
     setIsExporting(true);
     try {
       const exportOptions = {
@@ -97,16 +98,18 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
         template: pdfTemplate,
       };
 
-      // Unique timestamp so each download has a distinct filename
       const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
       if (selectedFormat === 'pdf') {
-        // First, get markdown for preview
         const previewContent = await downloadMarkdown(exportOptions);
         setExportedContent(previewContent);
 
-        // Then download the real PDF from backend
         const pdfBlob = await downloadPdf(exportOptions);
+        if (pdfBlob instanceof Blob && pdfBlob.type && pdfBlob.type.includes('application/json')) {
+          const text = await pdfBlob.text();
+          try { const err = JSON.parse(text); setExportError(err.detail || 'PDF generation failed'); } catch { setExportError('PDF generation failed'); }
+          return;
+        }
         const filename = `scope_document_${ts}.pdf`;
         triggerFileDownload(pdfBlob, filename);
         recordExport(sessionId, 'pdf', exportOptions, filename);
@@ -118,7 +121,6 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
         triggerFileDownload(blob, filename);
         recordExport(sessionId, 'json', exportOptions, filename);
       } else {
-        // Markdown (default)
         const content = await downloadMarkdown(exportOptions);
         setExportedContent(content);
         const filename = `scope_document_${ts}.md`;
@@ -127,8 +129,17 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
         recordExport(sessionId, 'markdown', exportOptions, filename);
       }
       setExportSuccess(true);
-    } catch (exportError) {
-      console.error('Export failed:', exportError);
+    } catch (err: any) {
+      console.error('Export failed:', err);
+      let msg = 'Export failed. Please try again.';
+      if (err?.response?.data instanceof Blob) {
+        try { const text = await err.response.data.text(); const parsed = JSON.parse(text); msg = parsed.detail || msg; } catch {}
+      } else if (err?.response?.data?.detail) {
+        msg = err.response.data.detail;
+      } else if (err?.message) {
+        msg = err.message;
+      }
+      setExportError(msg);
     } finally {
       setIsExporting(false);
     }
@@ -265,6 +276,13 @@ export default function ExportModal({ sessionId, onClose }: ExportModalProps) {
                   Change any option above and click &quot;Generate New Export&quot; to export again with different settings.
                 </p>
               </div>
+            </div>
+          )}
+
+          {exportError && (
+            <div className="flex items-center gap-3 p-3 rounded bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
+              <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>
+              <p className="text-sm text-red-700 dark:text-red-300">{exportError}</p>
             </div>
           )}
 

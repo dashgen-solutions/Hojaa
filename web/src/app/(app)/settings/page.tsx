@@ -824,8 +824,43 @@ console.log(sessions);`}</pre>
 //  AI Providers Tab
 // ═══════════════════════════════════════════════════════════
 
-const OPENAI_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"];
-const ANTHROPIC_MODELS = ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"];
+interface ModelOption {
+  id: string;
+  label: string;
+  hint: string;
+}
+
+const OPENAI_MODELS: ModelOption[] = [
+  { id: "gpt-4.1",       label: "GPT-4.1",       hint: "$2.00 / $8.00 per 1M tokens" },
+  { id: "gpt-4.1-mini",  label: "GPT-4.1 Mini",  hint: "$0.40 / $1.60 per 1M tokens" },
+  { id: "gpt-4.1-nano",  label: "GPT-4.1 Nano",  hint: "$0.10 / $0.40 per 1M tokens" },
+  { id: "gpt-4o",        label: "GPT-4o",         hint: "$2.50 / $10.00 per 1M tokens" },
+  { id: "gpt-4o-mini",   label: "GPT-4o Mini",   hint: "$0.15 / $0.60 per 1M tokens" },
+  { id: "o3",            label: "o3 (Reasoning)", hint: "$2.00 / $8.00 per 1M tokens" },
+  { id: "o4-mini",       label: "o4-mini (Reasoning)", hint: "$1.10 / $4.40 per 1M tokens" },
+  { id: "o1",            label: "o1 (Legacy)",    hint: "$15.00 / $60.00 per 1M tokens" },
+  { id: "o1-mini",       label: "o1-mini",        hint: "$3.00 / $12.00 per 1M tokens" },
+  { id: "gpt-4-turbo",   label: "GPT-4 Turbo (Legacy)", hint: "$10.00 / $30.00 per 1M tokens" },
+];
+
+const ANTHROPIC_MODELS: ModelOption[] = [
+  { id: "claude-opus-4-20250514",    label: "Claude Opus 4",    hint: "$5.00 / $25.00 per 1M tokens" },
+  { id: "claude-sonnet-4-20250514",  label: "Claude Sonnet 4",  hint: "$3.00 / $15.00 per 1M tokens" },
+  { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", hint: "$1.00 / $5.00 per 1M tokens" },
+  { id: "claude-3-5-sonnet-20241022",label: "Claude 3.5 Sonnet",hint: "$3.00 / $15.00 per 1M tokens" },
+  { id: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku", hint: "$0.80 / $4.00 per 1M tokens" },
+  { id: "claude-3-haiku-20240307",   label: "Claude 3 Haiku",   hint: "$0.25 / $1.25 per 1M tokens" },
+];
+
+const GEMINI_MODELS: ModelOption[] = [
+  { id: "gemini-2.5-pro",       label: "Gemini 2.5 Pro",        hint: "$1.25 / $10.00 per 1M tokens" },
+  { id: "gemini-2.5-flash",     label: "Gemini 2.5 Flash",      hint: "$0.30 / $2.50 per 1M tokens" },
+  { id: "gemini-2.5-flash-lite",label: "Gemini 2.5 Flash-Lite", hint: "$0.10 / $0.40 per 1M tokens" },
+  { id: "gemini-2.0-flash",     label: "Gemini 2.0 Flash",      hint: "$0.10 / $0.40 per 1M tokens" },
+  { id: "gemini-2.0-flash-lite",label: "Gemini 2.0 Flash-Lite", hint: "$0.075 / $0.30 per 1M tokens" },
+];
+
+type ProviderType = "llm_openai" | "llm_anthropic" | "llm_gemini";
 
 interface AIProviderState {
   integrationId: string | null;
@@ -851,49 +886,59 @@ function makeInitialState(defaultModel: string): AIProviderState {
   };
 }
 
+/** Extract a human-readable error string from an Axios error or plain Error. */
+function extractErrorMessage(e: any): string {
+  // FastAPI returns { detail: "..." } or { detail: [...] }
+  const detail = e?.response?.data?.detail;
+  if (typeof detail === "string" && detail) return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail.map((d: any) => d?.msg || JSON.stringify(d)).join("; ");
+  }
+  // Generic Axios message fallback
+  return e?.message || "Unknown error";
+}
+
 function AIProvidersTab() {
   const [loading, setLoading] = useState(true);
-  const [openai, setOpenai] = useState<AIProviderState>(makeInitialState(OPENAI_MODELS[0]));
-  const [anthropic, setAnthropic] = useState<AIProviderState>(makeInitialState(ANTHROPIC_MODELS[0]));
+  const [openai, setOpenai] = useState<AIProviderState>(makeInitialState(OPENAI_MODELS[0].id));
+  const [anthropic, setAnthropic] = useState<AIProviderState>(makeInitialState(ANTHROPIC_MODELS[1].id));
+  const [gemini, setGemini] = useState<AIProviderState>(makeInitialState(GEMINI_MODELS[0].id));
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const integrations = await listIntegrations();
 
-      const oai = integrations.find((i: any) => i.integration_type === "llm_openai");
-      if (oai) {
-        const key = oai.config?.api_key || "";
-        setOpenai((prev) => ({
-          ...prev,
-          integrationId: oai.id,
-          apiKey: "",
-          maskedKey: key ? `\u2022\u2022\u2022\u2022 ${key.slice(-4)}` : "",
-          model: oai.config?.model || OPENAI_MODELS[0],
-          status: oai.is_active ? "connected" : "not_configured",
-          statusMessage: oai.is_active ? "Connected" : "",
-        }));
-      } else {
-        setOpenai(makeInitialState(OPENAI_MODELS[0]));
-      }
+      const loadProvider = (
+        intType: string,
+        models: ModelOption[],
+        defaultIdx: number,
+        setState: React.Dispatch<React.SetStateAction<AIProviderState>>
+      ) => {
+        const integ = integrations.find((i: any) => i.integration_type === intType);
+        if (integ) {
+          const key = integ.config?.api_key || "";
+          const hasKey = Boolean(key);
+          setState((prev) => ({
+            ...prev,
+            integrationId: integ.id,
+            apiKey: "",
+            maskedKey: hasKey ? `\u2022\u2022\u2022\u2022 ${key.slice(-4)}` : "",
+            model: integ.config?.model || models[defaultIdx].id,
+            // Don't override status/message if the user just saw a test result
+            status: prev.status === "error" ? prev.status : (integ.is_active && hasKey ? "connected" : "not_configured"),
+            statusMessage: prev.status === "error" ? prev.statusMessage : (integ.is_active && hasKey ? "Connected" : ""),
+          }));
+        } else {
+          setState(makeInitialState(models[defaultIdx].id));
+        }
+      };
 
-      const ant = integrations.find((i: any) => i.integration_type === "llm_anthropic");
-      if (ant) {
-        const key = ant.config?.api_key || "";
-        setAnthropic((prev) => ({
-          ...prev,
-          integrationId: ant.id,
-          apiKey: "",
-          maskedKey: key ? `\u2022\u2022\u2022\u2022 ${key.slice(-4)}` : "",
-          model: ant.config?.model || ANTHROPIC_MODELS[0],
-          status: ant.is_active ? "connected" : "not_configured",
-          statusMessage: ant.is_active ? "Connected" : "",
-        }));
-      } else {
-        setAnthropic(makeInitialState(ANTHROPIC_MODELS[0]));
-      }
+      loadProvider("llm_openai", OPENAI_MODELS, 0, setOpenai);
+      loadProvider("llm_anthropic", ANTHROPIC_MODELS, 1, setAnthropic);
+      loadProvider("llm_gemini", GEMINI_MODELS, 0, setGemini);
     } catch {
-      // silently handle errors
+      // silently handle load errors
     }
     setLoading(false);
   }, []);
@@ -903,48 +948,77 @@ function AIProvidersTab() {
   }, [load]);
 
   const handleSave = async (
-    type: "llm_openai" | "llm_anthropic",
+    type: ProviderType,
     state: AIProviderState,
     setState: React.Dispatch<React.SetStateAction<AIProviderState>>
   ) => {
-    setState((prev) => ({ ...prev, saving: true }));
+    if (!state.apiKey && !state.maskedKey) {
+      setState((prev) => ({ ...prev, status: "error", statusMessage: "Please enter an API key." }));
+      return;
+    }
+    setState((prev) => ({ ...prev, saving: true, status: "not_configured", statusMessage: "Saving and verifying key…" }));
     try {
       await upsertIntegration({
         integration_type: type,
-        config: {
-          api_key: state.apiKey || "",
-          model: state.model,
-        },
+        config: { api_key: state.apiKey || "", model: state.model },
         is_active: true,
       });
-      await load();
+      // Auto-test the key — never show "Connected" for an invalid key
+      const res = await testIntegration(type);
+      if (res.status === "ok") {
+        setState((prev) => ({
+          ...prev,
+          saving: false,
+          apiKey: "",
+          status: "connected",
+          statusMessage: res.message || "Connected",
+        }));
+        await load();
+      } else {
+        // Key is bad — mark integration as inactive so it won't show "connected" on reload
+        try { await upsertIntegration({ integration_type: type, config: { api_key: state.apiKey || "", model: state.model }, is_active: false }); } catch {}
+        setState((prev) => ({
+          ...prev,
+          saving: false,
+          status: "error",
+          statusMessage: res.message || "API key is invalid. Please check and try again.",
+        }));
+      }
     } catch (e: any) {
       setState((prev) => ({
         ...prev,
+        saving: false,
         status: "error",
-        statusMessage: e.message || "Failed to save",
+        statusMessage: extractErrorMessage(e),
       }));
     }
-    setState((prev) => ({ ...prev, saving: false }));
   };
 
   const handleTest = async (
-    type: "llm_openai" | "llm_anthropic",
+    type: ProviderType,
     setState: React.Dispatch<React.SetStateAction<AIProviderState>>
   ) => {
-    setState((prev) => ({ ...prev, testing: true }));
+    setState((prev) => ({ ...prev, testing: true, statusMessage: "" }));
     try {
       const res = await testIntegration(type);
-      setState((prev) => ({
-        ...prev,
-        status: res.status === "ok" ? "connected" : "error",
-        statusMessage: res.status === "ok" ? "Connected" : res.message || "Connection failed",
-      }));
+      if (res.status === "ok") {
+        setState((prev) => ({
+          ...prev,
+          status: "connected",
+          statusMessage: res.message || "Connected",
+        }));
+      } else {
+        setState((prev) => ({
+          ...prev,
+          status: "error",
+          statusMessage: res.message || "Connection failed. Check your API key.",
+        }));
+      }
     } catch (e: any) {
       setState((prev) => ({
         ...prev,
         status: "error",
-        statusMessage: e.message || "Connection failed",
+        statusMessage: extractErrorMessage(e),
       }));
     }
     setState((prev) => ({ ...prev, testing: false }));
@@ -962,7 +1036,7 @@ function AIProvidersTab() {
       setState((prev) => ({
         ...prev,
         status: "error",
-        statusMessage: e.message || "Failed to remove",
+        statusMessage: extractErrorMessage(e),
       }));
     }
   };
@@ -971,72 +1045,94 @@ function AIProvidersTab() {
 
   const renderProviderCard = (
     label: string,
-    type: "llm_openai" | "llm_anthropic",
-    models: string[],
+    icon: string,
+    type: ProviderType,
+    models: ModelOption[],
     state: AIProviderState,
     setState: React.Dispatch<React.SetStateAction<AIProviderState>>,
     bgColor: string,
-    textColor: string
+    textColor: string,
+    keyHint: string
   ) => {
-    const statusDotColor =
-      state.status === "connected"
-        ? "bg-green-500"
-        : state.status === "error"
-        ? "bg-red-500"
-        : "bg-yellow-500";
-    const statusText =
-      state.status === "connected"
-        ? "Connected"
-        : state.status === "error"
-        ? `Error: ${state.statusMessage}`
-        : "Not configured";
+    const isConnected = state.status === "connected";
+    const isError = state.status === "error";
+    const statusDotColor = isConnected ? "bg-green-500" : isError ? "bg-red-500" : "bg-yellow-500";
+    const selectedModelHint = models.find((m) => m.id === state.model)?.hint || "";
 
     return (
       <div className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 p-5">
         {/* Provider header */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className={`w-10 h-10 ${bgColor} rounded-md flex items-center justify-center`}>
-            <span className={`${textColor} font-bold text-sm`}>{label.charAt(0)}</span>
+        <div className="flex items-center gap-3 mb-4">
+          <div className={`w-10 h-10 ${bgColor} rounded-md flex items-center justify-center flex-shrink-0`}>
+            <span className={`${textColor} font-bold text-sm`}>{icon}</span>
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{label}</h3>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={`w-2 h-2 rounded-full ${statusDotColor}`} />
-              <span className="text-xs text-neutral-500 dark:text-neutral-400">{statusText}</span>
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDotColor}`} />
+              <span className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                {isConnected ? "Connected" : isError ? "Error" : "Not configured"}
+              </span>
             </div>
           </div>
         </div>
 
+        {/* Error / success message */}
+        {state.statusMessage && (
+          <div className={`mb-3 p-2.5 rounded text-xs ${
+            isError
+              ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"
+              : "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800"
+          }`}>
+            {state.statusMessage}
+          </div>
+        )}
+
         {/* API Key */}
-        <div className="mb-4">
-          <label className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1 block">API Key</label>
+        <div className="mb-3">
+          <label className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1 block">
+            API Key
+          </label>
           <input
             type="password"
             value={state.apiKey}
             onChange={(e) => setState((prev) => ({ ...prev, apiKey: e.target.value }))}
-            placeholder={state.maskedKey || "Enter API key"}
-            className="w-full border dark:border-neutral-700 rounded-md px-3 py-2 text-sm dark:bg-neutral-800 dark:text-neutral-200 dark:placeholder-neutral-500"
+            placeholder={state.maskedKey || keyHint}
+            className="w-full border dark:border-neutral-700 rounded-md px-3 py-2 text-sm dark:bg-neutral-800 dark:text-neutral-200 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-brand-lime/40"
           />
         </div>
 
         {/* Model selector */}
-        <div className="mb-5">
-          <label className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1 block">Model</label>
+        <div className="mb-4">
+          <label className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1 block">
+            Model
+          </label>
           <select
             value={state.model}
             onChange={(e) => setState((prev) => ({ ...prev, model: e.target.value }))}
-            className="w-full border dark:border-neutral-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-neutral-800 dark:text-neutral-200"
+            className="w-full border dark:border-neutral-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-brand-lime/40"
           >
             {models.map((m) => (
-              <option key={m} value={m}>
-                {m}
+              <option key={m.id} value={m.id}>
+                {m.label}
               </option>
             ))}
           </select>
+          {selectedModelHint && (
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+              Pricing: {selectedModelHint} (input / output)
+            </p>
+          )}
+        </div>
+
+        {/* Usage limit note */}
+        <div className="mb-4 p-2 bg-amber-50 dark:bg-amber-900/10 rounded text-xs text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+          Free-tier users on the platform key are limited to <strong>$0.10</strong> total usage.
+          Configuring your own key removes this limit.
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => handleSave(type, state, setState)}
             disabled={state.saving}
@@ -1044,29 +1140,25 @@ function AIProvidersTab() {
           >
             {state.saving ? "Saving..." : "Save"}
           </button>
-          <button
-            onClick={() => handleTest(type, setState)}
-            disabled={state.testing}
-            className="px-4 py-2 border dark:border-neutral-700 text-sm rounded-md hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800 disabled:opacity-50"
-          >
-            {state.testing ? (
-              <span className="flex items-center gap-1.5">
-                <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
-                Testing...
-              </span>
-            ) : (
-              "Test Connection"
-            )}
-          </button>
           {state.integrationId && (
             <button
-              onClick={() =>
-                handleRemove(
-                  state.integrationId!,
-                  models[0],
-                  setState
-                )
-              }
+              onClick={() => handleTest(type, setState)}
+              disabled={state.testing}
+              className="px-4 py-2 border dark:border-neutral-700 text-sm rounded-md hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800 disabled:opacity-50"
+            >
+              {state.testing ? (
+                <span className="flex items-center gap-1.5">
+                  <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
+                  Testing...
+                </span>
+              ) : (
+                "Test Connection"
+              )}
+            </button>
+          )}
+          {state.integrationId && (
+            <button
+              onClick={() => handleRemove(state.integrationId!, models[0].id, setState)}
               className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md ml-auto"
               title={`Remove ${label}`}
             >
@@ -1079,25 +1171,47 @@ function AIProvidersTab() {
   };
 
   return (
-    <div className="grid grid-cols-2 gap-6">
-      {renderProviderCard(
-        "OpenAI",
-        "llm_openai",
-        OPENAI_MODELS,
-        openai,
-        setOpenai,
-        "bg-green-100 dark:bg-green-900/40",
-        "text-green-700 dark:text-green-400"
-      )}
-      {renderProviderCard(
-        "Anthropic",
-        "llm_anthropic",
-        ANTHROPIC_MODELS,
-        anthropic,
-        setAnthropic,
-        "bg-amber-100 dark:bg-amber-900/40",
-        "text-amber-700 dark:text-amber-400"
-      )}
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {renderProviderCard(
+          "OpenAI",
+          "AI",
+          "llm_openai",
+          OPENAI_MODELS,
+          openai,
+          setOpenai,
+          "bg-green-100 dark:bg-green-900/40",
+          "text-green-700 dark:text-green-400",
+          "sk-..."
+        )}
+        {renderProviderCard(
+          "Anthropic",
+          "An",
+          "llm_anthropic",
+          ANTHROPIC_MODELS,
+          anthropic,
+          setAnthropic,
+          "bg-amber-100 dark:bg-amber-900/40",
+          "text-amber-700 dark:text-amber-400",
+          "sk-ant-..."
+        )}
+        {renderProviderCard(
+          "Google Gemini",
+          "G",
+          "llm_gemini",
+          GEMINI_MODELS,
+          gemini,
+          setGemini,
+          "bg-blue-100 dark:bg-blue-900/40",
+          "text-blue-700 dark:text-blue-400",
+          "AIza..."
+        )}
+      </div>
+      <div className="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-800 rounded p-3 border border-neutral-200 dark:border-neutral-700">
+        <strong>How it works:</strong> When you configure your own API key, all AI features (document generation,
+        requirement trees, conversation summaries, etc.) use your key directly — with no platform spending limit.
+        The first provider with a valid key is used. Priority order: OpenAI → Anthropic → Google Gemini.
+      </div>
     </div>
   );
 }

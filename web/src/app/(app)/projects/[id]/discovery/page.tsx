@@ -67,7 +67,7 @@ export default function DiscoveryPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+    <div className="flex flex-col h-full w-full">
       {/* Guest User Banner */}
       {!isAuthenticated && currentStep === "upload" && (
         <div className="bg-neutral-900 text-white px-4 py-2.5 text-center text-sm flex-shrink-0">
@@ -80,25 +80,25 @@ export default function DiscoveryPage() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 min-h-0 overflow-hidden flex">
+      <div className="flex-1 overflow-y-auto">
         {currentStep === "upload" && (
-          <div className="w-full h-full overflow-y-auto">
-            <div className="min-h-full flex items-center justify-center p-6">
+          <div className="w-full">
+            <div className="flex justify-center p-6 py-12">
               <DocumentUpload sessionId={projectId} onUpload={handleDocumentUpload} />
             </div>
           </div>
         )}
 
         {currentStep === "questions" && (
-          <div className="w-full h-full overflow-y-auto">
-            <div className="min-h-full flex items-center justify-center p-6">
+          <div className="w-full">
+            <div className="flex justify-center p-6 py-12">
               <InitialQuestions sessionId={projectId} onComplete={handleQuestionsComplete} />
             </div>
           </div>
         )}
 
         {currentStep === "tree" && (
-          <>
+          <div className="h-full overflow-hidden">
             {/* Source suggestions panel */}
             {showSourceSuggestions && currentSourceDetail?.suggestions && (
               <>
@@ -255,7 +255,7 @@ export default function DiscoveryPage() {
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 

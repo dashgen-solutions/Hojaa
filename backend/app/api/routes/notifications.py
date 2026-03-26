@@ -125,7 +125,7 @@ async def send_test_notification(
 ):
     """Send a test notification email to the current user via SMTP."""
     try:
-        success = notification_service.send_email(
+        success, err = notification_service.send_email(
             subject="[Hojaa] Test Notification",
             html_content="""
             <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:auto;
@@ -148,7 +148,7 @@ async def send_test_notification(
         if not success:
             return {
                 "success": False,
-                "detail": "SMTP is not configured or email sending failed. Check SMTP_ENABLED, SMTP_USERNAME, and SMTP_PASSWORD in environment.",
+                "detail": err or "SMTP is not configured or email sending failed. Check SMTP_ENABLED, SMTP_USERNAME, and SMTP_PASSWORD in environment.",
             }
         return {"success": True}
     except Exception as exc:

@@ -44,6 +44,7 @@ def user_has_own_api_key(db: DBSession, user: User) -> bool:
             Integration.integration_type.in_([
                 IntegrationType.LLM_OPENAI,
                 IntegrationType.LLM_ANTHROPIC,
+                IntegrationType.LLM_GEMINI,
             ]),
             Integration.is_active == True,
         )

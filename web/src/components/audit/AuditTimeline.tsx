@@ -70,29 +70,55 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
     });
   }, []);
 
+  const [exportError, setExportError] = useState<string | null>(null);
+
   const handleExport = async (format: 'markdown' | 'pdf') => {
     setShowExportMenu(false);
     setIsExporting(true);
+    setExportError(null);
     try {
       if (format === 'pdf') {
         const blob = await exportAuditReportPdf(sessionId, undefined, undefined, userFilter || undefined);
+        if (blob.type && blob.type.includes('application/json')) {
+          const text = await blob.text();
+          try { const err = JSON.parse(text); setExportError(err.detail || 'Export failed'); } catch { setExportError('Export failed'); }
+          return;
+        }
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `audit-report-${sessionId.slice(0, 8)}.pdf`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } else {
         const blob = await exportAuditReport(sessionId, undefined, undefined, userFilter || undefined);
+        if (blob.type && blob.type.includes('application/json')) {
+          const text = await blob.text();
+          try { const err = JSON.parse(text); setExportError(err.detail || 'Export failed'); } catch { setExportError('Export failed'); }
+          return;
+        }
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `audit-report-${sessionId.slice(0, 8)}.md`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }
-    } catch {
-      // silent
+    } catch (err: any) {
+      console.error('Export failed:', err);
+      let msg = 'Export failed. Please try again.';
+      if (err?.response?.data instanceof Blob) {
+        try { const text = await err.response.data.text(); const parsed = JSON.parse(text); msg = parsed.detail || msg; } catch {}
+      } else if (err?.response?.data?.detail) {
+        msg = err.response.data.detail;
+      } else if (err?.message) {
+        msg = err.message;
+      }
+      setExportError(msg);
     } finally {
       setIsExporting(false);
     }
@@ -220,6 +246,10 @@ export default function AuditTimeline({ sessionId }: AuditTimelineProps) {
             </select>
             <FunnelIcon className="w-4 h-4 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
+
+          {exportError && (
+            <p className="mt-2 text-xs text-red-500 dark:text-red-400">{exportError}</p>
+          )}
         </div>
       </div>
 

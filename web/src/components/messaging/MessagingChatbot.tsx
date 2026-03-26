@@ -159,7 +159,7 @@ export default function MessagingChatbot({ channelId }: MessagingChatbotProps) {
       {/* Floating trigger / close button — always visible */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200
+        className={`fixed bottom-[88px] right-6 w-12 h-12 rounded-full shadow-lg hover:shadow-xl transition-all duration-200
                    flex items-center justify-center z-[60] group
                    ${isOpen
                      ? 'bg-neutral-800 hover:bg-red-600 text-white'
@@ -168,10 +168,10 @@ export default function MessagingChatbot({ channelId }: MessagingChatbotProps) {
         title={isOpen ? 'Close chatbot' : 'Channel AI Assistant'}
       >
         {isOpen ? (
-          <XMarkIcon className="w-6 h-6" />
+          <XMarkIcon className="w-5 h-5" />
         ) : (
           <>
-            <ChatBubbleLeftRightIcon className="w-6 h-6 group-hover:animate-pulse" />
+            <ChatBubbleLeftRightIcon className="w-5 h-5 group-hover:animate-pulse" />
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
           </>
         )}
@@ -179,10 +179,10 @@ export default function MessagingChatbot({ channelId }: MessagingChatbotProps) {
 
       {/* Chat panel — positioned above the FAB */}
       {isOpen && (
-        <div className="fixed bottom-24 right-4 w-[min(420px,calc(100vw-2rem))] bg-white dark:bg-neutral-900 rounded-md shadow-lg
+        <div className="fixed bottom-[148px] right-4 w-[min(420px,calc(100vw-2rem))] bg-white dark:bg-neutral-900 rounded-md shadow-lg
                         border border-neutral-200 dark:border-neutral-700 flex flex-col z-50 overflow-hidden
                         animate-in slide-in-from-bottom-4 duration-200"
-             style={{ maxHeight: 'calc(100vh - 7rem)', height: '560px' }}>
+             style={{ maxHeight: 'calc(100vh - 12rem)', height: '480px' }}>
           {/* Header */}
           <div className="bg-indigo-600 px-4 py-3 flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">

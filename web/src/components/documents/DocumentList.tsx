@@ -40,8 +40,10 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string; i
   completed: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Completed', icon: DocumentCheckIcon, accent: 'border-l-emerald-400' },
 };
 
-function formatRelativeTime(dateStr: string): string {
+function formatRelativeTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
   const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return '—';
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMin = Math.floor(diffMs / 60000);
@@ -106,7 +108,7 @@ export default function DocumentList({
     }
     if (search.trim()) {
       const q = search.toLowerCase();
-      result = result.filter((d) => d.title.toLowerCase().includes(q));
+      result = result.filter((d) => (d.title || '').toLowerCase().includes(q));
     }
     return result;
   }, [documents, statusFilter, search]);

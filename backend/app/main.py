@@ -1,9 +1,12 @@
 """
 Main FastAPI application.
 """
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.logger import get_logger, configure_logging
 from app.core.exceptions import AIUsageLimitExceeded
@@ -102,6 +105,13 @@ app.include_router(messaging.router, prefix="/api")  # Global Messaging ("Mini S
 app.include_router(messaging_chat.router, prefix="/api")  # Messaging Channel AI Chatbot
 app.include_router(documents.router, prefix="/api")  # Documents (PandaDoc replacement)
 app.include_router(roadmap.router, prefix="/api")  # Public Roadmap & Feature Requests
+
+# User-uploaded files (profile avatars, etc.)
+_uploads_root = Path(__file__).resolve().parent.parent / "uploads"
+_uploads_root.mkdir(parents=True, exist_ok=True)
+(_uploads_root / "avatars").mkdir(parents=True, exist_ok=True)
+(_uploads_root / "recordings").mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(_uploads_root)), name="uploads")
 
 
 @app.on_event("startup")

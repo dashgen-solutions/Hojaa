@@ -14,6 +14,7 @@ import {
   getProjectDocuments,
   createDocument,
   getDocument,
+  updateDocument,
   type ScopeDocument,
 } from "@/lib/api";
 import DocumentList from "@/components/documents/DocumentList";
@@ -104,9 +105,11 @@ export default function DocumentsPage() {
     try {
       setCreatingDoc(true);
       setShowNewMenu(false);
-      const doc = await createDocument(projectId, { title: "Untitled Document" });
-      setDocuments((prev) => [doc, ...prev]);
-      navigateToDoc(doc.id);
+      const created = await createDocument(projectId, { title: "Untitled Document" });
+      // Backend create endpoint returns a minimal payload; fetch full document for list timestamps.
+      const fullDoc = await getDocument(created.id);
+      setDocuments((prev) => [fullDoc, ...prev.filter((d) => d.id !== fullDoc.id)]);
+      navigateToDoc(fullDoc.id);
     } catch (err) {
       console.error("Failed to create document:", err);
     } finally {
@@ -120,9 +123,11 @@ export default function DocumentsPage() {
     try {
       setCreatingDoc(true);
       setShowTemplateGallery(false);
-      const doc = await createDocument(projectId, { template_id: templateId });
-      setDocuments((prev) => [doc, ...prev]);
-      navigateToDoc(doc.id);
+      const created = await createDocument(projectId, { template_id: templateId });
+      // Backend create endpoint returns a minimal payload; fetch full document for list timestamps.
+      const fullDoc = await getDocument(created.id);
+      setDocuments((prev) => [fullDoc, ...prev.filter((d) => d.id !== fullDoc.id)]);
+      navigateToDoc(fullDoc.id);
     } catch (err) {
       console.error("Failed to create document from template:", err);
     } finally {
@@ -159,13 +164,20 @@ export default function DocumentsPage() {
 
   // Handle title change from editor
   const handleTitleChange = useCallback(
-    (title: string) => {
-      if (selectedDoc) {
-        const updated = { ...selectedDoc, title };
-        setSelectedDoc(updated);
-        setDocuments((prev) =>
-          prev.map((d) => (d.id === updated.id ? updated : d))
-        );
+    async (title: string) => {
+      if (!selectedDoc) return;
+      const prev = selectedDoc;
+      const optimistic = { ...prev, title };
+      setSelectedDoc(optimistic);
+      setDocuments((docs) => docs.map((d) => (d.id === optimistic.id ? optimistic : d)));
+      try {
+        const saved = await updateDocument(prev.id, { title });
+        setSelectedDoc(saved);
+        setDocuments((docs) => docs.map((d) => (d.id === saved.id ? saved : d)));
+      } catch (err) {
+        console.error("Failed to update document title:", err);
+        setSelectedDoc(prev);
+        setDocuments((docs) => docs.map((d) => (d.id === prev.id ? prev : d)));
       }
     },
     [selectedDoc]
@@ -173,13 +185,20 @@ export default function DocumentsPage() {
 
   // Handle status change from editor
   const handleStatusChange = useCallback(
-    (status: string) => {
-      if (selectedDoc) {
-        const updated = { ...selectedDoc, status };
-        setSelectedDoc(updated);
-        setDocuments((prev) =>
-          prev.map((d) => (d.id === updated.id ? updated : d))
-        );
+    async (status: string) => {
+      if (!selectedDoc) return;
+      const prev = selectedDoc;
+      const optimistic = { ...prev, status };
+      setSelectedDoc(optimistic);
+      setDocuments((docs) => docs.map((d) => (d.id === optimistic.id ? optimistic : d)));
+      try {
+        const saved = await updateDocument(prev.id, { status });
+        setSelectedDoc(saved);
+        setDocuments((docs) => docs.map((d) => (d.id === saved.id ? saved : d)));
+      } catch (err) {
+        console.error("Failed to update document status:", err);
+        setSelectedDoc(prev);
+        setDocuments((docs) => docs.map((d) => (d.id === prev.id ? prev : d)));
       }
     },
     [selectedDoc]

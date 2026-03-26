@@ -31,6 +31,7 @@ export default function ExportPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportedContent, setExportedContent] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const clearPreviousExport = () => {
     if (exportedContent || exportSuccess) {
@@ -53,6 +54,7 @@ export default function ExportPage() {
   const handleExport = async () => {
     setExportedContent(null);
     setExportSuccess(false);
+    setExportError(null);
     setIsExporting(true);
     try {
       const exportOptions = {
@@ -73,6 +75,11 @@ export default function ExportPage() {
         const previewContent = await downloadMarkdown(exportOptions);
         setExportedContent(previewContent);
         const pdfBlob = await downloadPdf(exportOptions);
+        if (pdfBlob instanceof Blob && pdfBlob.type && pdfBlob.type.includes('application/json')) {
+          const text = await pdfBlob.text();
+          try { const err = JSON.parse(text); setExportError(err.detail || 'PDF generation failed'); } catch { setExportError('PDF generation failed'); }
+          return;
+        }
         const filename = `scope_document_${ts}.pdf`;
         triggerFileDownload(pdfBlob, filename);
         recordExport(projectId, "pdf", exportOptions, filename);
@@ -92,8 +99,17 @@ export default function ExportPage() {
         recordExport(projectId, "markdown", exportOptions, filename);
       }
       setExportSuccess(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Export failed:", err);
+      let msg = "Export failed. Please try again.";
+      if (err?.response?.data instanceof Blob) {
+        try { const text = await err.response.data.text(); const parsed = JSON.parse(text); msg = parsed.detail || msg; } catch {}
+      } else if (err?.response?.data?.detail) {
+        msg = err.response.data.detail;
+      } else if (err?.message) {
+        msg = err.message;
+      }
+      setExportError(msg);
     } finally {
       setIsExporting(false);
     }
@@ -223,6 +239,14 @@ export default function ExportPage() {
                   Change any option above and click &quot;Generate New Export&quot; to export again.
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Error banner */}
+          {exportError && (
+            <div className="flex items-center gap-3 p-3 rounded bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
+              <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>
+              <p className="text-sm text-red-700 dark:text-red-300">{exportError}</p>
             </div>
           )}
 

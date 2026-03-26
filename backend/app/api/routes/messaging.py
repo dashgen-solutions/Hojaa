@@ -95,6 +95,7 @@ def _serialize_message(msg: ChatChannelMessage, include_reactions: bool = True) 
         "channel_id": str(msg.channel_id),
         "sender_id": str(msg.sender_id) if msg.sender_id else None,
         "sender_name": msg.sender.username if msg.sender else "System",
+        "sender_avatar_url": msg.sender.avatar_url if msg.sender else None,
         "content": msg.content,
         "message_type": msg.message_type,
         "reference_type": msg.reference_type,
@@ -129,14 +130,21 @@ def _serialize_message(msg: ChatChannelMessage, include_reactions: bool = True) 
 
 
 def _serialize_member(member: ChatChannelMember) -> dict:
+    u = member.user
+    org_role_val = None
+    if u and u.org_role is not None:
+        org_role_val = u.org_role.value if hasattr(u.org_role, "value") else str(u.org_role)
     return {
         "user_id": str(member.user_id),
-        "username": member.user.username if member.user else "Unknown",
-        "email": member.user.email if member.user else "",
+        "username": u.username if u else "Unknown",
+        "email": u.email if u else "",
         "joined_at": member.joined_at.isoformat(),
         "is_online": messaging_ws_manager.is_user_online(str(member.user_id)),
-        "custom_status": member.user.custom_status if member.user else None,
-        "status_emoji": member.user.status_emoji if member.user else None,
+        "custom_status": u.custom_status if u else None,
+        "status_emoji": u.status_emoji if u else None,
+        "avatar_url": getattr(u, "avatar_url", None) if u else None,
+        "job_title": u.job_title if u else None,
+        "org_role": org_role_val,
     }
 
 
@@ -239,9 +247,19 @@ def list_channels(
         if ch.is_direct:
             for m in ch.members:
                 if m.user_id != current_user.id:
+                    ou = m.user
+                    org_role_val = None
+                    if ou and ou.org_role is not None:
+                        org_role_val = ou.org_role.value if hasattr(ou.org_role, "value") else str(ou.org_role)
                     other_user = {
                         "user_id": str(m.user_id),
-                        "username": m.user.username if m.user else "Unknown",
+                        "username": ou.username if ou else "Unknown",
+                        "email": ou.email if ou else "",
+                        "avatar_url": getattr(ou, "avatar_url", None) if ou else None,
+                        "custom_status": ou.custom_status if ou else None,
+                        "status_emoji": ou.status_emoji if ou else None,
+                        "job_title": ou.job_title if ou else None,
+                        "org_role": org_role_val,
                     }
                     break
 
@@ -1452,8 +1470,10 @@ def list_call_transcriptions(
             "channel_id": str(t.channel_id),
             "call_initiator_id": str(t.call_initiator_id) if t.call_initiator_id else None,
             "call_type": t.call_type,
+            "title": t.title,
             "duration_seconds": t.duration_seconds,
             "transcription_text": t.transcription_text,
+            "audio_url": t.audio_url,
             "language": t.language,
             "participants": t.participants,
             "status": t.status,
@@ -1461,6 +1481,36 @@ def list_call_transcriptions(
         }
         for t in txs
     ]
+
+
+@router.patch("/channels/{channel_id}/transcriptions/{transcription_id}")
+def update_transcription_title(
+    channel_id: str,
+    transcription_id: str,
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update the user-editable title of a call recording."""
+    member = db.query(ChatChannelMember).filter_by(
+        channel_id=channel_id, user_id=current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a channel member")
+
+    tx = db.query(CallTranscription).filter_by(id=transcription_id, channel_id=channel_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Recording not found")
+
+    new_title = body.get("title", "").strip()
+    tx.title = new_title or None
+    db.commit()
+    db.refresh(tx)
+
+    return {
+        "id": str(tx.id),
+        "title": tx.title,
+    }
 
 
 @router.post("/channels/{channel_id}/transcriptions/upload")
@@ -1473,9 +1523,13 @@ async def upload_and_transcribe_call(
     db: Session = Depends(get_db),
 ):
     """
-    Upload an audio recording and transcribe it using Whisper.
-    Saves the transcription text for the channel.
+    Upload an audio recording, persist the file, and transcribe it using Whisper.
+    Returns transcription text + a URL to download the original recording.
     """
+    import shutil
+    import uuid as _uuid
+    from pathlib import Path
+
     member = db.query(ChatChannelMember).filter_by(
         channel_id=channel_id, user_id=current_user.id
     ).first()
@@ -1491,6 +1545,24 @@ async def upload_and_transcribe_call(
         for m in members
     ]
 
+    # ── Save the raw recording to disk ──────────────────────────────────
+    recordings_root = (
+        Path(__file__).resolve().parent.parent.parent.parent / "uploads" / "recordings"
+    )
+    recordings_root.mkdir(parents=True, exist_ok=True)
+
+    original_name = audio.filename or "recording.webm"
+    ext = ("." + original_name.rsplit(".", 1)[-1]) if "." in original_name else ".webm"
+    file_name = f"{_uuid.uuid4()}{ext}"
+    file_path = recordings_root / file_name
+    audio_url: str | None = None
+
+    await audio.seek(0)
+    with open(file_path, "wb") as f:
+        shutil.copyfileobj(audio.file, f)
+    audio_url = f"/uploads/recordings/{file_name}"
+
+    # ── Transcribe with Whisper ──────────────────────────────────────────
     transcription_text = ""
     detected_language = "en"
     tx_status = "failed"
@@ -1498,10 +1570,11 @@ async def upload_and_transcribe_call(
     try:
         from app.services.transcription_service import transcription_service
 
-        result = await transcription_service.transcribe_audio(
-            audio_file=audio.file,
-            filename=audio.filename or "recording.webm",
-        )
+        with open(file_path, "rb") as audio_file:
+            result = await transcription_service.transcribe_audio(
+                audio_file=audio_file,
+                filename=file_name,
+            )
         transcription_text = result.get("text", "")
         detected_language = result.get("language", "en")
         tx_status = "completed" if transcription_text else "failed"
@@ -1515,6 +1588,7 @@ async def upload_and_transcribe_call(
         call_type=call_type,
         duration_seconds=duration_seconds,
         transcription_text=transcription_text,
+        audio_url=audio_url,
         language=detected_language,
         participants=participants,
         status=tx_status,
@@ -1528,6 +1602,7 @@ async def upload_and_transcribe_call(
         "channel_id": channel_id,
         "status": tx.status,
         "transcription_text": tx.transcription_text,
+        "audio_url": tx.audio_url,
         "language": tx.language,
     }
 

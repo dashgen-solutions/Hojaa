@@ -16,22 +16,48 @@ from app.models.database import AIUsageLog
 
 logger = get_logger(__name__)
 
-# ── Per-token pricing (USD) — updated 2025-Q4 ─────────────────
-# Keep this dict current whenever model pricing changes.
+# ── Per-token pricing (USD) — updated 2026-Q1 ─────────────────
+# Prices are per 1 token (not per 1 000 tokens).
+# Source: OpenAI platform.openai.com/docs/pricing  |  Anthropic docs.anthropic.com  |  Google ai.google.dev
 _PRICING: Dict[str, Dict[str, float]] = {
-    # OpenAI
-    "openai:gpt-4o-mini":       {"prompt": 0.00015 / 1000, "completion": 0.0006 / 1000},
-    "openai:gpt-4o":            {"prompt": 0.0025 / 1000,  "completion": 0.01 / 1000},
-    "openai:gpt-4-turbo":       {"prompt": 0.01 / 1000,    "completion": 0.03 / 1000},
-    "openai:gpt-3.5-turbo":     {"prompt": 0.0005 / 1000,  "completion": 0.0015 / 1000},
-    # Anthropic
-    "anthropic:claude-3-haiku-20240307":   {"prompt": 0.00025 / 1000, "completion": 0.00125 / 1000},
-    "anthropic:claude-3-sonnet-20240229":  {"prompt": 0.003 / 1000,   "completion": 0.015 / 1000},
-    "anthropic:claude-3-5-sonnet-20241022": {"prompt": 0.003 / 1000,  "completion": 0.015 / 1000},
+    # ── OpenAI (GPT-4.1 family) ──────────────────────────────────
+    "openai:gpt-4.1":           {"prompt": 2.00 / 1_000_000,  "completion": 8.00 / 1_000_000},
+    "openai:gpt-4.1-mini":      {"prompt": 0.40 / 1_000_000,  "completion": 1.60 / 1_000_000},
+    "openai:gpt-4.1-nano":      {"prompt": 0.10 / 1_000_000,  "completion": 0.40 / 1_000_000},
+    # ── OpenAI (GPT-4o family) ───────────────────────────────────
+    "openai:gpt-4o":            {"prompt": 2.50 / 1_000_000,  "completion": 10.00 / 1_000_000},
+    "openai:gpt-4o-mini":       {"prompt": 0.15 / 1_000_000,  "completion": 0.60 / 1_000_000},
+    # ── OpenAI (reasoning / o-series) ────────────────────────────
+    "openai:o3":                {"prompt": 2.00 / 1_000_000,  "completion": 8.00 / 1_000_000},
+    "openai:o4-mini":           {"prompt": 1.10 / 1_000_000,  "completion": 4.40 / 1_000_000},
+    "openai:o1":                {"prompt": 15.00 / 1_000_000, "completion": 60.00 / 1_000_000},
+    "openai:o1-mini":           {"prompt": 3.00 / 1_000_000,  "completion": 12.00 / 1_000_000},
+    # ── OpenAI (legacy) ──────────────────────────────────────────
+    "openai:gpt-4-turbo":       {"prompt": 10.00 / 1_000_000, "completion": 30.00 / 1_000_000},
+    "openai:gpt-3.5-turbo":     {"prompt": 0.50 / 1_000_000,  "completion": 1.50 / 1_000_000},
+    # ── Anthropic Claude 4.x ─────────────────────────────────────
+    "anthropic:claude-opus-4-6":          {"prompt": 5.00 / 1_000_000,  "completion": 25.00 / 1_000_000},
+    "anthropic:claude-sonnet-4-6":        {"prompt": 3.00 / 1_000_000,  "completion": 15.00 / 1_000_000},
+    "anthropic:claude-haiku-4-5":         {"prompt": 1.00 / 1_000_000,  "completion": 5.00 / 1_000_000},
+    # API model IDs with date suffixes
+    "anthropic:claude-opus-4-20250514":   {"prompt": 5.00 / 1_000_000,  "completion": 25.00 / 1_000_000},
+    "anthropic:claude-sonnet-4-20250514": {"prompt": 3.00 / 1_000_000,  "completion": 15.00 / 1_000_000},
+    "anthropic:claude-haiku-4-5-20251001":{"prompt": 1.00 / 1_000_000,  "completion": 5.00 / 1_000_000},
+    # ── Anthropic Claude 3.x (legacy, still available) ───────────
+    "anthropic:claude-3-5-sonnet-20241022":{"prompt": 3.00 / 1_000_000, "completion": 15.00 / 1_000_000},
+    "anthropic:claude-3-5-haiku-20241022": {"prompt": 0.80 / 1_000_000, "completion": 4.00 / 1_000_000},
+    "anthropic:claude-3-haiku-20240307":   {"prompt": 0.25 / 1_000_000, "completion": 1.25 / 1_000_000},
+    "anthropic:claude-3-sonnet-20240229":  {"prompt": 3.00 / 1_000_000, "completion": 15.00 / 1_000_000},
+    # ── Google Gemini ─────────────────────────────────────────────
+    "gemini:gemini-2.5-pro":              {"prompt": 1.25 / 1_000_000,  "completion": 10.00 / 1_000_000},
+    "gemini:gemini-2.5-flash":            {"prompt": 0.30 / 1_000_000,  "completion": 2.50 / 1_000_000},
+    "gemini:gemini-2.5-flash-lite":       {"prompt": 0.10 / 1_000_000,  "completion": 0.40 / 1_000_000},
+    "gemini:gemini-2.0-flash":            {"prompt": 0.10 / 1_000_000,  "completion": 0.40 / 1_000_000},
+    "gemini:gemini-2.0-flash-lite":       {"prompt": 0.075 / 1_000_000, "completion": 0.30 / 1_000_000},
 }
 
-# Fallback when model not in pricing table
-_DEFAULT_PRICING = {"prompt": 0.002 / 1000, "completion": 0.006 / 1000}
+# Fallback when model not in pricing table (conservative mid-tier estimate)
+_DEFAULT_PRICING = {"prompt": 1.00 / 1_000_000, "completion": 4.00 / 1_000_000}
 
 
 def estimate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:

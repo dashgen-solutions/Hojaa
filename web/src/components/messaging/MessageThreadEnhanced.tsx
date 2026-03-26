@@ -12,6 +12,7 @@ import {
   PhoneIcon,
   PhoneXMarkIcon,
   VideoCameraIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline';
 import EmojiPicker from './EmojiPicker';
 import {
@@ -23,6 +24,8 @@ import {
   pinMessage,
   unpinMessage,
 } from '@/lib/api';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface MessageThreadProps {
   messages: ChatMessageItem[];
@@ -225,18 +228,14 @@ function MessageBubble({
 
   const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  // Avatar color based on name
-  const avatarColors = [
-    'from-blue-500 to-purple-500',
-    'from-green-500 to-teal-500',
-    'from-orange-500 to-red-500',
-    'from-pink-500 to-rose-500',
-    'from-indigo-500 to-blue-500',
-    'from-yellow-500 to-orange-500',
-    'from-cyan-500 to-blue-500',
-    'from-violet-500 to-purple-500',
-  ];
-  const colorIdx = (msg.sender_name || '').charCodeAt(0) % avatarColors.length;
+  // Avatar: use uploaded photo, fall back to neutral SVG placeholder
+  const [avatarError, setAvatarError] = React.useState(false);
+  const avatarSrc =
+    !avatarError &&
+    msg.sender_avatar_url &&
+    (msg.sender_avatar_url.startsWith('http')
+      ? msg.sender_avatar_url
+      : `${API_URL}${msg.sender_avatar_url}`);
 
   return (
     <div
@@ -255,11 +254,18 @@ function MessageBubble({
       {/* Avatar */}
       <div className="flex-shrink-0 w-9">
         {!isGrouped && (
-          <div
-            className={`w-9 h-9 rounded-lg bg-gradient-to-br ${avatarColors[colorIdx]} flex items-center justify-center text-white text-sm font-bold`}
-          >
-            {msg.sender_name?.[0]?.toUpperCase() || '?'}
-          </div>
+          avatarSrc ? (
+            <img
+              src={avatarSrc}
+              alt={msg.sender_name}
+              className="w-9 h-9 rounded-lg object-cover border border-neutral-200 dark:border-[#383a3f]"
+              onError={() => setAvatarError(true)}
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
+              <UserCircleIcon className="w-6 h-6 text-neutral-400 dark:text-neutral-500" />
+            </div>
+          )
         )}
       </div>
 
@@ -454,12 +460,25 @@ function MessageBubble({
   );
 }
 
+/** Strip leading 📞 / 📵 from backend call messages (UTF-16 pairs; avoids \\p{Emoji} for older TS targets). */
+function stripCallEventEmojiPrefix(content: string): string {
+  let s = content.trimStart();
+  // 📞 U+1F4DE, 📵 U+1F4F5 (surrogate pairs)
+  const phone = '\uD83D\uDCDE';
+  const noSignal = '\uD83D\uDCF5';
+  if (s.startsWith(phone)) s = s.slice(phone.length);
+  else if (s.startsWith(noSignal)) s = s.slice(noSignal.length);
+  if (s.startsWith('\uFE0F')) s = s.slice(1); // optional variation selector
+  return s.trimStart();
+}
+
 /** Renders a call event system message (call started, ended, missed). */
 function CallEventMessage({ msg }: { msg: ChatMessageItem }) {
   const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const isMissed = msg.message_type === 'call_missed';
   const isEnded = msg.message_type === 'call_ended';
-  const isStarted = msg.message_type === 'call_started';
+
+  const displayText = stripCallEventEmojiPrefix(msg.content);
 
   return (
     <div className="flex items-center justify-center py-2 px-5 my-1">
@@ -477,7 +496,7 @@ function CallEventMessage({ msg }: { msg: ChatMessageItem }) {
         ) : (
           <PhoneIcon className="w-4 h-4" />
         )}
-        <span>{msg.content}</span>
+        <span>{displayText}</span>
         <span className="text-[10px] opacity-60">{time}</span>
       </div>
     </div>

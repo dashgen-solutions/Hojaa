@@ -5,10 +5,38 @@ import {
   MagnifyingGlassIcon,
   PlusIcon,
   HashtagIcon,
-  UserIcon,
+  UserCircleIcon,
   ChatBubbleLeftRightIcon,
+  PhoneIcon,
 } from '@heroicons/react/24/outline';
 import { ChatChannel } from '@/lib/api';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+/** Avatar for a DM channel — shows photo, falls back to SVG placeholder */
+function DmAvatar({ avatarUrl, username }: { avatarUrl?: string | null; username: string }) {
+  const [error, setError] = useState(false);
+  const src =
+    !error &&
+    avatarUrl &&
+    (avatarUrl.startsWith('http') ? avatarUrl : `${API_URL}${avatarUrl}`);
+
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={username}
+        className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
+        onError={() => setError(true)}
+      />
+    );
+  }
+  return (
+    <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center flex-shrink-0">
+      <UserCircleIcon className="w-5 h-5 text-neutral-400 dark:text-neutral-500" />
+    </div>
+  );
+}
 
 interface ChannelListProps {
   channels: ChatChannel[];
@@ -16,6 +44,7 @@ interface ChannelListProps {
   onSelectChannel: (channelId: string) => void;
   onNewChannel: () => void;
   currentUserId: string;
+  userStatuses?: Record<string, string>;
 }
 
 /** Strip @[username](userId) mention syntax to just @username */
@@ -38,12 +67,20 @@ function formatTime(isoStr: string | null): string {
   return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/** Returns the status dot color and title for a user status string */
+function statusDotProps(status: string): { color: string; label: string } {
+  if (status === 'in_call') return { color: 'bg-orange-400', label: 'In a call' };
+  if (status === 'online') return { color: 'bg-green-500', label: 'Online' };
+  return { color: 'bg-neutral-300 dark:bg-gray-600', label: 'Offline' };
+}
+
 export default function ChannelListEnhanced({
   channels,
   activeChannelId,
   onSelectChannel,
   onNewChannel,
   currentUserId,
+  userStatuses = {},
 }: ChannelListProps) {
   const [search, setSearch] = useState('');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -67,12 +104,18 @@ export default function ChannelListEnhanced({
 
   const renderChannel = (ch: ChatChannel) => {
     const isActive = ch.id === activeChannelId;
-    const displayName = ch.is_direct
-      ? ch.other_user?.username || 'Direct Message'
-      : `# ${ch.name || 'Unnamed'}`;
-    const isOnline = ch.is_direct && ch.members?.some(
-      (m) => m.user_id !== currentUserId && m.is_online
-    );
+
+    // For DMs, resolve the other user's current status
+    const otherMember = ch.is_direct
+      ? ch.members?.find((m) => m.user_id !== currentUserId)
+      : null;
+    const otherUserId = otherMember?.user_id;
+
+    // Prefer live WS status; fall back to is_online from channel data
+    const liveStatus = otherUserId ? userStatuses[otherUserId] : undefined;
+    const statusStr = liveStatus ?? (otherMember?.is_online ? 'online' : 'offline');
+    const dot = statusDotProps(statusStr);
+    const isInCall = statusStr === 'in_call';
 
     return (
       <button
@@ -87,34 +130,41 @@ export default function ChannelListEnhanced({
         {/* Icon / Avatar */}
         <div className="relative flex-shrink-0">
           {ch.is_direct ? (
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-white text-xs font-bold">
-              {(ch.other_user?.username || '?')[0]?.toUpperCase()}
-            </div>
+            <DmAvatar avatarUrl={ch.other_user?.avatar_url} username={ch.other_user?.username || '?'} />
           ) : (
             <div className="w-8 h-8 rounded-lg bg-neutral-200 dark:bg-[#383a3f] flex items-center justify-center">
               <HashtagIcon className="w-4 h-4 text-neutral-500 dark:text-gray-400" />
             </div>
           )}
-          {/* Online indicator */}
+          {/* Status indicator dot for DMs */}
           {ch.is_direct && (
             <div
-              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-[#1a1d21] ${
-                isOnline ? 'bg-green-500' : 'bg-neutral-300 dark:bg-gray-600'
-              }`}
-            />
+              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-[#1a1d21] flex items-center justify-center ${dot.color}`}
+              title={dot.label}
+            >
+              {isInCall && <PhoneIcon className="w-1.5 h-1.5 text-white" />}
+            </div>
           )}
         </div>
 
         {/* Channel info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <span
-              className={`text-sm truncate ${
-                ch.unread_count > 0 ? 'font-bold text-neutral-900 dark:text-white' : ''
-              }`}
-            >
-              {ch.is_direct ? ch.other_user?.username || 'DM' : ch.name || 'Unnamed'}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                className={`text-sm truncate ${
+                  ch.unread_count > 0 ? 'font-bold text-neutral-900 dark:text-white' : ''
+                }`}
+              >
+                {ch.is_direct ? ch.other_user?.username || 'DM' : ch.name || 'Unnamed'}
+              </span>
+              {/* In-call label for DMs */}
+              {ch.is_direct && isInCall && (
+                <span className="text-[10px] text-orange-500 dark:text-orange-400 font-medium whitespace-nowrap flex-shrink-0">
+                  · in a call
+                </span>
+              )}
+            </div>
             {ch.last_message?.created_at && (
               <span className="text-[10px] text-neutral-400 dark:text-gray-600 flex-shrink-0 ml-1">
                 {formatTime(ch.last_message.created_at)}

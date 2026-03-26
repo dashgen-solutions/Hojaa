@@ -1008,6 +1008,9 @@ export interface ChatChannelMemberInfo {
   is_online: boolean;
   custom_status?: string | null;
   status_emoji?: string | null;
+  avatar_url?: string | null;
+  job_title?: string | null;
+  org_role?: string | null;
 }
 
 export interface ChatMessagePreview {
@@ -1022,7 +1025,16 @@ export interface ChatChannel {
   is_direct: boolean;
   topic: string | null;
   description: string | null;
-  other_user: { user_id: string; username: string } | null;
+  other_user: {
+    user_id: string;
+    username: string;
+    email?: string;
+    avatar_url?: string | null;
+    custom_status?: string | null;
+    status_emoji?: string | null;
+    job_title?: string | null;
+    org_role?: string | null;
+  } | null;
   members: ChatChannelMemberInfo[];
   member_count: number;
   last_message: ChatMessagePreview | null;
@@ -1049,6 +1061,7 @@ export interface ChatMessageItem {
   channel_id: string;
   sender_id: string | null;
   sender_name: string;
+  sender_avatar_url?: string | null;
   content: string;
   message_type?: string | null; // null = normal, "call_started", "call_ended", "call_missed"
   reference_type: string | null;
@@ -1272,6 +1285,26 @@ export const updateMyStatus = async (data: UserStatusPayload): Promise<UserStatu
   return response.data;
 };
 
+/** PATCH /api/auth/me — job title only (status uses /api/messaging/status) */
+export const patchMyProfile = async (data: { job_title?: string | null }) => {
+  const response = await api.patch('/api/auth/me', data);
+  return response.data;
+};
+
+export const uploadMyAvatar = async (file: File): Promise<{ avatar_url: string | null }> => {
+  const formData = new FormData();
+  formData.append('avatar', file);
+  const response = await api.post('/api/auth/me/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+export const deleteMyAvatar = async (): Promise<{ avatar_url: null }> => {
+  const response = await api.delete('/api/auth/me/avatar');
+  return response.data;
+};
+
 
 // ===== Documents API =====
 
@@ -1311,6 +1344,11 @@ export interface DocumentRecipientInfo {
   viewed_at: string | null;
   completed_at: string | null;
   access_token: string | null;
+  approval?: {
+    decision: 'approved' | 'rejected';
+    reason: string | null;
+    decided_at: string | null;
+  } | null;
 }
 
 export interface PricingLineItemInfo {
@@ -1371,7 +1409,7 @@ export const getProjectDocuments = async (sessionId: string): Promise<ScopeDocum
 export const createDocument = async (
   sessionId: string,
   data: { title?: string; template_id?: string }
-): Promise<ScopeDocument> => {
+): Promise<{ id: string; title: string; status: string }> => {
   const response = await api.post(`/api/documents/session/${sessionId}`, data);
   return response.data;
 };
@@ -1512,7 +1550,25 @@ export const getDocumentRecipients = async (documentId: string): Promise<Documen
   return response.data;
 };
 
-export const sendDocument = async (documentId: string): Promise<ScopeDocument> => {
+export const addDocumentRecipient = async (
+  documentId: string,
+  data: { name: string; email: string; role?: string }
+): Promise<DocumentRecipientInfo> => {
+  const response = await api.post(`/api/documents/${documentId}/recipients`, data);
+  return response.data;
+};
+
+export const sendDocument = async (
+  documentId: string
+): Promise<{
+  id: string;
+  status: string;
+  sent_at: string;
+  recipients_sent: number;
+  emails_attempted?: number;
+  emails_sent?: number;
+  smtp_error_detail?: string | null;
+}> => {
   const response = await api.post(`/api/documents/${documentId}/send`);
   return response.data;
 };
@@ -1587,10 +1643,37 @@ export interface SharedDocumentView {
   sent_at: string | null;
   recipient: { name: string; email: string; role: string };
   pricing_items: PricingLineItemInfo[];
+  my_approval: { decision: string; reason: string | null; decided_at: string | null } | null;
 }
 
 export const getSharedDocument = async (token: string): Promise<SharedDocumentView> => {
   const response = await api.get(`/api/documents/view/${token}`);
+  return response.data;
+};
+
+// ── Document Approvals ────────────────────────────────────────
+
+export interface DocumentApprovalInfo {
+  id: string | null;
+  recipient_id: string;
+  recipient_name: string;
+  recipient_email: string;
+  decision: 'approved' | 'rejected' | 'pending';
+  reason: string | null;
+  decided_at: string | null;
+}
+
+export const submitDocumentApproval = async (
+  accessToken: string,
+  decision: 'approved' | 'rejected',
+  reason?: string,
+): Promise<{ status: string; decision: string; reason: string | null }> => {
+  const response = await api.post(`/api/documents/view/${accessToken}/approve`, { decision, reason });
+  return response.data;
+};
+
+export const getDocumentApprovals = async (documentId: string): Promise<DocumentApprovalInfo[]> => {
+  const response = await api.get(`/api/documents/${documentId}/approvals`);
   return response.data;
 };
 
@@ -1707,8 +1790,10 @@ export interface CallTranscriptionItem {
   channel_id: string;
   call_initiator_id: string | null;
   call_type: string;
+  title: string | null;
   duration_seconds: number | null;
   transcription_text: string | null;
+  audio_url: string | null;
   language: string | null;
   participants: Array<{ user_id: string; username: string }> | null;
   status: string;
@@ -1756,6 +1841,18 @@ export const uploadCallRecording = async (
     `/api/messaging/channels/${channelId}/transcriptions/upload?${params}`,
     formData,
     { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return response.data;
+};
+
+export const updateRecordingTitle = async (
+  channelId: string,
+  transcriptionId: string,
+  title: string,
+): Promise<{ id: string; title: string | null }> => {
+  const response = await api.patch(
+    `/api/messaging/channels/${channelId}/transcriptions/${transcriptionId}`,
+    { title },
   );
   return response.data;
 };

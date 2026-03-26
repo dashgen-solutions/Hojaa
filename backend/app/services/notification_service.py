@@ -9,7 +9,7 @@ import asyncio
 import re as _re
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from uuid import UUID
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import and_
@@ -28,14 +28,24 @@ def _send_email_sync(
     to_emails: List[str],
     subject: str,
     html_content: str,
-) -> bool:
+) -> Tuple[bool, str]:
     """
     Send an email via SMTP (synchronous — call via asyncio.to_thread for async).
     Works with Gmail (App Password), Outlook, or any SMTP provider.
+
+    Returns (True, "") on success, or (False, short_error_message) on failure.
     """
-    if not settings.smtp_username or not settings.smtp_password:
+    smtp_username = (settings.smtp_username or "").strip()
+    # Gmail app passwords are often entered with spaces for readability.
+    # Normalize to the real 16-char secret before auth.
+    smtp_password = (settings.smtp_password or "").replace(" ", "").strip()
+
+    if not to_emails:
+        return False, "No recipient email addresses"
+
+    if not smtp_username or not smtp_password:
         logger.warning("SMTP credentials not configured — cannot send email")
-        return False
+        return False, "SMTP credentials not configured (SMTP_USERNAME / SMTP_PASSWORD)"
 
     from_email = settings.smtp_from_email or settings.smtp_username
     from_name = settings.smtp_from_name or "Hojaa"
@@ -61,21 +71,25 @@ def _send_email_sync(
             else:
                 server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=15)
 
-            server.login(settings.smtp_username, settings.smtp_password)
-            server.sendmail(from_email, [email], msg.as_string())
+            server.login(smtp_username, smtp_password)
+            refused = server.sendmail(from_email, [email], msg.as_string())
             server.quit()
+            if refused:
+                err = f"Server refused recipient(s): {refused}"
+                logger.error(f"SMTP sendmail refused: {refused}")
+                return False, err
 
         logger.info(f"SMTP: sent email to {len(to_emails)} recipient(s): {subject[:60]}")
-        return True
+        return True, ""
     except smtplib.SMTPAuthenticationError as exc:
         logger.error(f"SMTP auth failed (check App Password): {exc}")
-        return False
+        return False, f"SMTP authentication failed: {exc}"
     except smtplib.SMTPException as exc:
         logger.error(f"SMTP error: {exc}")
-        return False
+        return False, f"SMTP error: {exc}"
     except Exception as exc:
         logger.error(f"Failed to send email: {exc}")
-        return False
+        return False, f"Email send failed: {exc}"
 
 
 # ---------------------------------------------------------------------------
@@ -351,13 +365,14 @@ class NotificationService:
         subject: str,
         html_content: str,
         recipient_emails: List[str],
-    ) -> bool:
+    ) -> Tuple[bool, str]:
         """
         Send an email via SMTP to the specified recipients (synchronous).
+        Returns (True, "") on success, or (False, reason) on failure.
         """
         if not settings.smtp_enabled:
-            logger.info("SMTP is disabled — email not sent")
-            return False
+            logger.warning("SMTP is disabled — email not sent (set SMTP_ENABLED=true)")
+            return False, "SMTP is disabled on the server (set SMTP_ENABLED=true)"
         return _send_email_sync(recipient_emails, subject, html_content)
 
     async def send_email_async(
@@ -365,11 +380,11 @@ class NotificationService:
         subject: str,
         html_content: str,
         recipient_emails: List[str],
-    ) -> bool:
+    ) -> Tuple[bool, str]:
         """Non-blocking email send via SMTP (runs in thread pool)."""
         if not settings.smtp_enabled:
-            logger.info("SMTP is disabled — email not sent")
-            return False
+            logger.warning("SMTP is disabled — email not sent (set SMTP_ENABLED=true)")
+            return False, "SMTP is disabled on the server (set SMTP_ENABLED=true)"
         return await asyncio.to_thread(
             _send_email_sync, recipient_emails, subject, html_content,
         )
@@ -444,7 +459,7 @@ class NotificationService:
             session_name=session_name,
         )
 
-        success = self.send_email(subject, html, recipient_emails)
+        success, _ = self.send_email(subject, html, recipient_emails)
         return len(recipient_emails) if success else 0
 
     # ------------------------------------------------------------------
@@ -504,7 +519,7 @@ class NotificationService:
 </div>"""
         html = self._hojaa_email_wrap("New Source Ingested", body)
 
-        success = self.send_email(subject, html, recipient_emails)
+        success, _ = self.send_email(subject, html, recipient_emails)
         return len(recipient_emails) if success else 0
 
     # ------------------------------------------------------------------
@@ -594,7 +609,7 @@ class NotificationService:
 </div>"""
         html = self._hojaa_email_wrap("Card Assignment", body)
 
-        success = self.send_email(subject, html, [team_member.email])
+        success, _ = self.send_email(subject, html, [team_member.email])
         if success:
             logger.info(f"Card assignment notification sent to {team_member.email} for card {card_id}")
         return success
@@ -675,7 +690,7 @@ class NotificationService:
   </table>
 </div>"""
                 html = self._hojaa_email_wrap("New Team Member", team_body)
-                if self.send_email(subject, html, recipient_emails):
+                if self.send_email(subject, html, recipient_emails)[0]:
                     notified = len(recipient_emails)
 
         # 2. Send welcome email to the new team member (if they have an email)
@@ -715,6 +730,8 @@ class NotificationService:
                 "detail": "SMTP credentials not configured",
             }
 
+        smtp_pw = (settings.smtp_password or "").replace(" ", "").strip()
+
         try:
             if settings.smtp_use_tls:
                 server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
@@ -724,7 +741,7 @@ class NotificationService:
             else:
                 server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=10)
 
-            server.login(settings.smtp_username, settings.smtp_password)
+            server.login(settings.smtp_username.strip(), smtp_pw)
             server.quit()
 
             return {

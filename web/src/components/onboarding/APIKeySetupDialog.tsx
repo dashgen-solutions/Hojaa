@@ -28,8 +28,12 @@ export default function APIKeySetupDialog() {
         (i: { integration_type: string; is_active: boolean; config?: { api_key?: string } }) =>
           i.integration_type === 'llm_anthropic' && i.is_active && i.config?.api_key
       );
+      const hasGemini = integrations.some(
+        (i: { integration_type: string; is_active: boolean; config?: { api_key?: string } }) =>
+          i.integration_type === 'llm_gemini' && i.is_active && i.config?.api_key
+      );
 
-      if (!hasOpenai && !hasAnthropic) {
+      if (!hasOpenai && !hasAnthropic && !hasGemini) {
         const dismissed = localStorage.getItem(`apikey_dialog_dismissed_${user?.id}`);
         if (!dismissed) {
           setOpen(true);

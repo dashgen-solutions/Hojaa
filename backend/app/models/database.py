@@ -193,7 +193,9 @@ class User(Base):
     # Slack-style custom status
     custom_status = Column(String(200), nullable=True)   # e.g. "In a meeting", "On vacation"
     status_emoji = Column(String(10), nullable=True)      # e.g. "🏖️", "📅", "🎯"
-    
+    # Profile photo — URL path served under /uploads/avatars/ (see auth routes)
+    avatar_url = Column(String(512), nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
@@ -746,6 +748,7 @@ class IntegrationType(str, enum.Enum):
     SLACK = "slack"
     LLM_OPENAI = "llm_openai"
     LLM_ANTHROPIC = "llm_anthropic"
+    LLM_GEMINI = "llm_gemini"
 
 
 class Integration(Base):
@@ -1051,8 +1054,10 @@ class CallTranscription(Base):
     channel_id = Column(UUID(as_uuid=True), ForeignKey("chat_channels.id", ondelete="CASCADE"), nullable=False)
     call_initiator_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     call_type = Column(String(20), nullable=False, default="audio")  # audio | video
+    title = Column(String(255), nullable=True)  # user-editable recording name
     duration_seconds = Column(Integer, nullable=True)
     transcription_text = Column(Text, nullable=True)
+    audio_url = Column(String(512), nullable=True)  # URL of the saved recording file
     language = Column(String(20), nullable=True)
     participants = Column(JSON, nullable=True)  # [{"user_id": ..., "username": ...}]
     status = Column(String(20), nullable=False, default="pending")  # pending | completed | failed
@@ -1170,6 +1175,12 @@ class DocumentStatus(str, enum.Enum):
     EXPIRED = "expired"
 
 
+class ApprovalDecision(str, enum.Enum):
+    """Document approval decision."""
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class Document(Base):
     """A block-based document (proposal, SOW, contract, etc.) within a project."""
     __tablename__ = "documents"
@@ -1207,6 +1218,7 @@ class Document(Base):
     pricing_items = relationship("PricingLineItem", back_populates="document", cascade="all, delete-orphan")
     versions = relationship("DocumentVersion", back_populates="document", cascade="all, delete-orphan")
     chat_messages = relationship("DocumentChatMessage", back_populates="document", cascade="all, delete-orphan")
+    approvals = relationship("DocumentApproval", back_populates="document", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_document_session", "session_id"),
@@ -1289,6 +1301,7 @@ class DocumentRecipient(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     document = relationship("Document", back_populates="recipients")
+    approval = relationship("DocumentApproval", back_populates="recipient", uselist=False, cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_docrecip_document", "document_id"),
@@ -1486,4 +1499,26 @@ class Feedback(Base):
         Index("idx_feedback_type", "feedback_type"),
         Index("idx_feedback_read", "is_read"),
         Index("idx_feedback_created", "created_at"),
+    )
+
+
+class DocumentApproval(Base):
+    """Records an approval or rejection decision by a document recipient."""
+    __tablename__ = "document_approvals"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+    recipient_id = Column(UUID(as_uuid=True), ForeignKey("document_recipients.id", ondelete="CASCADE"), nullable=False)
+
+    decision = Column(String(20), nullable=False)
+    reason = Column(Text, nullable=True)
+
+    decided_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    document = relationship("Document", back_populates="approvals")
+    recipient = relationship("DocumentRecipient", back_populates="approval")
+
+    __table_args__ = (
+        Index("idx_docapproval_document", "document_id"),
+        Index("idx_docapproval_recipient", "recipient_id", unique=True),
     )

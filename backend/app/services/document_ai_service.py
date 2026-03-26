@@ -304,11 +304,11 @@ def _get_llm_config(db: DBSession, user: User) -> Tuple[str, Dict[str, Any]]:
     """
     Resolve the user's organization's LLM integration.
 
-    Returns (provider, config_dict) where provider is 'openai' or 'anthropic'.
+    Returns (provider, config_dict) where provider is 'openai', 'anthropic', or 'gemini'.
     Falls back to platform OpenAI key when no user integration is configured.
     Raises ValueError only when neither user nor platform key is available.
     """
-    # Try user's organization integration first
+    # Try user's organization integration first (priority: OpenAI > Anthropic > Gemini)
     if user.organization_id:
         integrations = (
             db.query(Integration)
@@ -317,13 +317,13 @@ def _get_llm_config(db: DBSession, user: User) -> Tuple[str, Dict[str, Any]]:
                 Integration.integration_type.in_([
                     IntegrationType.LLM_OPENAI,
                     IntegrationType.LLM_ANTHROPIC,
+                    IntegrationType.LLM_GEMINI,
                 ]),
                 Integration.is_active == True,
             )
             .all()
         )
 
-        # Prefer OpenAI if both are configured
         for integ in integrations:
             if integ.integration_type == IntegrationType.LLM_OPENAI:
                 config = integ.config or {}
@@ -335,6 +335,12 @@ def _get_llm_config(db: DBSession, user: User) -> Tuple[str, Dict[str, Any]]:
                 config = integ.config or {}
                 if config.get("api_key"):
                     return ("anthropic", config)
+
+        for integ in integrations:
+            if integ.integration_type == IntegrationType.LLM_GEMINI:
+                config = integ.config or {}
+                if config.get("api_key"):
+                    return ("gemini", config)
 
     # Fallback: platform OpenAI key (for free-tier users)
     platform_key = getattr(settings, "platform_openai_api_key", None) or ""
@@ -625,6 +631,12 @@ async def generate_document_content(
             response_text, model_used = await _call_anthropic(
                 config, system_prompt, messages
             )
+        elif provider == "gemini":
+            response_text, model_used = await _call_gemini(
+                config, system_prompt, messages
+            )
+        else:
+            raise ValueError(f"Unknown AI provider: {provider}")
     except Exception as e:
         logger.error(f"LLM API error ({provider}): {e}")
         raise ValueError(f"AI generation failed: {str(e)}")
@@ -720,6 +732,45 @@ async def _call_anthropic(
 
     content = response.content[0].text if response.content else ""
     return (content, model)
+
+
+async def _call_gemini(
+    config: Dict[str, Any],
+    system_prompt: str,
+    messages: List[Dict[str, str]],
+) -> Tuple[str, str]:
+    """Call Google Gemini API with the org's API key."""
+    import google.generativeai as genai
+
+    api_key = config["api_key"]
+    model_name = config.get("model", "gemini-2.0-flash")
+
+    genai.configure(api_key=api_key)
+
+    # Build Gemini chat history from messages (excluding the last user message)
+    history = []
+    for msg in messages[:-1]:
+        role = "user" if msg["role"] == "user" else "model"
+        history.append({"role": role, "parts": [msg["content"]]})
+
+    last_user_message = messages[-1]["content"] if messages else ""
+
+    model_obj = genai.GenerativeModel(
+        model_name=model_name,
+        system_instruction=system_prompt,
+    )
+
+    chat = model_obj.start_chat(history=history)
+
+    response = await asyncio.wait_for(
+        asyncio.to_thread(
+            lambda: chat.send_message(last_user_message)
+        ),
+        timeout=180,
+    )
+
+    content = response.text or ""
+    return (content, model_name)
 
 
 # ── Chat History Helpers ───────────────────────────────────────

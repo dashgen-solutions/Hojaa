@@ -50,6 +50,7 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const callDurationRef = useRef(0);
   const [participants, setParticipants] = useState<CallParticipant[]>([]);
 
   // ── Refs that mirror state so callbacks never go stale ──────────
@@ -57,6 +58,7 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
   const callInfoRef = useRef<CallInfo | null>(callInfo);
   useEffect(() => { callStateRef.current = callState; }, [callState]);
   useEffect(() => { callInfoRef.current = callInfo; }, [callInfo]);
+  useEffect(() => { callDurationRef.current = callDuration; }, [callDuration]);
 
   // ── Multiple peer connections for group calls (keyed by userId) ──
   const pcsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
@@ -64,6 +66,7 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
   const localStreamRef = useRef<MediaStream | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const callTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
   // Track which group call participants we know about
   const groupParticipantIdsRef = useRef<Set<string>>(new Set());
@@ -72,9 +75,19 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
+  /** Populated when MediaRecorder finishes — used for transcription upload from any page */
+  const [recordingUploadMeta, setRecordingUploadMeta] = useState<{
+    channelId: string | null;
+    duration: number;
+    callType: CallType;
+  } | null>(null);
+  const recordingChannelIdRef = useRef<string | null>(null);
+  const recordingCallTypeRef = useRef<CallType>('audio');
   const [isRecording, setIsRecording] = useState(false);
 
-  // Stable refs for 1:1 call element binding
+  // ── Call error (replaces browser alert()) ───────────────────────
+  const [callError, setCallError] = useState<string | null>(null);
+
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -93,6 +106,73 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
+  }, [callState]);
+
+  // 30-second timeout: if still 'calling' after 30s, the callee is likely offline/unavailable
+  useEffect(() => {
+    if (callState === 'calling') {
+      callTimeoutRef.current = setTimeout(() => {
+        if (callStateRef.current === 'calling') {
+          setCallError('User is unavailable or offline. They may not be connected right now.');
+          cleanupCall();
+          setCallState('idle');
+          setCallInfo(null);
+        }
+      }, 30_000);
+    } else {
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
+      }
+    }
+    return () => {
+      if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callState]);
+
+  // Broadcast in_call presence when call becomes active; revert to online when idle
+  useEffect(() => {
+    if (callState === 'calling' || callState === 'connected') {
+      sendWsMessage({ type: 'presence_update', status: 'in_call' });
+    } else if (callState === 'idle') {
+      sendWsMessage({ type: 'presence_update', status: 'online' });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callState]);
+
+  // When callState becomes 'connected', the CallOverlay mounts the video/audio elements.
+  // Re-attach all streams so srcObject is set AFTER the elements exist in the DOM.
+  useEffect(() => {
+    if (callState !== 'connected') return;
+    const info = callInfoRef.current;
+
+    // Local video
+    if (localStreamRef.current && localVideoRef.current) {
+      if (localVideoRef.current.srcObject !== localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
+      localVideoRef.current.play().catch(() => {});
+    }
+
+    // Remote stream for 1:1 calls
+    if (info && !info.isGroup) {
+      const rs = remoteStreamsRef.current.get(info.remoteUserId);
+      if (rs) {
+        if (info.callType === 'video' && remoteVideoRef.current) {
+          if (remoteVideoRef.current.srcObject !== rs) {
+            remoteVideoRef.current.srcObject = rs;
+          }
+          remoteVideoRef.current.play().catch(() => {});
+        }
+        if (info.callType === 'audio' && remoteAudioRef.current) {
+          if (remoteAudioRef.current.srcObject !== rs) {
+            remoteAudioRef.current.srcObject = rs;
+          }
+          remoteAudioRef.current.play().catch(() => {});
+        }
+      }
+    }
   }, [callState]);
 
   /** Clean up ALL peer connections and media streams */
@@ -123,25 +203,28 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
   const attachRemoteStream = useCallback((userId: string) => {
     const rs = remoteStreamsRef.current.get(userId);
     if (!rs) return;
-    // For 1:1 calls, attachments go to the single video/audio refs
     const info = callInfoRef.current;
     if (!info?.isGroup) {
-      if (remoteVideoRef.current) {
+      if (info?.callType === 'video' && remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = rs;
         remoteVideoRef.current.play().catch(() => {});
       }
-      if (remoteAudioRef.current) {
+      if (info?.callType === 'audio' && remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = rs;
         remoteAudioRef.current.play().catch(() => {});
       }
     }
-    // For group calls, update participants state with the stream
+    // For group calls, update participants state with the stream.
+    // Also add them if they aren't in the list yet (e.g. callee receiving offer from caller).
     setParticipants((prev) => {
       const idx = prev.findIndex((p) => p.userId === userId);
       if (idx >= 0) {
         const updated = [...prev];
         updated[idx] = { ...updated[idx], stream: rs };
         return updated;
+      }
+      if (info?.isGroup) {
+        return [...prev, { userId, userName: userId, stream: rs }];
       }
       return prev;
     });
@@ -150,12 +233,8 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
   /** Create a peer connection for a specific remote user */
   const createPeerConnection = useCallback(
     (targetUserId: string) => {
-      // Close existing PC to this user if any
       const existing = pcsRef.current.get(targetUserId);
       if (existing) existing.close();
-
-      const remoteStream = new MediaStream();
-      remoteStreamsRef.current.set(targetUserId, remoteStream);
 
       const pc = new RTCPeerConnection(ICE_SERVERS);
 
@@ -169,14 +248,14 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
         }
       };
 
+      // Best-practice: use event.streams[0] directly — it is guaranteed to contain
+      // ALL tracks for this peer (audio + video together) once the SDP is negotiated.
       pc.ontrack = (e) => {
-        if (e.track) {
-          const existingTrack = remoteStream.getTracks().find((t) => t.id === e.track.id);
-          if (!existingTrack) {
-            remoteStream.addTrack(e.track);
-          }
+        const stream = e.streams[0];
+        if (stream) {
+          remoteStreamsRef.current.set(targetUserId, stream);
+          attachRemoteStream(targetUserId);
         }
-        attachRemoteStream(targetUserId);
       };
 
       pc.oniceconnectionstatechange = () => {
@@ -187,7 +266,6 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
         if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
           const info = callInfoRef.current;
           if (info && !info.isGroup) {
-            // 1:1: end the whole call
             sendWsMessage({
               type: 'call_hangup',
               target_user_id: info.remoteUserId,
@@ -197,7 +275,6 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
             setCallState('idle');
             setCallInfo(null);
           } else {
-            // Group: just remove this participant's PC
             pc.close();
             pcsRef.current.delete(targetUserId);
             remoteStreamsRef.current.delete(targetUserId);
@@ -212,18 +289,50 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
     [sendWsMessage, attachRemoteStream, cleanupCall],
   );
 
-  /** Get user media (mic + optional camera) */
+  /** Get user media (mic + optional camera) with resilient fallback */
   const getLocalMedia = useCallback(async (callType: CallType) => {
-    if (localStreamRef.current) return localStreamRef.current;
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: callType === 'video',
-    });
-    localStreamRef.current = stream;
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = stream;
+    if (localStreamRef.current) {
+      return localStreamRef.current;
     }
-    return stream;
+    // Attempt 1: ideal constraints
+    const videoConstraints: MediaTrackConstraints = {
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    };
+
+    const attempts: MediaStreamConstraints[] = callType === 'video'
+      ? [
+          { audio: true, video: videoConstraints },  // ideal constraints
+          { audio: true, video: true },               // basic video
+          { audio: true, video: false },              // audio-only fallback
+        ]
+      : [
+          { audio: true, video: false },
+        ];
+
+    let lastErr: unknown;
+    for (const constraints of attempts) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        localStreamRef.current = stream;
+        const hasVideo = stream.getVideoTracks().length > 0;
+        if (callType === 'video' && !hasVideo) {
+          // Warn but don't fail — audio-only will be used
+          console.warn('Camera unavailable; proceeding with audio only.');
+          setCallError('Camera unavailable. Joining with audio only.');
+        }
+        if (localVideoRef.current && hasVideo) {
+          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.play().catch(() => {});
+        }
+        return stream;
+      } catch (err) {
+        lastErr = err;
+        console.warn('getUserMedia attempt failed:', constraints, err);
+      }
+    }
+    // All attempts failed
+    throw new Error(`Cannot access microphone: ${lastErr instanceof Error ? lastErr.message : lastErr}`);
   }, []);
 
   // ────────────── 1:1 Call Methods ──────────────
@@ -246,6 +355,18 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
         setCallState('calling');
         callStateRef.current = 'calling';
 
+        // Pre-initialize media to ensure camera/mic access works
+        try {
+          await getLocalMedia(callType);
+        } catch (err) {
+          console.error('Failed to get local media:', err);
+          setCallError(`Cannot access ${callType === 'video' ? 'camera/microphone' : 'microphone'}. Check browser permissions and try again.`);
+          cleanupCall();
+          setCallState('idle');
+          setCallInfo(null);
+          return;
+        }
+
         sendWsMessage({
           type: 'call_initiate',
           target_user_id: targetUserId,
@@ -260,7 +381,7 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
         setCallInfo(null);
       }
     },
-    [sendWsMessage, cleanupCall],
+    [sendWsMessage, cleanupCall, getLocalMedia],
   );
 
   /** Accept an incoming call */
@@ -269,6 +390,25 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
       const info = callInfoRef.current;
       if (!info || callStateRef.current !== 'ringing') return;
       try {
+        // Pre-initialize media before accepting
+        try {
+          await getLocalMedia(info.callType);
+        } catch (err) {
+          console.error('Failed to get local media:', err);
+          setCallError(`Cannot access ${info.callType === 'video' ? 'camera/microphone' : 'microphone'}. Check browser permissions.`);
+          // Reject the call if we can't get media at all
+          sendWsMessage({
+            type: 'call_reject',
+            caller_id: info.remoteUserId,
+            channel_id: info.channelId,
+            reason: 'media_error',
+          });
+          cleanupCall();
+          setCallState('idle');
+          setCallInfo(null);
+          return;
+        }
+
         sendWsMessage({
           type: 'call_accept',
           caller_id: callerUserId,
@@ -283,7 +423,7 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
         setCallInfo(null);
       }
     },
-    [sendWsMessage, cleanupCall],
+    [sendWsMessage, cleanupCall, getLocalMedia],
   );
 
   /** Reject an incoming call */
@@ -387,6 +527,12 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
 
         groupParticipantIdsRef.current.add(callerUserId);
 
+        // Add the caller to participants immediately so the callee's UI shows them
+        setParticipants((prev) => {
+          if (prev.some((p) => p.userId === callerUserId)) return prev;
+          return [...prev, { userId: callerUserId, userName: info.remoteUserName, stream: null }];
+        });
+
         setCallState('connected');
         callStateRef.current = 'connected';
 
@@ -419,7 +565,14 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
   const toggleVideo = useCallback(() => {
     if (localStreamRef.current) {
       const videoTracks = localStreamRef.current.getVideoTracks();
-      videoTracks.forEach((t) => (t.enabled = !t.enabled));
+      if (videoTracks.length === 0) {
+        console.warn('No video tracks available to toggle');
+        return;
+      }
+      videoTracks.forEach((t) => {
+        t.enabled = !t.enabled;
+        console.log(`Video track ${t.id} enabled: ${t.enabled}`);
+      });
       setIsVideoOff((v) => !v);
     }
   }, []);
@@ -474,7 +627,11 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
         // Group call: a participant accepted — set up PC with them
         groupParticipantIdsRef.current.add(calleeId);
         setParticipants((prev) => {
-          if (prev.some((p) => p.userId === calleeId)) return prev;
+          if (prev.some((p) => p.userId === calleeId)) {
+            return prev.map((p) =>
+              p.userId === calleeId ? { ...p, userName: calleeName || calleeId } : p,
+            );
+          }
           return [...prev, { userId: calleeId, userName: calleeName || calleeId, stream: null }];
         });
 
@@ -517,7 +674,6 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-
         sendWsMessage({
           type: 'webrtc_offer',
           target_user_id: info.remoteUserId,
@@ -525,6 +681,7 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
         });
       } catch (err) {
         console.error('Failed to create offer after call accepted:', err);
+        setCallError('Failed to establish connection. Please try again.');
         cleanupCall();
         setCallState('idle');
         setCallInfo(null);
@@ -575,19 +732,40 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
       const fromUserId = msg.from_user_id as string;
       const sdp = msg.sdp as RTCSessionDescriptionInit;
       const info = callInfoRef.current;
-      if (!info) return;
+      if (!info) {
+        console.error('Received offer but no call info');
+        return;
+      }
 
-      let pc = pcsRef.current.get(fromUserId);
-      if (!pc) {
-        pc = createPeerConnection(fromUserId);
-        if (!localStreamRef.current) {
-          const stream = await getLocalMedia(info.callType);
-          stream.getTracks().forEach((track) => pc!.addTrack(track, stream));
-        } else {
-          localStreamRef.current.getTracks().forEach((track) => pc!.addTrack(track, localStreamRef.current!));
+      // For group calls: ensure the offer sender is in the participants list
+      if (info.isGroup) {
+        setParticipants((prev) => {
+          if (prev.some((p) => p.userId === fromUserId)) return prev;
+          return [...prev, { userId: fromUserId, userName: fromUserId, stream: null }];
+        });
+      }
+
+      // Always create a fresh PC for this offer to avoid stale state
+      const pc = createPeerConnection(fromUserId);
+
+      // Ensure local media is ready before adding tracks
+      let stream = localStreamRef.current;
+      if (!stream) {
+        try {
+          stream = await getLocalMedia(info.callType);
+        } catch (err) {
+          console.error('Callee: failed to get local media for offer:', err);
+          setCallError('Cannot access microphone. Check browser permissions.');
+          return;
         }
       }
 
+      // Add ALL local tracks to this peer connection
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream!);
+      });
+
+      // Set remote description (offer), create and send answer
       await pc.setRemoteDescription(new RTCSessionDescription(sdp));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
@@ -597,7 +775,7 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
         sdp: answer,
       });
 
-      // Apply any pending ICE candidates for this user
+      // Apply any ICE candidates that arrived before the offer
       const pending = pendingCandidatesRef.current.get(fromUserId) || [];
       for (const candidate of pending) {
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
@@ -613,8 +791,13 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
       const fromUserId = msg.from_user_id as string;
       const sdp = msg.sdp as RTCSessionDescriptionInit;
       const pc = pcsRef.current.get(fromUserId);
-      if (!pc) return;
+      if (!pc) {
+        console.error(`Caller: received answer from ${fromUserId} but no peer connection exists`);
+        return;
+      }
+      console.log(`Caller: received answer from ${fromUserId}, setting remote description`);
       await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+      console.log('Caller: remote description set successfully');
     },
     [],
   );
@@ -646,7 +829,10 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
 
       groupParticipantIdsRef.current.add(userId);
       setParticipants((prev) => {
-        if (prev.some((p) => p.userId === userId)) return prev;
+        if (prev.some((p) => p.userId === userId)) {
+          // Update userName if we only had userId as placeholder
+          return prev.map((p) => (p.userId === userId ? { ...p, userName } : p));
+        }
         return [...prev, { userId, userName, stream: null }];
       });
 
@@ -697,6 +883,8 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
   /** Start recording all call audio into a single blob */
   const startRecording = useCallback(() => {
     try {
+      recordingChannelIdRef.current = callInfoRef.current?.channelId ?? null;
+      recordingCallTypeRef.current = callInfoRef.current?.callType ?? 'audio';
       const audioCtx = new AudioContext();
       const dest = audioCtx.createMediaStreamDestination();
 
@@ -732,6 +920,11 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
 
       recorder.onstop = () => {
         const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+        setRecordingUploadMeta({
+          channelId: recordingChannelIdRef.current,
+          duration: callDurationRef.current,
+          callType: recordingCallTypeRef.current,
+        });
         setRecordingBlob(blob);
         recordedChunksRef.current = [];
       };
@@ -755,12 +948,17 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
   /** Clear the recorded blob */
   const clearRecording = useCallback(() => {
     setRecordingBlob(null);
+    setRecordingUploadMeta(null);
     recordedChunksRef.current = [];
   }, []);
+
+  const clearCallError = useCallback(() => setCallError(null), []);
 
   return {
     callState,
     callInfo,
+    callError,
+    clearCallError,
     isMuted,
     isVideoOff,
     callDuration,
@@ -771,6 +969,7 @@ export function useWebRTCCall({ currentUserId, currentUserName, sendWsMessage }:
     // Recording
     isRecording,
     recordingBlob,
+    recordingUploadMeta,
     startRecording,
     stopRecording,
     clearRecording,

@@ -1,7 +1,10 @@
 """
 Authentication & Enterprise API routes.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+import shutil
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from uuid import uuid4, UUID
@@ -204,6 +207,9 @@ async def get_current_user_info(
         "organization_id": str(current_user.organization_id) if current_user.organization_id else None,
         "org_role": current_user.org_role.value if hasattr(current_user.org_role, 'value') else str(current_user.org_role),
         "job_title": current_user.job_title,
+        "custom_status": getattr(current_user, "custom_status", None),
+        "status_emoji": getattr(current_user, "status_emoji", None),
+        "avatar_url": getattr(current_user, "avatar_url", None),
         "created_at": current_user.created_at.isoformat(),
     }
     # Include organization details if user belongs to one
@@ -227,6 +233,93 @@ async def get_current_user_info(
     result.update(usage_info)
 
     return result
+
+
+class UpdateMeRequest(BaseModel):
+    """Partial profile update (job title). Status is updated via /api/messaging/status or Profile UI."""
+    job_title: Optional[str] = None
+
+
+@router.patch("/me")
+async def update_current_user_profile(
+    body: UpdateMeRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Update basic profile fields."""
+    if body.job_title is not None:
+        current_user.job_title = body.job_title or None
+    db.commit()
+    db.refresh(current_user)
+    return {
+        "id": str(current_user.id),
+        "email": current_user.email,
+        "username": current_user.username,
+        "job_title": current_user.job_title,
+        "custom_status": getattr(current_user, "custom_status", None),
+        "status_emoji": getattr(current_user, "status_emoji", None),
+        "avatar_url": getattr(current_user, "avatar_url", None),
+    }
+
+
+def _avatar_dir() -> Path:
+    return Path(__file__).resolve().parents[3] / "uploads" / "avatars"
+
+
+@router.post("/me/avatar")
+async def upload_my_avatar(
+    avatar: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Upload or replace profile picture. Served at /uploads/avatars/{user_id}.ext"""
+    ct = (avatar.content_type or "").lower()
+    if ct not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
+        raise HTTPException(status_code=400, detail="Use a JPEG, PNG, WebP, or GIF image")
+
+    ext_map = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+        "image/gif": ".gif",
+    }
+    ext = ext_map[ct]
+    uid = str(current_user.id)
+    av_dir = _avatar_dir()
+    av_dir.mkdir(parents=True, exist_ok=True)
+    for p in av_dir.glob(f"{uid}.*"):
+        try:
+            p.unlink()
+        except OSError:
+            pass
+
+    dest = av_dir / f"{uid}{ext}"
+    with dest.open("wb") as buf:
+        shutil.copyfileobj(avatar.file, buf)
+
+    current_user.avatar_url = f"/uploads/avatars/{uid}{ext}"
+    db.commit()
+    db.refresh(current_user)
+    return {"avatar_url": current_user.avatar_url}
+
+
+@router.delete("/me/avatar")
+async def delete_my_avatar(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Remove profile picture."""
+    uid = str(current_user.id)
+    av_dir = _avatar_dir()
+    if av_dir.is_dir():
+        for p in av_dir.glob(f"{uid}.*"):
+            try:
+                p.unlink()
+            except OSError:
+                pass
+    current_user.avatar_url = None
+    db.commit()
+    return {"avatar_url": None}
 
 
 @router.post("/logout")

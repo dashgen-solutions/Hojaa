@@ -25,6 +25,11 @@ interface User {
   organization_id: string | null;
   org_role: string | null; // owner | admin | member
   job_title: string | null;
+  /** Slack-style status (also returned from /api/messaging/status) */
+  custom_status?: string | null;
+  status_emoji?: string | null;
+  /** Path e.g. /uploads/avatars/... — prefix with API_URL for <img src> */
+  avatar_url?: string | null;
   created_at: string;
   organization?: Organization | null;
   has_own_api_key?: boolean;

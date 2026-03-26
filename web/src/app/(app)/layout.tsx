@@ -4,12 +4,14 @@ import { useState } from "react";
 import AppSidebar from "@/components/layout/AppSidebar";
 import AppHeader from "@/components/layout/AppHeader";
 import APIKeySetupDialog from "@/components/onboarding/APIKeySetupDialog";
+import { MessagingConnectionProvider } from "@/contexts/MessagingConnectionContext";
 
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
+    <MessagingConnectionProvider>
     <div className="flex h-screen w-screen overflow-hidden bg-neutral-50 dark:bg-[#060606] transition-colors">
       {/* One-time API key setup prompt for new users */}
       <APIKeySetupDialog />
@@ -38,5 +40,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
     </div>
+    </MessagingConnectionProvider>
   );
 }

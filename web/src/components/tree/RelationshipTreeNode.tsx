@@ -51,7 +51,20 @@ interface RelationshipTreeNodeProps {
   teamMembers?: { id: string; name: string; avatar_color?: string }[];
 }
 
-const CHILD_SLOT_WIDTH = 400;
+const NODE_BASE_WIDTH = 400; // Width of a single node card slot
+const NODE_GAP = 24; // Gap between sibling subtrees
+
+/**
+ * Recursively compute how many "leaf slots" a subtree occupies.
+ * A collapsed or childless node = 1 slot.
+ * An expanded node = sum of its children's slots.
+ */
+function getSubtreeSlots(node: TreeNodeData): number {
+  if (!node.isExpanded || !node.children || node.children.length === 0) {
+    return 1;
+  }
+  return node.children.reduce((sum, child) => sum + getSubtreeSlots(child), 0);
+}
 
 export default function RelationshipTreeNode({
   node,
@@ -904,11 +917,19 @@ export default function RelationshipTreeNode({
         <div className="relative mt-6 animate-fade-in-up">
           {/* SVG Orthogonal Connectors */}
           {(() => {
-            const childCount = node.children!.length;
+            const children = node.children!;
+            const childCount = children.length;
             const lineColor = "#e2e2e2";
             const svgHeight = 56;
             const midY = 22;
             const r = 8;
+
+            // Compute per-child widths based on subtree size
+            const childSlots = children.map(getSubtreeSlots);
+            const childWidths = childSlots.map(
+              (slots) => slots * NODE_BASE_WIDTH + (slots - 1) * NODE_GAP
+            );
+            const totalWidth = childWidths.reduce((a, b) => a + b, 0) + (childCount - 1) * NODE_GAP;
 
             if (childCount === 1) {
               return (
@@ -926,17 +947,23 @@ export default function RelationshipTreeNode({
               );
             }
 
-            const svgWidth = childCount * CHILD_SLOT_WIDTH;
-            const centerX = svgWidth / 2;
+            // Calculate center-X of each child within the total width
+            const childCenters: number[] = [];
+            let cursor = 0;
+            for (let i = 0; i < childCount; i++) {
+              childCenters.push(cursor + childWidths[i] / 2);
+              cursor += childWidths[i] + NODE_GAP;
+            }
+            const centerX = totalWidth / 2;
 
             return (
               <svg
                 className="absolute left-1/2 z-0 pointer-events-none"
                 style={{
                   top: 0,
-                  width: svgWidth,
+                  width: totalWidth,
                   height: svgHeight,
-                  marginLeft: -svgWidth / 2,
+                  marginLeft: -totalWidth / 2,
                 }}
                 overflow="visible"
               >
@@ -948,8 +975,8 @@ export default function RelationshipTreeNode({
                 />
 
                 {/* Child branches */}
-                {node.children!.map((child, index) => {
-                  const childX = (index + 0.5) * CHILD_SLOT_WIDTH;
+                {children.map((child, index) => {
+                  const childX = childCenters[index];
                   const dx = childX - centerX;
 
                   if (Math.abs(dx) < 1) {
@@ -986,31 +1013,42 @@ export default function RelationshipTreeNode({
           })()}
 
           {/* Children Nodes */}
-          <div
-            className="flex items-start"
-            style={{ width: `${node.children!.length * CHILD_SLOT_WIDTH}px`, marginTop: `${56}px` }}
-          >
-            {node.children!.map((child, index) => (
+          {(() => {
+            const children = node.children!;
+            const childSlots = children.map(getSubtreeSlots);
+            const childWidths = childSlots.map(
+              (slots) => slots * NODE_BASE_WIDTH + (slots - 1) * NODE_GAP
+            );
+            const totalWidth = childWidths.reduce((a, b) => a + b, 0) + (children.length - 1) * NODE_GAP;
+
+            return (
               <div
-                key={child.id}
-                className="relative animate-fade-in-up flex justify-center"
-                style={{ width: `${CHILD_SLOT_WIDTH}px`, animationDelay: `${index * 80}ms` }}
+                className="flex items-start"
+                style={{ width: `${totalWidth}px`, marginTop: `${56}px`, gap: `${NODE_GAP}px` }}
               >
-                <RelationshipTreeNode
-                  node={child}
-                  sessionId={sessionId}
-                  onToggle={onToggle}
-                  onExpand={onExpand}
-                  onNodeClick={onNodeClick}
-                  onUpdate={onUpdate}
-                  selectedNodeId={selectedNodeId}
-                  isRoot={false}
-                  readOnly={readOnly}
-                  teamMembers={teamMembers}
-                />
+                {children.map((child, index) => (
+                  <div
+                    key={child.id}
+                    className="relative animate-fade-in-up flex justify-center flex-shrink-0"
+                    style={{ width: `${childWidths[index]}px`, animationDelay: `${index * 80}ms` }}
+                  >
+                    <RelationshipTreeNode
+                      node={child}
+                      sessionId={sessionId}
+                      onToggle={onToggle}
+                      onExpand={onExpand}
+                      onNodeClick={onNodeClick}
+                      onUpdate={onUpdate}
+                      selectedNodeId={selectedNodeId}
+                      isRoot={false}
+                      readOnly={readOnly}
+                      teamMembers={teamMembers}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </div>
       )}
     </div>

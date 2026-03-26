@@ -19,13 +19,22 @@ export const MermaidBlockSpec = createReactBlockSpec(
     type: 'mermaid' as const,
     propSchema: {
       code: { default: '' },
+      width: { default: 100 },
     },
     content: 'none',
   },
   {
     render: (props) => {
       const code = props.block.props.code || '';
+      const width = props.block.props.width ?? 100;
       const [editing, setEditing] = useState(false);
+
+      const handleResize = (newWidth: number) => {
+        const clamped = Math.max(25, Math.min(100, newWidth));
+        props.editor.updateBlock(props.block, {
+          props: { width: clamped },
+        } as any);
+      };
 
       if (editing) {
         return (
@@ -66,12 +75,28 @@ export const MermaidBlockSpec = createReactBlockSpec(
       }
 
       return (
-        <div
-          className="my-3 cursor-pointer"
-          onDoubleClick={() => setEditing(true)}
-          title="Double-click to edit diagram code"
-        >
-          <MermaidDiagram code={code} />
+        <div className="my-3 group relative" style={{ maxWidth: `${width}%` }}>
+          <div
+            className="cursor-pointer"
+            onDoubleClick={() => setEditing(true)}
+            title="Double-click to edit diagram code"
+          >
+            <MermaidDiagram code={code} />
+          </div>
+          {/* Resize controls */}
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full px-2 py-0.5 shadow-sm z-10">
+            <button
+              onClick={() => handleResize(width - 10)}
+              className="text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 px-1 font-bold"
+              title="Shrink diagram"
+            >−</button>
+            <span className="text-[10px] text-neutral-400 min-w-[2.5rem] text-center">{width}%</span>
+            <button
+              onClick={() => handleResize(width + 10)}
+              className="text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 px-1 font-bold"
+              title="Grow diagram"
+            >+</button>
+          </div>
         </div>
       );
     },

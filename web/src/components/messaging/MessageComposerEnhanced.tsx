@@ -307,10 +307,12 @@ export default function MessageComposer({
 
         {/* Emoji Picker */}
         {showEmojiPicker && (
-          <EmojiPicker
-            onSelect={insertEmoji}
-            onClose={() => setShowEmojiPicker(false)}
-          />
+          <div className="absolute bottom-full right-0 mb-2 z-[100]">
+            <EmojiPicker
+              onSelect={insertEmoji}
+              onClose={() => setShowEmojiPicker(false)}
+            />
+          </div>
         )}
 
         <div className="flex items-end gap-2">
@@ -348,9 +350,13 @@ export default function MessageComposer({
                 <AtSymbolIcon className="w-4 h-4" />
               </button>
               <button
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowEmojiPicker(!showEmojiPicker);
+                }}
                 className="p-1 rounded text-neutral-400 dark:text-gray-500 hover:text-yellow-400 hover:bg-neutral-100 dark:hover:bg-[#383a3f] transition-colors"
                 title="Emoji"
+                id="emoji-trigger-button"
               >
                 <FaceSmileIcon className="w-4 h-4" />
               </button>

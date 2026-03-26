@@ -21,6 +21,7 @@ services:
     build: .
     ports:
       - "8001:8000"
+    # Compose loads ./.env automatically for ${SMTP_*} substitution when you run from this folder.
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/hojaa_db
       OPENAI_API_KEY: ${OPENAI_API_KEY}

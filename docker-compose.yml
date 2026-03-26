@@ -52,6 +52,8 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
       SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Hojaa}
+      # Required for Gmail/Outlook on 587 (STARTTLS). Use false + port 465 for SMTP_SSL (e.g. GoDaddy).
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-admin@hojaa.com}
       PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-}
     depends_on:

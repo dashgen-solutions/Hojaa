@@ -19,6 +19,7 @@ from sqlalchemy import func, desc
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth import get_current_user
+from app.core.config import settings
 from app.core.logger import get_logger
 from app.db.session import get_db
 from app.models.database import (
@@ -26,8 +27,9 @@ from app.models.database import (
     Session as SessionModel, Node, Card, TeamMember,
     Document, DocumentVersion, DocumentTemplate,
     DocumentRecipient, PricingLineItem, DocumentStatus,
-    DocumentChatMessage,
+    DocumentChatMessage, DocumentApproval,
 )
+from app.services.notification_service import notification_service
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -1153,6 +1155,62 @@ def share_document(
     }
 
 
+@router.post("/{document_id}/recipients")
+def add_recipient(
+    document_id: str,
+    body: RecipientInput,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Add a single recipient to a document."""
+    doc = _verify_document_access(db, document_id, current_user)
+
+    name = body.name.strip()
+    email = body.email.strip().lower()
+    role = (body.role or "viewer").strip().lower()
+
+    if not name:
+        raise HTTPException(status_code=400, detail="Recipient name is required")
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Valid recipient email is required")
+    if role not in {"viewer", "approver"}:
+        raise HTTPException(status_code=400, detail="Role must be either 'viewer' or 'approver'")
+
+    existing = (
+        db.query(DocumentRecipient)
+        .filter(
+            DocumentRecipient.document_id == doc.id,
+            func.lower(DocumentRecipient.email) == email,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Recipient already exists for this document")
+
+    recipient = DocumentRecipient(
+        document_id=doc.id,
+        name=name,
+        email=email,
+        role=role,
+        access_token=secrets.token_urlsafe(32),
+    )
+    db.add(recipient)
+    db.commit()
+    db.refresh(recipient)
+
+    return {
+        "id": str(recipient.id),
+        "name": recipient.name,
+        "email": recipient.email,
+        "role": recipient.role,
+        "access_token": recipient.access_token,
+        "sent_at": recipient.sent_at.isoformat() if recipient.sent_at else None,
+        "viewed_at": recipient.viewed_at.isoformat() if recipient.viewed_at else None,
+        "completed_at": recipient.completed_at.isoformat() if recipient.completed_at else None,
+        "created_at": recipient.created_at.isoformat() if recipient.created_at else None,
+    }
+
+
 @router.delete("/{document_id}/recipients/{recipient_id}")
 def remove_recipient(
     document_id: str,
@@ -1185,7 +1243,7 @@ def list_recipients(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List recipients with their status."""
+    """List recipients with their status and approval decision (if any)."""
     _verify_document_access(db, document_id, current_user)
 
     recipients = (
@@ -1195,8 +1253,19 @@ def list_recipients(
         .all()
     )
 
-    return [
-        {
+    recipient_ids = [r.id for r in recipients]
+    approvals_map = {}
+    if recipient_ids:
+        approvals = (
+            db.query(DocumentApproval)
+            .filter(DocumentApproval.recipient_id.in_(recipient_ids))
+            .all()
+        )
+        approvals_map = {a.recipient_id: a for a in approvals}
+
+    result = []
+    for r in recipients:
+        entry = {
             "id": str(r.id),
             "name": r.name,
             "email": r.email,
@@ -1206,9 +1275,18 @@ def list_recipients(
             "completed_at": r.completed_at.isoformat() if r.completed_at else None,
             "access_token": r.access_token,
             "created_at": r.created_at.isoformat() if r.created_at else None,
+            "approval": None,
         }
-        for r in recipients
-    ]
+        a = approvals_map.get(r.id)
+        if a:
+            entry["approval"] = {
+                "decision": a.decision,
+                "reason": a.reason,
+                "decided_at": a.decided_at.isoformat() if a.decided_at else None,
+            }
+        result.append(entry)
+
+    return result
 
 
 @router.post("/{document_id}/send")
@@ -1217,7 +1295,7 @@ def send_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Mark document as sent and update sent_at timestamps on document and recipients."""
+    """Mark document as sent, update timestamps, and dispatch recipient emails via SMTP."""
     doc = _verify_document_access(db, document_id, current_user)
 
     now = datetime.utcnow()
@@ -1235,14 +1313,75 @@ def send_document(
         if not r.sent_at:
             r.sent_at = now
 
+    # Send recipient emails (best-effort; never fail the send action due to SMTP issues).
+    # Use per-recipient access token links so each recipient gets a unique trackable URL.
+    emails_attempted = 0
+    emails_sent = 0
+    smtp_errors: List[str] = []
+    frontend_base = (
+        settings.cors_origins[0].rstrip("/")
+        if isinstance(settings.cors_origins, list) and settings.cors_origins
+        else "http://localhost:3000"
+    )
+    sender_name = current_user.username or "A team member"
+    doc_title = (doc.title or "Untitled Document").strip()
+
+    for r in recipients:
+        if not r.email:
+            continue
+        recipient_link = f"{frontend_base}/documents/shared/{r.access_token}"
+        recipient_name = (r.name or "there").strip()
+        subject = f"[Hojaa] {doc_title} shared with you"
+        html = f"""
+<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;">
+  <h2 style="margin:0 0 12px 0;color:#111827;">Document shared with you</h2>
+  <p style="margin:0 0 10px 0;color:#374151;">Hi {recipient_name},</p>
+  <p style="margin:0 0 10px 0;color:#374151;">
+    <strong>{sender_name}</strong> shared a document with you from Hojaa.
+  </p>
+  <div style="margin:14px 0;padding:12px 14px;border:1px solid #E5E7EB;border-radius:10px;background:#F9FAFB;">
+    <div style="font-size:12px;color:#6B7280;margin-bottom:4px;">Document</div>
+    <div style="font-size:16px;font-weight:700;color:#111827;">{doc_title}</div>
+    <div style="font-size:12px;color:#6B7280;margin-top:4px;">Role: {r.role}</div>
+  </div>
+  <a href="{recipient_link}" style="display:inline-block;margin-top:8px;background:#111827;color:#FFFFFF;text-decoration:none;padding:10px 14px;border-radius:8px;font-weight:600;">
+    Open document
+  </a>
+  <p style="margin-top:14px;font-size:12px;color:#6B7280;">
+    If the button does not work, copy this link:<br />
+    <span style="word-break:break-all;color:#374151;">{recipient_link}</span>
+  </p>
+</div>
+"""
+        emails_attempted += 1
+        try:
+            ok, err_msg = notification_service.send_email(subject, html, [r.email])
+            if ok:
+                emails_sent += 1
+            elif err_msg:
+                smtp_errors.append(f"{r.email}: {err_msg}")
+                logger.warning("Document send email failed for %s: %s", r.email, err_msg)
+        except Exception as e:
+            logger.warning(f"Failed to send document email to {r.email}: {e}")
+            smtp_errors.append(f"{r.email}: {e}")
+
     db.commit()
     db.refresh(doc)
+
+    smtp_error_detail = None
+    if smtp_errors:
+        smtp_error_detail = "; ".join(smtp_errors[:5])
+        if len(smtp_errors) > 5:
+            smtp_error_detail += f" (+{len(smtp_errors) - 5} more)"
 
     return {
         "id": str(doc.id),
         "status": doc.status.value,
         "sent_at": doc.sent_at.isoformat(),
         "recipients_sent": len(recipients),
+        "emails_attempted": emails_attempted,
+        "emails_sent": emails_sent,
+        "smtp_error_detail": smtp_error_detail,
     }
 
 
@@ -1300,6 +1439,21 @@ def view_document_public(
 
     pricing_items = sorted((doc.pricing_items or []), key=lambda i: i.order_index)
 
+    # Include existing approval for this recipient (if approver)
+    my_approval = None
+    if recipient and recipient.role == "approver":
+        existing = (
+            db.query(DocumentApproval)
+            .filter(DocumentApproval.recipient_id == recipient.id)
+            .first()
+        )
+        if existing:
+            my_approval = {
+                "decision": existing.decision,
+                "reason": existing.reason,
+                "decided_at": existing.decided_at.isoformat() if existing.decided_at else None,
+            }
+
     return {
         "title": doc.title,
         "status": doc.status.value,
@@ -1312,6 +1466,7 @@ def view_document_public(
             "role": recipient.role if recipient else "viewer",
         },
         "pricing_items": [_serialize_line_item(i) for i in pricing_items],
+        "my_approval": my_approval,
     }
 
 
@@ -1588,40 +1743,61 @@ def _render_block_to_docx_v2(word, block: dict) -> None:
 
     elif block_type == "mermaid":
         code = props.get("code", plain_text)
-        # Styled placeholder for mermaid diagram
-        para = word.add_paragraph()
-        para.paragraph_format.space_before = Pt(8)
-        para.paragraph_format.space_after = Pt(4)
-        # Box header
-        run = para.add_run("📊 Diagram")
-        run.bold = True
-        run.font.name = "Inter"
-        run.font.size = Pt(10)
-        run.font.color.rgb = RGBColor(59, 130, 246)
+        if not code:
+            return
+        # Attempt to render the diagram as a PNG via mermaid.ink and embed it
+        png_bytes = None
+        try:
+            import base64 as _b64
+            import httpx as _httpx
+            encoded = _b64.urlsafe_b64encode(code.encode("utf-8")).decode("ascii")
+            url = f"https://mermaid.ink/img/{encoded}?type=png&bgColor=white"
+            resp = _httpx.get(url, timeout=15.0, follow_redirects=True)
+            if resp.status_code == 200 and resp.headers.get("content-type", "").startswith("image/"):
+                png_bytes = resp.content
+        except Exception:
+            pass
 
-        # Description line
-        desc_para = word.add_paragraph()
-        desc_run = desc_para.add_run("(This diagram is rendered as an interactive chart in the web editor. Below is the diagram definition.)")
-        desc_run.font.name = "Inter"
-        desc_run.font.size = Pt(8)
-        desc_run.font.italic = True
-        desc_run.font.color.rgb = RGBColor(156, 163, 175)
+        if png_bytes:
+            import tempfile, os
+            from docx.shared import Inches
+            tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+            try:
+                tmp.write(png_bytes)
+                tmp.flush()
+                tmp.close()
+                width_pct = int(props.get("width", 100))
+                img_width = Inches(6.0) * width_pct / 100
+                word.add_picture(tmp.name, width=img_width)
+            finally:
+                try:
+                    os.unlink(tmp.name)
+                except OSError:
+                    pass
+        else:
+            # Fallback: diagram code as styled text
+            para = word.add_paragraph()
+            para.paragraph_format.space_before = Pt(8)
+            para.paragraph_format.space_after = Pt(4)
+            run = para.add_run("Diagram")
+            run.bold = True
+            run.font.name = "Inter"
+            run.font.size = Pt(10)
+            run.font.color.rgb = RGBColor(59, 130, 246)
 
-        # Diagram code in styled block
-        code_para = word.add_paragraph()
-        code_para.paragraph_format.space_after = Pt(8)
-        code_run = code_para.add_run(code)
-        code_run.font.name = "Courier New"
-        code_run.font.size = Pt(8)
-        code_run.font.color.rgb = RGBColor(30, 41, 59)
-        # Shading
-        pPr = code_para._element.get_or_add_pPr()
-        shading = pPr.makeelement(qn("w:shd"), {
-            qn("w:val"): "clear",
-            qn("w:color"): "auto",
-            qn("w:fill"): "EFF6FF",
-        })
-        pPr.append(shading)
+            code_para = word.add_paragraph()
+            code_para.paragraph_format.space_after = Pt(8)
+            code_run = code_para.add_run(code)
+            code_run.font.name = "Courier New"
+            code_run.font.size = Pt(8)
+            code_run.font.color.rgb = RGBColor(30, 41, 59)
+            pPr = code_para._element.get_or_add_pPr()
+            shading = pPr.makeelement(qn("w:shd"), {
+                qn("w:val"): "clear",
+                qn("w:color"): "auto",
+                qn("w:fill"): "EFF6FF",
+            })
+            pPr.append(shading)
 
     elif block_type == "table":
         # Render BlockNote table
@@ -1921,24 +2097,52 @@ def _render_block_to_pdf_v2(pdf: "FPDF", block: dict, page_w: float, list_counte
         pdf.ln(3)
 
     elif block_type == "mermaid":
-        code = _safe_text(props.get("code", plain_text))
-        pdf.ln(4)
-        # Header
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.set_text_color(59, 130, 246)
-        pdf.cell(0, 6, "Diagram", new_x="LMARGIN", new_y="NEXT")
-        # Description
-        pdf.set_font("Helvetica", "I", 7)
-        pdf.set_text_color(156, 163, 175)
-        pdf.cell(0, 4, "(Interactive chart in web editor. Diagram definition below.)", new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(1)
-        # Code block
-        pdf.set_fill_color(239, 246, 255)  # blue-50
-        pdf.set_font("Courier", "", 7)
-        pdf.set_text_color(30, 41, 59)
-        for line in code.split("\n"):
-            pdf.cell(0, 4, "  " + _safe_text(line), fill=True, new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(4)
+        code = props.get("code", plain_text)
+        if not code:
+            return
+        # Attempt to render the diagram as an actual PNG image via mermaid.ink
+        png_bytes = None
+        try:
+            import base64 as _b64
+            import httpx
+            encoded = _b64.urlsafe_b64encode(code.encode("utf-8")).decode("ascii")
+            url = f"https://mermaid.ink/img/{encoded}?type=png&bgColor=white"
+            resp = httpx.get(url, timeout=15.0, follow_redirects=True)
+            if resp.status_code == 200 and resp.headers.get("content-type", "").startswith("image/"):
+                png_bytes = resp.content
+        except Exception:
+            pass
+
+        if png_bytes:
+            import tempfile, os
+            tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+            try:
+                tmp.write(png_bytes)
+                tmp.flush()
+                tmp.close()
+                pdf.ln(4)
+                width_pct = int(props.get("width", 100))
+                img_w = page_w * width_pct / 100
+                pdf.image(tmp.name, x=pdf.l_margin, w=img_w)
+                pdf.ln(4)
+            finally:
+                try:
+                    os.unlink(tmp.name)
+                except OSError:
+                    pass
+        else:
+            # Fallback: raw code block
+            code = _safe_text(code)
+            pdf.ln(4)
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_text_color(59, 130, 246)
+            pdf.cell(0, 6, "Diagram", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_fill_color(239, 246, 255)
+            pdf.set_font("Courier", "", 7)
+            pdf.set_text_color(30, 41, 59)
+            for line in code.split("\n"):
+                pdf.cell(0, 4, "  " + _safe_text(line), fill=True, new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(4)
 
     elif block_type == "table":
         table_content = content
@@ -2055,6 +2259,7 @@ async def send_ai_chat_message(
 ):
     """Send a message to the AI assistant and auto-apply generated content to the document."""
     from app.services.document_ai_service import generate_document_content, apply_blocks_to_document
+    from app.services.ai_usage_limit_service import enforce_ai_limit
 
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
@@ -2064,6 +2269,9 @@ async def send_ai_chat_message(
     session = db.query(SessionModel).filter(SessionModel.id == doc.session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Enforce $0.10 usage limit for users on the platform key
+    enforce_ai_limit(db, current_user)
 
     try:
         result = await generate_document_content(
@@ -2186,3 +2394,221 @@ def get_document_preview(
         return HTMLResponse(content=html)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# -- Document Approvals -------------------------------------------------------
+
+
+class ApprovalRequest(BaseModel):
+    decision: str = Field(..., pattern="^(approved|rejected)$")
+    reason: Optional[str] = None
+
+
+@router.post("/view/{access_token}/approve")
+def submit_approval(
+    access_token: str,
+    body: ApprovalRequest,
+    db: Session = Depends(get_db),
+):
+    """PUBLIC endpoint — an approver submits their decision via their access token."""
+    recipient = (
+        db.query(DocumentRecipient)
+        .filter(DocumentRecipient.access_token == access_token)
+        .first()
+    )
+    if not recipient:
+        raise HTTPException(404, "Invalid access link")
+
+    if recipient.role != "approver":
+        raise HTTPException(403, "Only approvers can approve or reject a document")
+
+    doc = db.query(Document).filter(Document.id == recipient.document_id).first()
+    if not doc:
+        raise HTTPException(404, "Document not found")
+
+    if doc.expires_at and doc.expires_at < datetime.utcnow():
+        raise HTTPException(410, "This document link has expired")
+
+    existing = (
+        db.query(DocumentApproval)
+        .filter(DocumentApproval.recipient_id == recipient.id)
+        .first()
+    )
+    if existing:
+        existing.decision = body.decision
+        existing.reason = (body.reason or "").strip() or None
+        existing.decided_at = datetime.utcnow()
+    else:
+        approval = DocumentApproval(
+            document_id=doc.id,
+            recipient_id=recipient.id,
+            decision=body.decision,
+            reason=(body.reason or "").strip() or None,
+        )
+        db.add(approval)
+
+    recipient.completed_at = datetime.utcnow()
+
+    # Update document status: if all approvers have decided, mark completed
+    all_approvers = (
+        db.query(DocumentRecipient)
+        .filter(
+            DocumentRecipient.document_id == doc.id,
+            DocumentRecipient.role == "approver",
+        )
+        .all()
+    )
+    decided_count = 0
+    for ap in all_approvers:
+        has_decision = (
+            db.query(DocumentApproval)
+            .filter(DocumentApproval.recipient_id == ap.id)
+            .first()
+        )
+        if has_decision or ap.id == recipient.id:
+            decided_count += 1
+
+    if decided_count >= len(all_approvers):
+        doc.status = DocumentStatus.COMPLETED
+        doc.completed_at = datetime.utcnow()
+    elif doc.status == DocumentStatus.SENT:
+        doc.status = DocumentStatus.VIEWED
+        doc.viewed_at = doc.viewed_at or datetime.utcnow()
+
+    db.commit()
+
+    # Send notification email to the document creator
+    try:
+        from app.services.notification_service import notification_service
+
+        creator = db.query(User).filter(User.id == doc.created_by).first()
+        if creator and creator.email:
+            decision_label = "Approved" if body.decision == "approved" else "Rejected"
+            decision_color = "#059669" if body.decision == "approved" else "#DC2626"
+            reason_html = ""
+            if body.reason and body.reason.strip():
+                reason_html = f"""
+<div style="margin:16px 0;padding:14px 18px;background:#F9FAFB;border-left:4px solid {decision_color};border-radius:4px;">
+  <div style="font-size:12px;color:#6B7280;margin-bottom:4px;">Reason</div>
+  <div style="font-size:14px;color:#374151;">{body.reason.strip()}</div>
+</div>"""
+
+            email_body = f"""\
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Document:</b> {doc.title or 'Untitled Document'}
+</p>
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Reviewer:</b> {recipient.name} ({recipient.email})
+</p>
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Decision:</b>
+  <span style="color:{decision_color};font-weight:700;">{decision_label}</span>
+</p>
+{reason_html}"""
+
+            html = notification_service._hojaa_email_wrap(
+                f"Document {decision_label}", email_body,
+            )
+            notification_service.send_email(
+                subject=f"[Hojaa] {recipient.name} {decision_label.lower()} \"{doc.title}\"",
+                html_content=html,
+                recipient_emails=[creator.email],
+            )
+    except Exception as exc:
+        logger.warning(f"Failed to send approval notification email: {exc}")
+
+    return {
+        "status": "ok",
+        "decision": body.decision,
+        "reason": body.reason,
+    }
+
+
+@router.get("/{document_id}/approvals")
+def get_document_approvals(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all approval decisions for a document (author view)."""
+    doc = _verify_document_access(db, document_id, current_user)
+
+    approvals = (
+        db.query(DocumentApproval)
+        .filter(DocumentApproval.document_id == doc.id)
+        .all()
+    )
+
+    recipient_ids = [a.recipient_id for a in approvals]
+    recipients_map = {}
+    if recipient_ids:
+        recipients = db.query(DocumentRecipient).filter(DocumentRecipient.id.in_(recipient_ids)).all()
+        recipients_map = {r.id: r for r in recipients}
+
+    # Also include approver recipients who haven't decided yet
+    all_approvers = (
+        db.query(DocumentRecipient)
+        .filter(
+            DocumentRecipient.document_id == doc.id,
+            DocumentRecipient.role == "approver",
+        )
+        .all()
+    )
+    decided_ids = {a.recipient_id for a in approvals}
+
+    result = []
+    for a in approvals:
+        r = recipients_map.get(a.recipient_id)
+        result.append({
+            "id": str(a.id),
+            "recipient_id": str(a.recipient_id),
+            "recipient_name": r.name if r else "Unknown",
+            "recipient_email": r.email if r else "",
+            "decision": a.decision,
+            "reason": a.reason,
+            "decided_at": a.decided_at.isoformat() if a.decided_at else None,
+        })
+
+    for r in all_approvers:
+        if r.id not in decided_ids:
+            result.append({
+                "id": None,
+                "recipient_id": str(r.id),
+                "recipient_name": r.name,
+                "recipient_email": r.email,
+                "decision": "pending",
+                "reason": None,
+                "decided_at": None,
+            })
+
+    return result
+
+
+@router.get("/view/{access_token}/approval")
+def get_my_approval(
+    access_token: str,
+    db: Session = Depends(get_db),
+):
+    """PUBLIC endpoint — check if the current recipient has already submitted a decision."""
+    recipient = (
+        db.query(DocumentRecipient)
+        .filter(DocumentRecipient.access_token == access_token)
+        .first()
+    )
+    if not recipient:
+        raise HTTPException(404, "Invalid access link")
+
+    approval = (
+        db.query(DocumentApproval)
+        .filter(DocumentApproval.recipient_id == recipient.id)
+        .first()
+    )
+
+    if not approval:
+        return {"decision": None, "reason": None, "decided_at": None}
+
+    return {
+        "decision": approval.decision,
+        "reason": approval.reason,
+        "decided_at": approval.decided_at.isoformat() if approval.decided_at else None,
+    }

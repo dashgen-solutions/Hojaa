@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 
 // Comprehensive emoji set organized by category (Slack-style)
 const EMOJI_CATEGORIES: Record<string, { label: string; emojis: string[] }> = {
@@ -199,33 +198,6 @@ export default function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('frequent');
   const ref = useRef<HTMLDivElement>(null);
-  const anchorRef = useRef<HTMLSpanElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-
-  // Calculate position from anchor placeholder
-  useEffect(() => {
-    if (anchorRef.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
-      const pickerHeight = 360;
-      const pickerWidth = 320;
-
-      let top = rect.top - pickerHeight - 8;
-      let left = rect.left;
-
-      // If would go off-screen top, position below
-      if (top < 8) top = rect.bottom + 8;
-      // Clamp within viewport
-      if (top + pickerHeight > window.innerHeight - 8) {
-        top = window.innerHeight - pickerHeight - 8;
-      }
-      if (left + pickerWidth > window.innerWidth - 8) {
-        left = window.innerWidth - pickerWidth - 8;
-      }
-      if (left < 8) left = 8;
-
-      setPos({ top, left });
-    }
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -251,13 +223,9 @@ export default function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
   const picker = (
     <div
       ref={ref}
-      className="fixed w-80 bg-white dark:bg-[#1a1d21] border border-neutral-200 dark:border-[#383a3f] rounded-lg shadow-2xl flex flex-col"
+      className="w-80 bg-white dark:bg-[#1a1d21] border border-neutral-200 dark:border-[#383a3f] rounded-lg shadow-2xl flex flex-col"
       style={{
         maxHeight: '360px',
-        top: pos?.top ?? -9999,
-        left: pos?.left ?? -9999,
-        zIndex: 9999,
-        visibility: pos ? 'visible' : 'hidden',
       }}
     >
       {/* Search */}
@@ -339,10 +307,5 @@ export default function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
     </div>
   );
 
-  return (
-    <>
-      <span ref={anchorRef} className="absolute bottom-12 left-0 w-0 h-0 pointer-events-none opacity-0" aria-hidden />
-      {typeof document !== 'undefined' && createPortal(picker, document.body)}
-    </>
-  );
+  return picker;
 }
