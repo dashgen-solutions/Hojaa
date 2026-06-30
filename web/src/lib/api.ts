@@ -1349,6 +1349,12 @@ export interface DocumentRecipientInfo {
     reason: string | null;
     decided_at: string | null;
   } | null;
+  signature?: {
+    signer_name: string;
+    signature_type: string;
+    signed_at: string | null;
+    signature_data?: string | null;
+  } | null;
 }
 
 export interface PricingLineItemInfo {
@@ -1644,6 +1650,7 @@ export interface SharedDocumentView {
   recipient: { name: string; email: string; role: string };
   pricing_items: PricingLineItemInfo[];
   my_approval: { decision: string; reason: string | null; decided_at: string | null } | null;
+  my_signature: { signer_name: string; signature_type: string; signed_at: string | null } | null;
 }
 
 export const getSharedDocument = async (token: string): Promise<SharedDocumentView> => {
@@ -1674,6 +1681,37 @@ export const submitDocumentApproval = async (
 
 export const getDocumentApprovals = async (documentId: string): Promise<DocumentApprovalInfo[]> => {
   const response = await api.get(`/api/documents/${documentId}/approvals`);
+  return response.data;
+};
+
+// ── Document Signatures (E-Sign) ──────────────────────────────
+
+export interface DocumentSignatureInfo {
+  id: string | null;
+  recipient_id: string;
+  signer_name: string;
+  signer_email: string;
+  signature_type: 'draw' | 'typed' | null;
+  signature_data: string | null;
+  signed_at: string | null;
+}
+
+export const submitDocumentSignature = async (
+  accessToken: string,
+  signatureData: string,
+  signatureType: 'draw' | 'typed',
+  signerName: string,
+): Promise<{ status: string; signer_name: string; signed_at: string }> => {
+  const response = await api.post(`/api/documents/view/${accessToken}/sign`, {
+    signature_data: signatureData,
+    signature_type: signatureType,
+    signer_name: signerName,
+  });
+  return response.data;
+};
+
+export const getDocumentSignatures = async (documentId: string): Promise<DocumentSignatureInfo[]> => {
+  const response = await api.get(`/api/documents/${documentId}/signatures`);
   return response.data;
 };
 

@@ -27,7 +27,7 @@ from app.models.database import (
     Session as SessionModel, Node, Card, TeamMember,
     Document, DocumentVersion, DocumentTemplate,
     DocumentRecipient, PricingLineItem, DocumentStatus,
-    DocumentChatMessage, DocumentApproval,
+    DocumentChatMessage, DocumentApproval, DocumentSignature,
 )
 from app.services.notification_service import notification_service
 
@@ -1173,8 +1173,8 @@ def add_recipient(
         raise HTTPException(status_code=400, detail="Recipient name is required")
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="Valid recipient email is required")
-    if role not in {"viewer", "approver"}:
-        raise HTTPException(status_code=400, detail="Role must be either 'viewer' or 'approver'")
+    if role not in {"viewer", "approver", "signer"}:
+        raise HTTPException(status_code=400, detail="Role must be 'viewer', 'approver', or 'signer'")
 
     existing = (
         db.query(DocumentRecipient)
@@ -1255,6 +1255,7 @@ def list_recipients(
 
     recipient_ids = [r.id for r in recipients]
     approvals_map = {}
+    signatures_map = {}
     if recipient_ids:
         approvals = (
             db.query(DocumentApproval)
@@ -1262,6 +1263,12 @@ def list_recipients(
             .all()
         )
         approvals_map = {a.recipient_id: a for a in approvals}
+        sigs = (
+            db.query(DocumentSignature)
+            .filter(DocumentSignature.recipient_id.in_(recipient_ids))
+            .all()
+        )
+        signatures_map = {s.recipient_id: s for s in sigs}
 
     result = []
     for r in recipients:
@@ -1276,6 +1283,7 @@ def list_recipients(
             "access_token": r.access_token,
             "created_at": r.created_at.isoformat() if r.created_at else None,
             "approval": None,
+            "signature": None,
         }
         a = approvals_map.get(r.id)
         if a:
@@ -1283,6 +1291,14 @@ def list_recipients(
                 "decision": a.decision,
                 "reason": a.reason,
                 "decided_at": a.decided_at.isoformat() if a.decided_at else None,
+            }
+        s = signatures_map.get(r.id)
+        if s:
+            entry["signature"] = {
+                "signer_name": s.signer_name,
+                "signature_type": s.signature_type,
+                "signed_at": s.signed_at.isoformat() if s.signed_at else None,
+                "signature_data": s.signature_data,  # Include signature image for preview
             }
         result.append(entry)
 
@@ -1454,6 +1470,20 @@ def view_document_public(
                 "decided_at": existing.decided_at.isoformat() if existing.decided_at else None,
             }
 
+    my_signature = None
+    if recipient and recipient.role == "signer":
+        existing_sig = (
+            db.query(DocumentSignature)
+            .filter(DocumentSignature.recipient_id == recipient.id)
+            .first()
+        )
+        if existing_sig:
+            my_signature = {
+                "signer_name": existing_sig.signer_name,
+                "signature_type": existing_sig.signature_type,
+                "signed_at": existing_sig.signed_at.isoformat() if existing_sig.signed_at else None,
+            }
+
     return {
         "title": doc.title,
         "status": doc.status.value,
@@ -1467,6 +1497,7 @@ def view_document_public(
         },
         "pricing_items": [_serialize_line_item(i) for i in pricing_items],
         "my_approval": my_approval,
+        "my_signature": my_signature,
     }
 
 
@@ -1621,6 +1652,90 @@ def export_document_docx(
             for run in p.runs:
                 run.bold = True
         total_row.cells[5].text = f"${grand_total:,.2f}"
+
+    # ── Signatures section ──
+    signatures = (
+        db.query(DocumentSignature)
+        .filter(DocumentSignature.document_id == doc.id)
+        .order_by(DocumentSignature.signed_at)
+        .all()
+    )
+
+    if signatures:
+        word.add_page_break()
+        word.add_heading("Signatures", level=1)
+        
+        para = word.add_paragraph()
+        run = para.add_run(f"This document has been electronically signed by {len(signatures)} part{'y' if len(signatures) == 1 else 'ies'}.")
+        run.font.name = "Inter"
+        run.font.size = Pt(10)
+        run.font.color.rgb = RGBColor(75, 85, 99)
+        
+        import base64
+        import tempfile
+        import os
+        
+        for sig in signatures:
+            word.add_paragraph()  # spacing
+            
+            # Signer name
+            sig_para = word.add_paragraph()
+            sig_run = sig_para.add_run(sig.signer_name)
+            sig_run.bold = True
+            sig_run.font.name = "Inter"
+            sig_run.font.size = Pt(11)
+            sig_run.font.color.rgb = RGBColor(17, 24, 39)
+            
+            # Details
+            details_para = word.add_paragraph()
+            sig_details = [sig.signer_email]
+            if sig.signed_at:
+                sig_details.append(f"Signed on {sig.signed_at.strftime('%B %d, %Y at %I:%M %p UTC')}")
+            if sig.signature_type:
+                sig_type_label = "Hand-drawn signature" if sig.signature_type == "draw" else "Typed signature"
+                sig_details.append(sig_type_label)
+            if sig.ip_address:
+                sig_details.append(f"IP: {sig.ip_address}")
+            
+            details_run = details_para.add_run("  |  ".join(sig_details))
+            details_run.font.name = "Inter"
+            details_run.font.size = Pt(8)
+            details_run.font.color.rgb = RGBColor(107, 114, 128)
+            
+            # Signature image
+            if sig.signature_data:
+                try:
+                    # Extract base64 PNG data
+                    if sig.signature_data.startswith("data:image/png;base64,"):
+                        img_data = sig.signature_data.split(",", 1)[1]
+                    else:
+                        img_data = sig.signature_data
+                    
+                    img_bytes = base64.b64decode(img_data)
+                    
+                    # Write to temp file
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                        tmp.write(img_bytes)
+                        tmp.flush()
+                        tmp_path = tmp.name
+                    
+                    try:
+                        # Add signature image to document
+                        word.add_picture(tmp_path, width=Inches(3.5))
+                    finally:
+                        # Clean up temp file
+                        try:
+                            os.unlink(tmp_path)
+                        except:
+                            pass
+                except Exception as e:
+                    logger.warning(f"Failed to embed signature image in DOCX: {e}")
+                    err_para = word.add_paragraph()
+                    err_run = err_para.add_run("[Signature image could not be rendered]")
+                    err_run.font.name = "Inter"
+                    err_run.font.size = Pt(8)
+                    err_run.font.italic = True
+                    err_run.font.color.rgb = RGBColor(156, 163, 175)
 
     # Output
     buf = io.BytesIO()
@@ -2006,6 +2121,91 @@ def export_document_pdf(
         pdf.cell(total_label_width, 8, "Grand Total", border=1, fill=True, align="R")
         pdf.cell(col_widths[-1], 8, f"${grand_total:,.2f}", border=1, fill=True)
         pdf.ln()
+
+    # ── Signatures section ──
+    signatures = (
+        db.query(DocumentSignature)
+        .filter(DocumentSignature.document_id == doc.id)
+        .order_by(DocumentSignature.signed_at)
+        .all()
+    )
+
+    if signatures:
+        pdf.ln(12)
+        pdf.set_font("Helvetica", "B", 16)
+        pdf.set_text_color(17, 24, 39)
+        pdf.cell(0, 10, "Signatures", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(75, 85, 99)
+        pdf.cell(0, 5, f"This document has been electronically signed by {len(signatures)} part{'y' if len(signatures) == 1 else 'ies'}.", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(3)
+
+        import base64
+        import tempfile
+        import os
+
+        for sig in signatures:
+            pdf.ln(4)
+            
+            # Signer info
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_text_color(17, 24, 39)
+            pdf.cell(0, 5, sig.signer_name, new_x="LMARGIN", new_y="NEXT")
+            
+            pdf.set_font("Helvetica", "", 8)
+            pdf.set_text_color(107, 114, 128)
+            sig_details = [sig.signer_email]
+            if sig.signed_at:
+                sig_details.append(f"Signed on {sig.signed_at.strftime('%B %d, %Y at %I:%M %p UTC')}")
+            if sig.signature_type:
+                sig_type_label = "Hand-drawn signature" if sig.signature_type == "draw" else "Typed signature"
+                sig_details.append(sig_type_label)
+            if sig.ip_address:
+                sig_details.append(f"IP: {sig.ip_address}")
+            
+            pdf.cell(0, 4, "  |  ".join(sig_details), new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(2)
+
+            # Render signature image
+            if sig.signature_data:
+                try:
+                    # Extract base64 PNG data
+                    if sig.signature_data.startswith("data:image/png;base64,"):
+                        img_data = sig.signature_data.split(",", 1)[1]
+                    else:
+                        img_data = sig.signature_data
+                    
+                    img_bytes = base64.b64decode(img_data)
+                    
+                    # Write to temp file
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                        tmp.write(img_bytes)
+                        tmp_path = tmp.name
+                    
+                    try:
+                        # Add signature image to PDF (max width 80mm, maintain aspect ratio)
+                        pdf.image(tmp_path, x=pdf.l_margin, w=80)
+                        pdf.ln(2)
+                    finally:
+                        # Clean up temp file
+                        try:
+                            os.unlink(tmp_path)
+                        except:
+                            pass
+                except Exception as e:
+                    logger.warning(f"Failed to embed signature image in PDF: {e}")
+                    pdf.set_font("Helvetica", "I", 8)
+                    pdf.set_text_color(156, 163, 175)
+                    pdf.cell(0, 4, "[Signature image could not be rendered]", new_x="LMARGIN", new_y="NEXT")
+                    pdf.ln(2)
+
+            # Divider line between signatures
+            if sig != signatures[-1]:
+                pdf.set_draw_color(229, 231, 235)
+                pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+                pdf.ln(2)
 
     # Output PDF bytes
     pdf_bytes = pdf.output()
@@ -2611,4 +2811,221 @@ def get_my_approval(
         "decision": approval.decision,
         "reason": approval.reason,
         "decided_at": approval.decided_at.isoformat() if approval.decided_at else None,
+    }
+
+
+# -- Document Signatures (E-Sign) --------------------------------------------
+
+
+class SignatureRequest(BaseModel):
+    signature_data: str = Field(..., min_length=10, description="Base64 PNG data URL of the signature")
+    signature_type: str = Field("draw", pattern="^(draw|typed)$")
+    signer_name: str = Field(..., min_length=1, max_length=255)
+
+
+@router.post("/view/{access_token}/sign")
+def submit_signature(
+    access_token: str,
+    body: SignatureRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """PUBLIC endpoint — a signer submits their electronic signature via their access token."""
+    recipient = (
+        db.query(DocumentRecipient)
+        .filter(DocumentRecipient.access_token == access_token)
+        .first()
+    )
+    if not recipient:
+        raise HTTPException(404, "Invalid access link")
+
+    if recipient.role != "signer":
+        raise HTTPException(403, "Only signers can sign a document")
+
+    doc = db.query(Document).filter(Document.id == recipient.document_id).first()
+    if not doc:
+        raise HTTPException(404, "Document not found")
+
+    if doc.expires_at and doc.expires_at < datetime.utcnow():
+        raise HTTPException(410, "This document link has expired")
+
+    existing = (
+        db.query(DocumentSignature)
+        .filter(DocumentSignature.recipient_id == recipient.id)
+        .first()
+    )
+    if existing:
+        raise HTTPException(409, "You have already signed this document")
+
+    # Capture IP address from request
+    client_ip = request.client.host if request.client else None
+    # Check for forwarded IP in case of proxy/load balancer
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+
+    signature = DocumentSignature(
+        document_id=doc.id,
+        recipient_id=recipient.id,
+        signature_data=body.signature_data,
+        signature_type=body.signature_type,
+        signer_name=body.signer_name,
+        signer_email=recipient.email,
+        ip_address=client_ip,
+    )
+    db.add(signature)
+
+    recipient.completed_at = datetime.utcnow()
+
+    all_signers = (
+        db.query(DocumentRecipient)
+        .filter(
+            DocumentRecipient.document_id == doc.id,
+            DocumentRecipient.role == "signer",
+        )
+        .all()
+    )
+    signed_count = 0
+    for s in all_signers:
+        has_sig = (
+            db.query(DocumentSignature)
+            .filter(DocumentSignature.recipient_id == s.id)
+            .first()
+        )
+        if has_sig or s.id == recipient.id:
+            signed_count += 1
+
+    if signed_count >= len(all_signers):
+        doc.status = DocumentStatus.COMPLETED
+        doc.completed_at = datetime.utcnow()
+    elif doc.status == DocumentStatus.SENT:
+        doc.status = DocumentStatus.VIEWED
+        doc.viewed_at = doc.viewed_at or datetime.utcnow()
+
+    db.commit()
+
+    # Send notification email to document creator
+    try:
+        creator = db.query(User).filter(User.id == doc.created_by).first()
+        if creator and creator.email:
+            all_signed = signed_count >= len(all_signers)
+            status_text = "All parties have signed!" if all_signed else f"{signed_count}/{len(all_signers)} signatures collected"
+
+            email_body = f"""\
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Document:</b> {doc.title or 'Untitled Document'}
+</p>
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Signed by:</b> {recipient.name} ({recipient.email})
+</p>
+<p style="margin:0 0 10px;color:#6B7280;font-size:14px;line-height:1.6;">
+  <b style="color:#374151;">Status:</b>
+  <span style="color:#059669;font-weight:700;">{status_text}</span>
+</p>"""
+
+            html = notification_service._hojaa_email_wrap(
+                "Document Signed", email_body,
+            )
+            notification_service.send_email(
+                subject=f"[Hojaa] {recipient.name} signed \"{doc.title}\"",
+                html_content=html,
+                recipient_emails=[creator.email],
+            )
+    except Exception as exc:
+        logger.warning(f"Failed to send signature notification email: {exc}")
+
+    return {
+        "status": "ok",
+        "signer_name": body.signer_name,
+        "signed_at": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/{document_id}/signatures")
+def get_document_signatures(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all signature records for a document (author view)."""
+    doc = _verify_document_access(db, document_id, current_user)
+
+    signatures = (
+        db.query(DocumentSignature)
+        .filter(DocumentSignature.document_id == doc.id)
+        .all()
+    )
+
+    recipient_ids = [s.recipient_id for s in signatures]
+    recipients_map = {}
+    if recipient_ids:
+        recipients = db.query(DocumentRecipient).filter(DocumentRecipient.id.in_(recipient_ids)).all()
+        recipients_map = {r.id: r for r in recipients}
+
+    all_signers = (
+        db.query(DocumentRecipient)
+        .filter(
+            DocumentRecipient.document_id == doc.id,
+            DocumentRecipient.role == "signer",
+        )
+        .all()
+    )
+    signed_ids = {s.recipient_id for s in signatures}
+
+    result = []
+    for s in signatures:
+        r = recipients_map.get(s.recipient_id)
+        result.append({
+            "id": str(s.id),
+            "recipient_id": str(s.recipient_id),
+            "signer_name": s.signer_name,
+            "signer_email": s.signer_email,
+            "signature_type": s.signature_type,
+            "signature_data": s.signature_data,
+            "signed_at": s.signed_at.isoformat() if s.signed_at else None,
+        })
+
+    for r in all_signers:
+        if r.id not in signed_ids:
+            result.append({
+                "id": None,
+                "recipient_id": str(r.id),
+                "signer_name": r.name,
+                "signer_email": r.email,
+                "signature_type": None,
+                "signature_data": None,
+                "signed_at": None,
+            })
+
+    return result
+
+
+@router.get("/view/{access_token}/signature")
+def get_my_signature(
+    access_token: str,
+    db: Session = Depends(get_db),
+):
+    """PUBLIC endpoint — check if the current signer has already signed."""
+    recipient = (
+        db.query(DocumentRecipient)
+        .filter(DocumentRecipient.access_token == access_token)
+        .first()
+    )
+    if not recipient:
+        raise HTTPException(404, "Invalid access link")
+
+    signature = (
+        db.query(DocumentSignature)
+        .filter(DocumentSignature.recipient_id == recipient.id)
+        .first()
+    )
+
+    if not signature:
+        return {"signed": False, "signer_name": None, "signed_at": None}
+
+    return {
+        "signed": True,
+        "signer_name": signature.signer_name,
+        "signature_type": signature.signature_type,
+        "signed_at": signature.signed_at.isoformat() if signature.signed_at else None,
     }

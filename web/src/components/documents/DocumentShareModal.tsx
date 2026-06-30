@@ -32,6 +32,7 @@ interface DocumentShareModalProps {
 const STATUS_DOT: Record<string, { color: string; label: string }> = {
   approved: { color: 'bg-green-500', label: 'Approved' },
   rejected: { color: 'bg-red-500', label: 'Rejected' },
+  signed: { color: 'bg-indigo-500', label: 'Signed' },
   sent: { color: 'bg-blue-500', label: 'Sent' },
   viewed: { color: 'bg-yellow-500', label: 'Viewed' },
   completed: { color: 'bg-green-500', label: 'Completed' },
@@ -40,6 +41,7 @@ const STATUS_DOT: Record<string, { color: string; label: string }> = {
 
 function getRecipientStatus(r: DocumentRecipientInfo): string {
   if (r.approval?.decision) return r.approval.decision;
+  if (r.signature?.signed_at) return 'signed';
   if (r.completed_at) return 'completed';
   if (r.viewed_at) return 'viewed';
   if (r.sent_at) return 'sent';
@@ -64,7 +66,7 @@ export default function DocumentShareModal({
   // New recipient form
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
-  const [newRole, setNewRole] = useState<'viewer' | 'approver'>('viewer');
+  const [newRole, setNewRole] = useState<'viewer' | 'approver' | 'signer'>('viewer');
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
@@ -240,11 +242,12 @@ export default function DocumentShareModal({
           <div className="flex items-center gap-2">
             <select
               value={newRole}
-              onChange={(e) => setNewRole(e.target.value as 'viewer' | 'approver')}
+              onChange={(e) => setNewRole(e.target.value as 'viewer' | 'approver' | 'signer')}
               className="flex-1 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1.5 px-2.5 text-sm text-neutral-700 dark:text-neutral-300 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
             >
               <option value="viewer">Viewer</option>
               <option value="approver">Approver</option>
+              <option value="signer">Signer</option>
             </select>
             <button
               onClick={handleAddRecipient}
@@ -284,13 +287,15 @@ export default function DocumentShareModal({
               const status = getRecipientStatus(r);
               const dot = STATUS_DOT[status] || STATUS_DOT.pending;
               const hasApproval = !!r.approval?.decision;
+              const hasSignature = !!r.signature?.signed_at;
+              const isExpandable = hasApproval || hasSignature;
               const isExpanded = expandedId === r.id;
 
               return (
                 <div key={r.id} className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-hidden">
                   <div
-                    className={`flex items-center gap-3 px-3 py-2.5 ${hasApproval ? 'cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors' : ''}`}
-                    onClick={() => hasApproval && setExpandedId(isExpanded ? null : r.id)}
+                    className={`flex items-center gap-3 px-3 py-2.5 ${isExpandable ? 'cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors' : ''}`}
+                    onClick={() => isExpandable && setExpandedId(isExpanded ? null : r.id)}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -306,11 +311,11 @@ export default function DocumentShareModal({
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <div className="flex items-center gap-1.5">
                         <span className={`h-2 w-2 rounded-full ${dot.color}`} />
-                        <span className={`text-xs ${status === 'approved' ? 'text-green-600 dark:text-green-400 font-medium' : status === 'rejected' ? 'text-red-600 dark:text-red-400 font-medium' : 'text-neutral-500'}`}>
+                        <span className={`text-xs ${status === 'approved' ? 'text-green-600 dark:text-green-400 font-medium' : status === 'rejected' ? 'text-red-600 dark:text-red-400 font-medium' : status === 'signed' ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-neutral-500'}`}>
                           {dot.label}
                         </span>
                       </div>
-                      {hasApproval && (
+                      {isExpandable && (
                         <svg className={`h-3.5 w-3.5 text-neutral-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                         </svg>
@@ -351,6 +356,39 @@ export default function DocumentShareModal({
                         )}
                         {!r.approval.reason && (
                           <p className="text-[11px] text-neutral-400 italic">No reason provided.</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* Expanded signature detail */}
+                  {isExpanded && r.signature?.signed_at && (
+                    <div className="px-3 pb-3 border-t border-indigo-100 dark:border-indigo-900/30 bg-indigo-50/50 dark:bg-indigo-950/10">
+                      <div className="pt-2.5 space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <svg className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                          <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                            Signed by {r.signature.signer_name}
+                          </span>
+                          {r.signature.signed_at && (
+                            <span className="text-[10px] text-neutral-400 ml-auto">
+                              {new Date(r.signature.signed_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-neutral-500">
+                          {r.signature.signature_type === 'draw' ? 'Hand-drawn signature' : 'Typed signature'}
+                        </p>
+                        {/* Signature image preview */}
+                        {r.signature.signature_data && (
+                          <div className="mt-2 pt-2 border-t border-neutral-200 dark:border-neutral-700">
+                            <img
+                              src={r.signature.signature_data}
+                              alt={`Signature of ${r.signature.signer_name}`}
+                              className="h-16 max-w-full object-contain bg-white dark:bg-neutral-900 rounded border border-neutral-200 dark:border-neutral-700 p-1.5"
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
