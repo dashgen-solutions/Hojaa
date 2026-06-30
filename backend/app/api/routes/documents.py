@@ -2827,7 +2827,6 @@ class SignatureRequest(BaseModel):
 def submit_signature(
     access_token: str,
     body: SignatureRequest,
-    request: Request,
     db: Session = Depends(get_db),
 ):
     """PUBLIC endpoint — a signer submits their electronic signature via their access token."""
@@ -2857,13 +2856,6 @@ def submit_signature(
     if existing:
         raise HTTPException(409, "You have already signed this document")
 
-    # Capture IP address from request
-    client_ip = request.client.host if request.client else None
-    # Check for forwarded IP in case of proxy/load balancer
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        client_ip = forwarded_for.split(",")[0].strip()
-
     signature = DocumentSignature(
         document_id=doc.id,
         recipient_id=recipient.id,
@@ -2871,7 +2863,7 @@ def submit_signature(
         signature_type=body.signature_type,
         signer_name=body.signer_name,
         signer_email=recipient.email,
-        ip_address=client_ip,
+        ip_address=None,  # TODO: Add IP capture via middleware or X-Forwarded-For header
     )
     db.add(signature)
 

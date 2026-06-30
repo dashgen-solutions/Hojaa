@@ -24,8 +24,6 @@ from app.core.logger import get_logger
 from app.models.database import (
     Document,
     DocumentChatMessage,
-    Integration,
-    IntegrationType,
     Node,
     Session as SessionModel,
     TeamMember,
@@ -300,60 +298,7 @@ def markdown_to_blocknote(md: str) -> List[Dict[str, Any]]:
 
 # ── LLM Client Resolution ─────────────────────────────────────
 
-def _get_llm_config(db: DBSession, user: User) -> Tuple[str, Dict[str, Any]]:
-    """
-    Resolve the user's organization's LLM integration.
-
-    Returns (provider, config_dict) where provider is 'openai', 'anthropic', or 'gemini'.
-    Falls back to platform OpenAI key when no user integration is configured.
-    Raises ValueError only when neither user nor platform key is available.
-    """
-    # Try user's organization integration first (priority: OpenAI > Anthropic > Gemini)
-    if user.organization_id:
-        integrations = (
-            db.query(Integration)
-            .filter(
-                Integration.organization_id == user.organization_id,
-                Integration.integration_type.in_([
-                    IntegrationType.LLM_OPENAI,
-                    IntegrationType.LLM_ANTHROPIC,
-                    IntegrationType.LLM_GEMINI,
-                ]),
-                Integration.is_active == True,
-            )
-            .all()
-        )
-
-        for integ in integrations:
-            if integ.integration_type == IntegrationType.LLM_OPENAI:
-                config = integ.config or {}
-                if config.get("api_key"):
-                    return ("openai", config)
-
-        for integ in integrations:
-            if integ.integration_type == IntegrationType.LLM_ANTHROPIC:
-                config = integ.config or {}
-                if config.get("api_key"):
-                    return ("anthropic", config)
-
-        for integ in integrations:
-            if integ.integration_type == IntegrationType.LLM_GEMINI:
-                config = integ.config or {}
-                if config.get("api_key"):
-                    return ("gemini", config)
-
-    # Fallback: platform OpenAI key (for free-tier users)
-    platform_key = getattr(settings, "platform_openai_api_key", None) or ""
-    if platform_key:
-        logger.info(f"Using platform API key for user {user.id} (no org integration)")
-        return ("openai", {
-            "api_key": platform_key,
-            "model": "gpt-4o-mini",  # cost-effective for free tier
-        })
-
-    raise ValueError(
-        "No AI provider configured. Go to Settings > AI to add your API key."
-    )
+from app.services.llm_config_service import get_llm_config as _get_llm_config
 
 
 # ── Project Context Builder ───────────────────────────────────

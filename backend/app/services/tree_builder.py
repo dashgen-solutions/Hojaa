@@ -128,10 +128,11 @@ class AITreeBuilder:
                 self.tree_agent, user_prompt, deps=context,
                 task="tree_building", session_id=str(session_id),
                 user_id=user_id,
+                db=db,
             )
             
             # Log usage
-            logger.info(f"Token usage: {result.usage()}")
+            logger.info(f"Token usage: {result.usage}")
             
             # Get validated output
             tree_output = result.output
@@ -253,10 +254,11 @@ class AITreeBuilder:
                 task="tree_building",
                 session_id=str(parent_node.session_id),
                 user_id=user_id,
+                db=db,
             )
             
             # Log usage
-            logger.info(f"Token usage: {result.usage()}")
+            logger.info(f"Token usage: {result.usage}")
             
             # Get validated output
             sub_req_output = result.output

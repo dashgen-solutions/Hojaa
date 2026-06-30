@@ -153,10 +153,11 @@ class AIConversationFlow:
                 self.start_agent, user_prompt, deps=context,
                 task="conversation", session_id=str(node.session_id),
                 user_id=user_id,
+                db=db,
             )
             
             # Log usage
-            logger.info(f"Token usage: {result.usage()}")
+            logger.info(f"Token usage: {result.usage}")
             
             # Get validated output
             output = result.output
@@ -282,11 +283,13 @@ class AIConversationFlow:
             result = await cached_agent_run(
                 self.continue_agent, user_prompt, deps=context,
                 task="conversation",
+                session_id=str(conversation.session_id),
                 user_id=user_id,
+                db=db,
             )
             
             # Log usage
-            logger.info(f"Token usage: {result.usage()}")
+            logger.info(f"Token usage: {result.usage}")
             
             # Get validated output
             output = result.output

@@ -1219,6 +1219,7 @@ class Document(Base):
     versions = relationship("DocumentVersion", back_populates="document", cascade="all, delete-orphan")
     chat_messages = relationship("DocumentChatMessage", back_populates="document", cascade="all, delete-orphan")
     approvals = relationship("DocumentApproval", back_populates="document", cascade="all, delete-orphan")
+    signatures = relationship("DocumentSignature", back_populates="document", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_document_session", "session_id"),
@@ -1290,7 +1291,7 @@ class DocumentRecipient(Base):
 
     name = Column(String(255), nullable=False)
     email = Column(String(255), nullable=False)
-    role = Column(String(50), default="viewer", nullable=False)  # "viewer", "approver"
+    role = Column(String(50), default="viewer", nullable=False)  # "viewer", "approver", "signer"
 
     # Tracking
     sent_at = Column(DateTime, nullable=True)
@@ -1302,6 +1303,7 @@ class DocumentRecipient(Base):
 
     document = relationship("Document", back_populates="recipients")
     approval = relationship("DocumentApproval", back_populates="recipient", uselist=False, cascade="all, delete-orphan")
+    signature = relationship("DocumentSignature", back_populates="recipient", uselist=False, cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_docrecip_document", "document_id"),
@@ -1521,4 +1523,29 @@ class DocumentApproval(Base):
     __table_args__ = (
         Index("idx_docapproval_document", "document_id"),
         Index("idx_docapproval_recipient", "recipient_id", unique=True),
+    )
+
+
+class DocumentSignature(Base):
+    """Electronic signature captured from a document signer."""
+    __tablename__ = "document_signatures"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+    recipient_id = Column(UUID(as_uuid=True), ForeignKey("document_recipients.id", ondelete="CASCADE"), nullable=False)
+
+    signature_data = Column(Text, nullable=False)
+    signature_type = Column(String(20), nullable=False, default="draw")
+    signer_name = Column(String(255), nullable=False)
+    signer_email = Column(String(255), nullable=False)
+    ip_address = Column(String(45), nullable=True)
+
+    signed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    document = relationship("Document", back_populates="signatures")
+    recipient = relationship("DocumentRecipient", back_populates="signature")
+
+    __table_args__ = (
+        Index("idx_docsig_document", "document_id"),
+        Index("idx_docsig_recipient", "recipient_id", unique=True),
     )

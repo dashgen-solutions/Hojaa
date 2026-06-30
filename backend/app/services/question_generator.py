@@ -96,10 +96,11 @@ class AIQuestionGenerator:
                 self.agent, user_prompt, deps=context,
                 task="question_gen", session_id=str(session_id),
                 user_id=user_id,
+                db=db,
             )
             
             # Log usage stats
-            logger.info(f"Token usage: {result.usage()}")
+            logger.info(f"Token usage: {result.usage}")
             
             # Get validated output
             questions_output = result.output

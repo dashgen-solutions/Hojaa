@@ -20,9 +20,6 @@ google-generativeai
 pydantic-ai>=0.0.14
 pydantic-ai-slim[openai,anthropic]
 
-# Audio Transcription
-openai-whisper  # For local Whisper (optional, we use OpenAI API)
-
 # Document Processing
 pypdf2
 python-docx

@@ -935,7 +935,7 @@ function AIProvidersTab() {
       };
 
       loadProvider("llm_openai", OPENAI_MODELS, 0, setOpenai);
-      loadProvider("llm_anthropic", ANTHROPIC_MODELS, 1, setAnthropic);
+      loadProvider("llm_anthropic", ANTHROPIC_MODELS, 0, setAnthropic);
       loadProvider("llm_gemini", GEMINI_MODELS, 0, setGemini);
     } catch {
       // silently handle load errors

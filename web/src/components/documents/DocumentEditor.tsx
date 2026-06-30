@@ -22,8 +22,8 @@ import { BlockNoteView } from '@blocknote/mantine';
 import { BlockNoteSchema, defaultBlockSpecs } from '@blocknote/core';
 import '@blocknote/mantine/style.css';
 import { useTheme } from '@/contexts/ThemeContext';
-import type { ScopeDocument, DocumentVersionInfo, DocumentApprovalInfo } from '@/lib/api';
-import { getDocumentPDF, getDocumentDOCX, getDocumentVersions, createDocumentVersion, restoreDocumentVersion, renameDocumentVersion, getDocumentApprovals } from '@/lib/api';
+import type { ScopeDocument, DocumentVersionInfo, DocumentApprovalInfo, DocumentSignatureInfo } from '@/lib/api';
+import { getDocumentPDF, getDocumentDOCX, getDocumentVersions, createDocumentVersion, restoreDocumentVersion, renameDocumentVersion, getDocumentApprovals, getDocumentSignatures } from '@/lib/api';
 import { useDocumentAutoSave } from '@/hooks/useDocumentAutoSave';
 import VariableInserter from './VariableInserter';
 import PricingTableBlock from './PricingTableBlock';
@@ -39,7 +39,7 @@ interface DocumentEditorProps {
   onStatusChange: (status: string) => void;
 }
 
-type PanelTab = 'variables' | 'pricing' | 'share' | 'versions' | 'ai' | 'preview' | 'approvals' | null;
+type PanelTab = 'variables' | 'pricing' | 'share' | 'versions' | 'ai' | 'preview' | 'approvals' | 'signatures' | null;
 
 const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
   draft: { bg: 'bg-neutral-100', text: 'text-neutral-600', label: 'Draft' },
@@ -89,6 +89,8 @@ export default function DocumentEditor({
   const skipNextAutoSaveRef = useRef(false);
   const [approvals, setApprovals] = useState<DocumentApprovalInfo[]>([]);
   const [loadingApprovals, setLoadingApprovals] = useState(false);
+  const [signatures, setSignatures] = useState<DocumentSignatureInfo[]>([]);
+  const [loadingSignatures, setLoadingSignatures] = useState(false);
 
   // Keep editor title input in sync when parent replaces document (e.g. after save/refetch).
   useEffect(() => {
@@ -405,6 +407,15 @@ export default function DocumentEditor({
       .finally(() => setLoadingApprovals(false));
   }, [activePanel, doc.id]);
 
+  useEffect(() => {
+    if (activePanel !== 'signatures') return;
+    setLoadingSignatures(true);
+    getDocumentSignatures(doc.id)
+      .then(setSignatures)
+      .catch(() => setSignatures([]))
+      .finally(() => setLoadingSignatures(false));
+  }, [activePanel, doc.id]);
+
   const badge = STATUS_BADGE[doc.status] || STATUS_BADGE.draft;
 
   // Save indicator text
@@ -539,6 +550,19 @@ export default function DocumentEditor({
             title="Approvals"
           >
             <ClipboardDocumentCheckIcon className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => togglePanel('signatures')}
+            className={`rounded-md p-2 transition-colors ${
+              activePanel === 'signatures'
+                ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+            }`}
+            title="Signatures"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
           </button>
           <div className="relative" ref={exportMenuRef}>
             <button
@@ -687,6 +711,76 @@ export default function DocumentEditor({
                             {!isPending && a.decided_at && (
                               <p className="mt-1.5 text-[11px] text-neutral-400">
                                 {new Date(a.decided_at).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activePanel === 'signatures' && (
+                <div className="p-4">
+                  {loadingSignatures ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin h-6 w-6 border-2 border-neutral-300 border-t-neutral-700 rounded-full" />
+                    </div>
+                  ) : signatures.length === 0 ? (
+                    <div className="text-center py-12">
+                      <svg className="h-10 w-10 text-neutral-300 dark:text-neutral-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      <p className="text-sm text-neutral-500 dark:text-neutral-400">No signers added yet.</p>
+                      <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+                        Add recipients with the &quot;Signer&quot; role in the Share panel.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {signatures.map((s) => {
+                        const hasSigned = !!s.signed_at;
+                        return (
+                          <div
+                            key={s.recipient_id}
+                            className={`rounded-lg border p-4 ${
+                              hasSigned
+                                ? 'border-indigo-200 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-950/20'
+                                : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                                  {s.signer_name}
+                                </p>
+                                <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                                  {s.signer_email}
+                                </p>
+                              </div>
+                              <span
+                                className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                  hasSigned
+                                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                                    : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300'
+                                }`}
+                              >
+                                {hasSigned ? 'Signed' : 'Pending'}
+                              </span>
+                            </div>
+                            {hasSigned && s.signature_data && (
+                              <div className="mt-3 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 p-2">
+                                <img
+                                  src={s.signature_data}
+                                  alt={`Signature of ${s.signer_name}`}
+                                  className="max-h-20 mx-auto"
+                                />
+                              </div>
+                            )}
+                            {hasSigned && s.signature_type && (
+                              <p className="mt-1.5 text-[11px] text-neutral-400">
+                                {s.signature_type === 'draw' ? 'Hand-drawn' : 'Typed'} &middot; {new Date(s.signed_at!).toLocaleString()}
                               </p>
                             )}
                           </div>

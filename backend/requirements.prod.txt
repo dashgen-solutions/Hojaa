@@ -16,6 +16,7 @@ pydantic-settings
 # LLM & AI
 openai
 anthropic
+google-generativeai
 pydantic-ai>=0.0.14
 pydantic-ai-slim[openai,anthropic]
 

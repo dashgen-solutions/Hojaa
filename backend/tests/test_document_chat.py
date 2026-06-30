@@ -155,7 +155,7 @@ pie title Effort Distribution
 
 # ── _get_llm_config tests ──────────────────────────────────
 
-from app.services.document_ai_service import _get_llm_config
+from app.services.llm_config_service import get_llm_config as _get_llm_config
 from app.models.database import User, Integration, IntegrationType
 
 
@@ -173,7 +173,7 @@ class TestGetLlmConfig:
         user = self._mock_user(org_id=None)
         db = MagicMock()
 
-        with patch("app.services.document_ai_service.settings") as mock_settings:
+        with patch("app.services.llm_config_service.settings") as mock_settings:
             mock_settings.platform_openai_api_key = "sk-platform-test-key"
             provider, config = _get_llm_config(db, user)
 
@@ -188,7 +188,7 @@ class TestGetLlmConfig:
         # Mock empty integration query
         db.query.return_value.filter.return_value.all.return_value = []
 
-        with patch("app.services.document_ai_service.settings") as mock_settings:
+        with patch("app.services.llm_config_service.settings") as mock_settings:
             mock_settings.platform_openai_api_key = "sk-platform-fallback"
             provider, config = _get_llm_config(db, user)
 
@@ -200,8 +200,9 @@ class TestGetLlmConfig:
         user = self._mock_user(org_id=None)
         db = MagicMock()
 
-        with patch("app.services.document_ai_service.settings") as mock_settings:
+        with patch("app.services.llm_config_service.settings") as mock_settings:
             mock_settings.platform_openai_api_key = ""
+            mock_settings.openai_api_key = ""
             with pytest.raises(ValueError, match="No AI provider configured"):
                 _get_llm_config(db, user)
 
@@ -217,7 +218,7 @@ class TestGetLlmConfig:
 
         db.query.return_value.filter.return_value.all.return_value = [integ]
 
-        with patch("app.services.document_ai_service.settings") as mock_settings:
+        with patch("app.services.llm_config_service.settings") as mock_settings:
             mock_settings.platform_openai_api_key = "sk-platform-key"
             provider, config = _get_llm_config(db, user)
 
@@ -242,7 +243,7 @@ class TestGetLlmConfig:
             anthropic_integ,
         ]
 
-        with patch("app.services.document_ai_service.settings") as mock_settings:
+        with patch("app.services.llm_config_service.settings") as mock_settings:
             mock_settings.platform_openai_api_key = ""
             provider, config = _get_llm_config(db, user)
 

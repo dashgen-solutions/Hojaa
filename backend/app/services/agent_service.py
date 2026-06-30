@@ -205,6 +205,7 @@ async def cached_agent_run(
     session_id=None,
     org_id=None,
     user_id=None,
+    db=None,
 ):
     """
     Run an agent with optional Redis response caching **and** timeout
@@ -243,8 +244,30 @@ async def cached_agent_run(
                 raise
             logger.debug(f"Usage-limit pre-check skipped: {limit_exc}")
 
+    run_model = None
+    effective_model_name = model_name or _resolve_model_name(task)
+    if user_id and db is not None:
+        try:
+            from app.models.database import User as _User
+            from app.services.llm_config_service import get_llm_config, model_from_llm_config
+
+            _user = db.query(_User).filter(_User.id == user_id).first()
+            if _user:
+                provider, llm_config = get_llm_config(db, _user)
+                run_model, effective_model_name = model_from_llm_config(provider, llm_config)
+                logger.info(
+                    f"Using Settings LLM config for user {user_id}: {effective_model_name}"
+                )
+        except ValueError:
+            raise
+        except Exception as exc:
+            logger.warning(f"Could not resolve user LLM config, using default: {exc}")
+
+    if run_model is not None:
+        effective_model_name = run_model
+
     r = _get_redis()
-    key = _cache_key(prompt, model_name) if r and cache_ttl > 0 else ""
+    key = _cache_key(prompt, effective_model_name) if r and cache_ttl > 0 else ""
 
     # Cache hit?
     if key and r:
@@ -254,8 +277,8 @@ async def cached_agent_run(
                 logger.debug("Cache hit for LLM prompt")
                 # RISK-2.3C — log cache hit
                 _log_usage_bg(
-                    task=task or model_name,
-                    model=model_name,
+                    task=task or effective_model_name,
+                    model=effective_model_name,
                     cache_hit=True,
                     session_id=session_id,
                     org_id=org_id,
@@ -271,9 +294,13 @@ async def cached_agent_run(
 
     timeout = settings.ai_timeout_seconds
     t0 = time.monotonic()
+
     try:
+        run_kwargs = {"deps": deps}
+        if effective_model_name and effective_model_name != (model_name or _resolve_model_name(task)):
+            run_kwargs["model"] = effective_model_name
         result = await asyncio.wait_for(
-            agent.run(prompt, deps=deps),
+            agent.run(prompt, **run_kwargs),
             timeout=timeout,
         )
     except asyncio.TimeoutError:
@@ -289,7 +316,8 @@ async def cached_agent_run(
             pass
 
     # RISK-2.3C — log usage
-    usage = result.usage() if callable(getattr(result, "usage", None)) else None
+    usage_attr = getattr(result, "usage", None)
+    usage = usage_attr() if callable(usage_attr) else usage_attr
     prompt_tokens = 0
     completion_tokens = 0
     total_tokens = 0
@@ -299,8 +327,8 @@ async def cached_agent_run(
         total_tokens = getattr(usage, "total_tokens", 0) or (prompt_tokens + completion_tokens)
 
     _log_usage_bg(
-        task=task or model_name,
-        model=model_name,
+        task=task or effective_model_name,
+        model=effective_model_name,
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
         total_tokens=total_tokens,

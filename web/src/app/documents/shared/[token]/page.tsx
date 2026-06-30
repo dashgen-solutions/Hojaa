@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getSharedDocument, submitDocumentApproval, type SharedDocumentView, type PricingLineItemInfo } from '@/lib/api';
+import { getSharedDocument, submitDocumentApproval, submitDocumentSignature, type SharedDocumentView, type PricingLineItemInfo } from '@/lib/api';
 import dynamic from 'next/dynamic';
+import SignaturePad from '@/components/documents/SignaturePad';
 
 const MermaidDiagram = dynamic(() => import('@/components/documents/MermaidDiagram'), { ssr: false });
 
@@ -352,6 +353,135 @@ function ApprovalPanel({
   );
 }
 
+function SigningPanel({
+  token,
+  recipientName,
+  initialSignature,
+}: {
+  token: string;
+  recipientName: string;
+  initialSignature: SharedDocumentView['my_signature'];
+}) {
+  const [signed, setSigned] = useState(!!initialSignature);
+  const [signerName, setSignerName] = useState(initialSignature?.signer_name ?? '');
+  const [signedAt, setSignedAt] = useState<string | null>(initialSignature?.signed_at ?? null);
+  const [signatureType, setSignatureType] = useState<string | null>(initialSignature?.signature_type ?? null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleCapture = async (dataUrl: string, type: 'draw' | 'typed') => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await submitDocumentSignature(token, dataUrl, type, recipientName);
+      setSigned(true);
+      setSignerName(res.signer_name);
+      setSignedAt(res.signed_at);
+      setSignatureType(type);
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        setError('You have already signed this document.');
+        setSigned(true);
+      } else {
+        setError(err?.response?.data?.detail || 'Failed to submit signature. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (signed) {
+    return (
+      <div className="rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm">
+        <div className="h-1.5 bg-gradient-to-r from-indigo-400 to-blue-500" />
+        <div className="p-6">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/40">
+              <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-indigo-700 dark:text-indigo-300">
+                Document Signed
+              </h3>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                Signed by {signerName || recipientName}
+                {signatureType && <> &middot; {signatureType === 'draw' ? 'Hand-drawn' : 'Typed'} signature</>}
+              </p>
+              {signedAt && (
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
+                  {new Date(signedAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm border border-neutral-200 dark:border-neutral-800">
+      <div className="h-1.5 bg-gradient-to-r from-indigo-400 via-blue-400 to-indigo-500" />
+      <div className="p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40">
+            <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+              Your signature is required
+            </h3>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              Review the document above, then sign below
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            {error}
+          </div>
+        )}
+
+        <SignaturePad
+          onSignatureCapture={handleCapture}
+          signerName={recipientName}
+          disabled={submitting}
+        />
+
+        {submitting && (
+          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-neutral-500">
+            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Submitting signature...
+          </div>
+        )}
+
+        <div className="mt-5 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+          <div className="flex items-start gap-2">
+            <svg className="w-4 h-4 text-neutral-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 leading-relaxed">
+              By signing, you agree that your electronic signature has the same legal effect as a handwritten signature.
+              Your IP address and timestamp will be recorded for audit purposes.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SharedDocumentPage() {
   const params = useParams();
   const token = params?.token as string;
@@ -405,6 +535,7 @@ export default function SharedDocumentPage() {
 
   const blocks = Array.isArray(doc.content) ? doc.content : [];
   const isApprover = doc.recipient?.role === 'approver';
+  const isSigner = doc.recipient?.role === 'signer';
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
@@ -427,6 +558,11 @@ export default function SharedDocumentPage() {
               {isApprover && (
                 <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                   Approver
+                </span>
+              )}
+              {isSigner && (
+                <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                  Signer
                 </span>
               )}
               <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
@@ -464,6 +600,17 @@ export default function SharedDocumentPage() {
         {isApprover && (
           <div className="mt-6">
             <ApprovalPanel token={token} initialApproval={doc.my_approval} />
+          </div>
+        )}
+
+        {/* Signing Panel — only shown to signer recipients */}
+        {isSigner && (
+          <div className="mt-6">
+            <SigningPanel
+              token={token}
+              recipientName={doc.recipient?.name || ''}
+              initialSignature={doc.my_signature}
+            />
           </div>
         )}
       </main>
