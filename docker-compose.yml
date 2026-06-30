@@ -27,6 +27,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        REQUIREMENTS_FILE: requirements.prod.txt
     container_name: hojaa-api
     ports:
       - "${API_PORT:-8000}:8000"
@@ -41,6 +43,7 @@ services:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-90}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-this-in-production}
       ENVIRONMENT: production
       DEBUG: "False"
