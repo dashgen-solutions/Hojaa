@@ -100,6 +100,13 @@ export default function DocumentEditor({
     setTitle(doc.title || 'Untitled Document');
   }, [doc.id, doc.title]);
 
+  // Fetch signatures on mount to check if document is locked
+  useEffect(() => {
+    getDocumentSignatures(doc.id)
+      .then(setSignatures)
+      .catch(() => setSignatures([]));
+  }, [doc.id]);
+
   // Extend BlockNote schema with custom mermaid block
   const schema = BlockNoteSchema.create({
     blockSpecs: {
