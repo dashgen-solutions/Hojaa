@@ -161,12 +161,12 @@ export default function DocumentsPage() {
       try {
         const duplicated = await duplicateDocument(docId);
         await fetchDocuments();
-        setSelectedDoc(duplicated);
+        navigateToDoc(duplicated.id);
       } catch (err) {
         console.error('Failed to duplicate document:', err);
       }
     },
-    [fetchDocuments]
+    [fetchDocuments, navigateToDoc]
   );
 
   // Handle title change from editor
