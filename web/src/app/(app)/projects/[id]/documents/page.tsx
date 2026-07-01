@@ -156,8 +156,14 @@ export default function DocumentsPage() {
 
   // Handle document duplication
   const handleDocumentDuplicate = useCallback(
-    (docId: string) => {
-      fetchDocuments();
+    async (docId: string) => {
+      try {
+        const duplicated = await duplicateDocument(docId);
+        await fetchDocuments();
+        setSelectedDoc(duplicated);
+      } catch (err) {
+        console.error('Failed to duplicate document:', err);
+      }
     },
     [fetchDocuments]
   );

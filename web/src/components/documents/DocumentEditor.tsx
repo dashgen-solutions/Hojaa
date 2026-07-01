@@ -111,8 +111,14 @@ export default function DocumentEditor({
   const editor = useCreateBlockNote({
     schema,
     initialContent: doc.content?.length ? (doc.content as any) : undefined,
-    editable: !hasSignatures, // Lock editor if document has signatures
   });
+
+  // Dynamically update editor editability when signatures change
+  useEffect(() => {
+    if (editor) {
+      editor.isEditable = !hasSignatures;
+    }
+  }, [editor, hasSignatures]);
 
   const { isSaving, lastSaved, error: saveError, saveNow } = useDocumentAutoSave({
     documentId: doc.id,
