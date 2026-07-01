@@ -442,47 +442,27 @@ export default function DocumentShareModal({
             />
           </div>
 
-          {/* Role picker — all 3 roles */}
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Role</p>
-            <div className="grid grid-cols-1 gap-1.5">
-              {ROLE_OPTIONS.map((role) => {
-                const selected = newRole === role.value;
-                return (
-                  <button
-                    key={role.value}
-                    type="button"
-                    onClick={() => setNewRole(role.value)}
-                    className={`flex items-start gap-2 rounded-md border px-3 py-2 text-left transition-colors ${
-                      selected
-                        ? 'border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900'
-                        : 'border-neutral-200 bg-white hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800'
-                    }`}
-                  >
-                    <span
-                      className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                        selected ? 'bg-white/20 text-white dark:bg-neutral-900/10 dark:text-neutral-900' : role.badgeClass
-                      }`}
-                    >
-                      {role.label}
-                    </span>
-                    <span className={`text-xs ${selected ? 'text-white/90 dark:text-neutral-700' : 'text-neutral-500'}`}>
-                      {role.description}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value as 'viewer' | 'approver' | 'signer')}
+              className="flex-1 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1.5 px-2.5 text-sm text-neutral-700 dark:text-neutral-300 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+            >
+              {ROLE_OPTIONS.map((role) => (
+                <option key={role.value} value={role.value}>
+                  {role.label} — {role.description}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleAddRecipient}
+              disabled={adding || !newName.trim() || !newEmail.trim()}
+              className="inline-flex items-center gap-1 rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 transition-colors disabled:opacity-50 whitespace-nowrap"
+            >
+              <PlusIcon className="h-3.5 w-3.5" />
+              {adding ? 'Adding...' : 'Add'}
+            </button>
           </div>
-
-          <button
-            onClick={handleAddRecipient}
-            disabled={adding || !newName.trim() || !newEmail.trim()}
-            className="w-full inline-flex items-center justify-center gap-1 rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 transition-colors disabled:opacity-50"
-          >
-            <PlusIcon className="h-3.5 w-3.5" />
-            {adding ? 'Adding...' : `Add ${ROLE_OPTIONS.find((r) => r.value === newRole)?.label ?? 'Recipient'}`}
-          </button>
         </div>
       </div>
 
