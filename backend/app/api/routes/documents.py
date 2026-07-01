@@ -96,6 +96,10 @@ class ShareDocumentRequest(BaseModel):
     recipients: Optional[List[RecipientInput]] = None
 
 
+class SendDocumentRequest(BaseModel):
+    recipient_ids: Optional[List[str]] = None
+
+
 class CreateTemplateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
@@ -1336,23 +1340,41 @@ def list_recipients(
 @router.post("/{document_id}/send")
 def send_document(
     document_id: str,
+    body: SendDocumentRequest = SendDocumentRequest(),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Mark document as sent, update timestamps, and dispatch recipient emails via SMTP."""
+    """Mark document as sent and email selected recipients (or all if none specified)."""
     doc = _verify_document_access(db, document_id, current_user)
 
     now = datetime.utcnow()
 
-    doc.status = DocumentStatus.SENT
-    doc.sent_at = now
-
-    # Update all recipients
-    recipients = (
+    all_recipients = (
         db.query(DocumentRecipient)
         .filter(DocumentRecipient.document_id == doc.id)
         .all()
     )
+
+    if body.recipient_ids:
+        try:
+            selected_ids = {UUID(rid) for rid in body.recipient_ids}
+        except ValueError:
+            raise HTTPException(400, "Invalid recipient ID format")
+        recipients = [r for r in all_recipients if r.id in selected_ids]
+        if not recipients:
+            raise HTTPException(400, "No valid recipients selected")
+        if len(recipients) != len(selected_ids):
+            raise HTTPException(400, "One or more selected recipients were not found")
+    else:
+        recipients = all_recipients
+
+    if not recipients:
+        raise HTTPException(400, "Add at least one recipient before sending")
+
+    doc.status = DocumentStatus.SENT
+    if not doc.sent_at:
+        doc.sent_at = now
+
     for r in recipients:
         if not r.sent_at:
             r.sent_at = now

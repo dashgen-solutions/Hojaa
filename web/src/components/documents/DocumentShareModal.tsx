@@ -69,16 +69,40 @@ export default function DocumentShareModal({
   const [newRole, setNewRole] = useState<'viewer' | 'approver' | 'signer'>('viewer');
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!isOpen) return;
 
     setLoading(true);
     getDocumentRecipients(documentId)
-      .then(setRecipients)
+      .then((list) => {
+        setRecipients(list);
+        setSelectedRecipientIds(new Set(list.map((r) => r.id)));
+      })
       .catch((err) => console.error('Failed to fetch recipients:', err))
       .finally(() => setLoading(false));
   }, [isOpen, documentId]);
+
+  const toggleRecipientSelection = (recipientId: string) => {
+    setSelectedRecipientIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(recipientId)) {
+        next.delete(recipientId);
+      } else {
+        next.add(recipientId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllRecipients = () => {
+    setSelectedRecipientIds(new Set(recipients.map((r) => r.id)));
+  };
+
+  const deselectAllRecipients = () => {
+    setSelectedRecipientIds(new Set());
+  };
 
   const shareUrl = token
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/documents/shared/${token}`
@@ -120,9 +144,17 @@ export default function DocumentShareModal({
         email: newEmail.trim(),
         role: newRole,
       });
+      const addedName = newName.trim();
+      const addedEmail = newEmail.trim();
       // Refresh list to ensure consistent sorting/state with backend
       const updated = await getDocumentRecipients(documentId);
       setRecipients(updated);
+      setSelectedRecipientIds((prev) => {
+        const next = new Set(prev);
+        const added = updated.find((r) => r.name === addedName && r.email === addedEmail);
+        if (added) next.add(added.id);
+        return next;
+      });
       setNewName('');
       setNewEmail('');
       setNewRole('viewer');
@@ -141,6 +173,11 @@ export default function DocumentShareModal({
     try {
       await removeDocumentRecipient(documentId, recipientId);
       setRecipients((prev) => prev.filter((r) => r.id !== recipientId));
+      setSelectedRecipientIds((prev) => {
+        const next = new Set(prev);
+        next.delete(recipientId);
+        return next;
+      });
     } catch (err) {
       console.error('Failed to remove recipient:', err);
       setError('Failed to remove recipient.');
@@ -150,10 +187,15 @@ export default function DocumentShareModal({
   };
 
   const handleSend = async () => {
+    if (selectedRecipientIds.size === 0) {
+      setError('Select at least one recipient to send the document to.');
+      return;
+    }
+
     setSending(true);
     setError(null);
     try {
-      const res = await sendDocument(documentId);
+      const res = await sendDocument(documentId, Array.from(selectedRecipientIds));
       if ((res.emails_attempted ?? 0) > 0 && (res.emails_sent ?? 0) === 0) {
         const detail = res.smtp_error_detail?.trim();
         setError(
@@ -263,9 +305,35 @@ export default function DocumentShareModal({
 
       {/* Recipients List */}
       <div>
-        <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
-          Recipients ({recipients.length})
-        </h4>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+            Recipients ({recipients.length})
+          </h4>
+          {recipients.length > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                type="button"
+                onClick={selectAllRecipients}
+                className="text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+              >
+                Select all
+              </button>
+              <span className="text-neutral-300">|</span>
+              <button
+                type="button"
+                onClick={deselectAllRecipients}
+                className="text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+        {recipients.length > 0 && (
+          <p className="text-xs text-neutral-500 mb-2">
+            Select who should receive the document email ({selectedRecipientIds.size} selected)
+          </p>
+        )}
 
         {loading && (
           <div className="space-y-2">
@@ -294,10 +362,20 @@ export default function DocumentShareModal({
               return (
                 <div key={r.id} className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-hidden">
                   <div
-                    className={`flex items-center gap-3 px-3 py-2.5 ${isExpandable ? 'cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors' : ''}`}
-                    onClick={() => isExpandable && setExpandedId(isExpanded ? null : r.id)}
+                    className={`flex items-center gap-3 px-3 py-2.5 ${isExpandable ? 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors' : ''}`}
                   >
-                    <div className="flex-1 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={selectedRecipientIds.has(r.id)}
+                      onChange={() => toggleRecipientSelection(r.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500 flex-shrink-0"
+                      title="Include when sending"
+                    />
+                    <div
+                      className={`flex-1 min-w-0 ${isExpandable ? 'cursor-pointer' : ''}`}
+                      onClick={() => isExpandable && setExpandedId(isExpanded ? null : r.id)}
+                    >
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">
                           {r.name}
@@ -404,11 +482,17 @@ export default function DocumentShareModal({
       {recipients.length > 0 && (
         <button
           onClick={handleSend}
-          disabled={sending}
+          disabled={sending || selectedRecipientIds.size === 0}
           className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 transition-colors disabled:opacity-50"
         >
           <PaperAirplaneIcon className="h-4 w-4" />
-          {sending ? 'Sending...' : 'Send Document'}
+          {sending
+            ? 'Sending...'
+            : selectedRecipientIds.size === 0
+            ? 'Select recipients to send'
+            : selectedRecipientIds.size === 1
+            ? 'Send to 1 recipient'
+            : `Send to ${selectedRecipientIds.size} recipients`}
         </button>
       )}
     </div>

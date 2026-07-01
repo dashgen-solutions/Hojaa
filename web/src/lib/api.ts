@@ -1566,7 +1566,8 @@ export const addDocumentRecipient = async (
 };
 
 export const sendDocument = async (
-  documentId: string
+  documentId: string,
+  recipientIds?: string[]
 ): Promise<{
   id: string;
   status: string;
@@ -1576,7 +1577,9 @@ export const sendDocument = async (
   emails_sent?: number;
   smtp_error_detail?: string | null;
 }> => {
-  const response = await api.post(`/api/documents/${documentId}/send`);
+  const response = await api.post(`/api/documents/${documentId}/send`, {
+    recipient_ids: recipientIds,
+  });
   return response.data;
 };
 
