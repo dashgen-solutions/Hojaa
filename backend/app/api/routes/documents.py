@@ -1484,6 +1484,32 @@ def view_document_public(
                 "signed_at": existing_sig.signed_at.isoformat() if existing_sig.signed_at else None,
             }
 
+    # Fetch ALL signatures for display (everyone can see)
+    all_signers = (
+        db.query(DocumentRecipient)
+        .filter(
+            DocumentRecipient.document_id == doc.id,
+            DocumentRecipient.role == "signer",
+        )
+        .all()
+    )
+    
+    signatures_list = []
+    for signer_recip in all_signers:
+        sig_record = (
+            db.query(DocumentSignature)
+            .filter(DocumentSignature.recipient_id == signer_recip.id)
+            .first()
+        )
+        signatures_list.append({
+            "recipient_id": str(signer_recip.id),
+            "signer_name": signer_recip.name,
+            "signer_email": signer_recip.email,
+            "signature_type": sig_record.signature_type if sig_record else None,
+            "signature_data": sig_record.signature_data if sig_record else None,
+            "signed_at": sig_record.signed_at.isoformat() if sig_record and sig_record.signed_at else None,
+        })
+
     return {
         "title": doc.title,
         "status": doc.status.value,
@@ -1498,6 +1524,7 @@ def view_document_public(
         "pricing_items": [_serialize_line_item(i) for i in pricing_items],
         "my_approval": my_approval,
         "my_signature": my_signature,
+        "signatures": signatures_list,
     }
 
 
