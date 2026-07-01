@@ -39,6 +39,34 @@ const STATUS_DOT: Record<string, { color: string; label: string }> = {
   pending: { color: 'bg-neutral-400', label: 'Pending' },
 };
 
+const ROLE_OPTIONS: Array<{
+  value: 'viewer' | 'approver' | 'signer';
+  label: string;
+  description: string;
+  badgeClass: string;
+}> = [
+  {
+    value: 'viewer',
+    label: 'Viewer',
+    description: 'Can read the document',
+    badgeClass: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
+  },
+  {
+    value: 'approver',
+    label: 'Approver',
+    description: 'Can approve or reject',
+    badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+  },
+  {
+    value: 'signer',
+    label: 'Signer',
+    description: 'Must sign the document',
+    badgeClass: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200',
+  },
+];
+
+const ROLE_ORDER = ['viewer', 'approver', 'signer'] as const;
+
 function getRecipientStatus(r: DocumentRecipientInfo): string {
   if (r.approval?.decision) return r.approval.decision;
   if (r.signature?.signed_at) return 'signed';
@@ -104,6 +132,135 @@ export default function DocumentShareModal({
     setSelectedRecipientIds(new Set());
   };
 
+  const roleCounts = ROLE_ORDER.reduce(
+    (acc, role) => {
+      acc[role] = recipients.filter((r) => r.role === role).length;
+      return acc;
+    },
+    { viewer: 0, approver: 0, signer: 0 } as Record<(typeof ROLE_ORDER)[number], number>
+  );
+
+  const renderRecipientRow = (r: DocumentRecipientInfo) => {
+    const status = getRecipientStatus(r);
+    const dot = STATUS_DOT[status] || STATUS_DOT.pending;
+    const hasApproval = !!r.approval?.decision;
+    const hasSignature = !!r.signature?.signed_at;
+    const isExpandable = hasApproval || hasSignature;
+    const isExpanded = expandedId === r.id;
+    const roleMeta = ROLE_OPTIONS.find((opt) => opt.value === r.role);
+
+    return (
+      <div key={r.id} className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-hidden">
+        <div
+          className={`flex items-center gap-3 px-3 py-2.5 ${isExpandable ? 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors' : ''}`}
+        >
+          <input
+            type="checkbox"
+            checked={selectedRecipientIds.has(r.id)}
+            onChange={() => toggleRecipientSelection(r.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500 flex-shrink-0"
+            title="Include when sending"
+          />
+          <div
+            className={`flex-1 min-w-0 ${isExpandable ? 'cursor-pointer' : ''}`}
+            onClick={() => isExpandable && setExpandedId(isExpanded ? null : r.id)}
+          >
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                {r.name}
+              </p>
+              <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium capitalize ${roleMeta?.badgeClass ?? 'bg-neutral-100 text-neutral-600'}`}>
+                {r.role}
+              </span>
+            </div>
+            <p className="text-xs text-neutral-500 truncate">{r.email}</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span className={`h-2 w-2 rounded-full ${dot.color}`} />
+              <span className={`text-xs ${status === 'approved' ? 'text-green-600 dark:text-green-400 font-medium' : status === 'rejected' ? 'text-red-600 dark:text-red-400 font-medium' : status === 'signed' ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-neutral-500'}`}>
+                {dot.label}
+              </span>
+            </div>
+            {isExpandable && (
+              <svg className={`h-3.5 w-3.5 text-neutral-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleRemoveRecipient(r.id); }}
+              disabled={removingId === r.id}
+              className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-neutral-400 hover:text-red-500 transition-colors disabled:opacity-50"
+              title="Remove recipient"
+            >
+              <TrashIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+        {isExpanded && r.approval && (
+          <div className={`px-3 pb-3 border-t ${r.approval.decision === 'approved' ? 'border-green-100 dark:border-green-900/30 bg-green-50/50 dark:bg-green-950/10' : 'border-red-100 dark:border-red-900/30 bg-red-50/50 dark:bg-red-950/10'}`}>
+            <div className="pt-2.5 space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                {r.approval.decision === 'approved' ? (
+                  <CheckCircleIcon className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                ) : (
+                  <XMarkIcon className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                )}
+                <span className={`text-xs font-semibold ${r.approval.decision === 'approved' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                  {r.approval.decision === 'approved' ? 'Approved' : 'Rejected'}
+                </span>
+                {r.approval.decided_at && (
+                  <span className="text-[10px] text-neutral-400 ml-auto">
+                    {new Date(r.approval.decided_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+              {r.approval.reason ? (
+                <div className={`rounded-md px-2.5 py-2 text-xs ${r.approval.decision === 'approved' ? 'bg-green-100/70 text-green-800 dark:bg-green-900/20 dark:text-green-200' : 'bg-red-100/70 text-red-800 dark:bg-red-900/20 dark:text-red-200'}`}>
+                  {r.approval.reason}
+                </div>
+              ) : (
+                <p className="text-[11px] text-neutral-400 italic">No reason provided.</p>
+              )}
+            </div>
+          </div>
+        )}
+        {isExpanded && r.signature?.signed_at && (
+          <div className="px-3 pb-3 border-t border-indigo-100 dark:border-indigo-900/30 bg-indigo-50/50 dark:bg-indigo-950/10">
+            <div className="pt-2.5 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <svg className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                  Signed by {r.signature.signer_name}
+                </span>
+                {r.signature.signed_at && (
+                  <span className="text-[10px] text-neutral-400 ml-auto">
+                    {new Date(r.signature.signed_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-neutral-500">
+                {r.signature.signature_type === 'draw' ? 'Hand-drawn signature' : 'Typed signature'}
+              </p>
+              {r.signature.signature_data && (
+                <div className="mt-2 pt-2 border-t border-neutral-200 dark:border-neutral-700">
+                  <img
+                    src={r.signature.signature_data}
+                    alt={`Signature of ${r.signature.signer_name}`}
+                    className="h-16 max-w-full object-contain bg-white dark:bg-neutral-900 rounded border border-neutral-200 dark:border-neutral-700 p-1.5"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const shareUrl = token
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/documents/shared/${token}`
     : null;
@@ -157,7 +314,7 @@ export default function DocumentShareModal({
       });
       setNewName('');
       setNewEmail('');
-      setNewRole('viewer');
+      // Keep selected role so you can add multiple recipients for the same role quickly
     } catch (err: any) {
       console.error('Failed to add recipient:', err);
       const detail = err?.response?.data?.detail;
@@ -259,7 +416,10 @@ export default function DocumentShareModal({
 
       {/* Add Recipient */}
       <div>
-        <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Add Recipient</h4>
+        <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Add Recipient</h4>
+        <p className="text-xs text-neutral-500 mb-3">
+          Add as many recipients as you need — viewers, approvers, and signers can all be on the same document.
+        </p>
         <div className="space-y-2">
           <div className="relative">
             <UserIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
@@ -281,25 +441,48 @@ export default function DocumentShareModal({
               className="w-full rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1.5 pl-8 pr-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value as 'viewer' | 'approver' | 'signer')}
-              className="flex-1 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1.5 px-2.5 text-sm text-neutral-700 dark:text-neutral-300 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
-            >
-              <option value="viewer">Viewer</option>
-              <option value="approver">Approver</option>
-              <option value="signer">Signer</option>
-            </select>
-            <button
-              onClick={handleAddRecipient}
-              disabled={adding || !newName.trim() || !newEmail.trim()}
-              className="inline-flex items-center gap-1 rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 transition-colors disabled:opacity-50"
-            >
-              <PlusIcon className="h-3.5 w-3.5" />
-              {adding ? 'Adding...' : 'Add'}
-            </button>
+
+          {/* Role picker — all 3 roles */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Role</p>
+            <div className="grid grid-cols-1 gap-1.5">
+              {ROLE_OPTIONS.map((role) => {
+                const selected = newRole === role.value;
+                return (
+                  <button
+                    key={role.value}
+                    type="button"
+                    onClick={() => setNewRole(role.value)}
+                    className={`flex items-start gap-2 rounded-md border px-3 py-2 text-left transition-colors ${
+                      selected
+                        ? 'border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900'
+                        : 'border-neutral-200 bg-white hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800'
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                        selected ? 'bg-white/20 text-white dark:bg-neutral-900/10 dark:text-neutral-900' : role.badgeClass
+                      }`}
+                    >
+                      {role.label}
+                    </span>
+                    <span className={`text-xs ${selected ? 'text-white/90 dark:text-neutral-700' : 'text-neutral-500'}`}>
+                      {role.description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          <button
+            onClick={handleAddRecipient}
+            disabled={adding || !newName.trim() || !newEmail.trim()}
+            className="w-full inline-flex items-center justify-center gap-1 rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 transition-colors disabled:opacity-50"
+          >
+            <PlusIcon className="h-3.5 w-3.5" />
+            {adding ? 'Adding...' : `Add ${ROLE_OPTIONS.find((r) => r.value === newRole)?.label ?? 'Recipient'}`}
+          </button>
         </div>
       </div>
 
@@ -330,6 +513,18 @@ export default function DocumentShareModal({
           )}
         </div>
         {recipients.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {ROLE_OPTIONS.map((role) => (
+              <span
+                key={role.value}
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${role.badgeClass}`}
+              >
+                {role.label}: {roleCounts[role.value]}
+              </span>
+            ))}
+          </div>
+        )}
+        {recipients.length > 0 && (
           <p className="text-xs text-neutral-500 mb-2">
             Select who should receive the document email ({selectedRecipientIds.size} selected)
           </p>
@@ -345,132 +540,24 @@ export default function DocumentShareModal({
 
         {!loading && recipients.length === 0 && (
           <p className="text-sm text-neutral-500 py-4 text-center">
-            No recipients added yet.
+            No recipients added yet. Add viewers, approvers, and/or signers above.
           </p>
         )}
 
         {!loading && recipients.length > 0 && (
-          <div className="space-y-2">
-            {recipients.map((r) => {
-              const status = getRecipientStatus(r);
-              const dot = STATUS_DOT[status] || STATUS_DOT.pending;
-              const hasApproval = !!r.approval?.decision;
-              const hasSignature = !!r.signature?.signed_at;
-              const isExpandable = hasApproval || hasSignature;
-              const isExpanded = expandedId === r.id;
-
+          <div className="space-y-4">
+            {ROLE_ORDER.map((role) => {
+              const group = recipients.filter((r) => r.role === role);
+              if (group.length === 0) return null;
+              const roleMeta = ROLE_OPTIONS.find((r) => r.value === role);
               return (
-                <div key={r.id} className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-hidden">
-                  <div
-                    className={`flex items-center gap-3 px-3 py-2.5 ${isExpandable ? 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedRecipientIds.has(r.id)}
-                      onChange={() => toggleRecipientSelection(r.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500 flex-shrink-0"
-                      title="Include when sending"
-                    />
-                    <div
-                      className={`flex-1 min-w-0 ${isExpandable ? 'cursor-pointer' : ''}`}
-                      onClick={() => isExpandable && setExpandedId(isExpanded ? null : r.id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">
-                          {r.name}
-                        </p>
-                        <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 capitalize">
-                          {r.role}
-                        </span>
-                      </div>
-                      <p className="text-xs text-neutral-500 truncate">{r.email}</p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`h-2 w-2 rounded-full ${dot.color}`} />
-                        <span className={`text-xs ${status === 'approved' ? 'text-green-600 dark:text-green-400 font-medium' : status === 'rejected' ? 'text-red-600 dark:text-red-400 font-medium' : status === 'signed' ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-neutral-500'}`}>
-                          {dot.label}
-                        </span>
-                      </div>
-                      {isExpandable && (
-                        <svg className={`h-3.5 w-3.5 text-neutral-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                        </svg>
-                      )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRemoveRecipient(r.id); }}
-                        disabled={removingId === r.id}
-                        className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-neutral-400 hover:text-red-500 transition-colors disabled:opacity-50"
-                        title="Remove recipient"
-                      >
-                        <TrashIcon className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+                <div key={role}>
+                  <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">
+                    {roleMeta?.label}s ({group.length})
+                  </p>
+                  <div className="space-y-2">
+                    {group.map((r) => renderRecipientRow(r))}
                   </div>
-                  {/* Expanded approval detail */}
-                  {isExpanded && r.approval && (
-                    <div className={`px-3 pb-3 border-t ${r.approval.decision === 'approved' ? 'border-green-100 dark:border-green-900/30 bg-green-50/50 dark:bg-green-950/10' : 'border-red-100 dark:border-red-900/30 bg-red-50/50 dark:bg-red-950/10'}`}>
-                      <div className="pt-2.5 space-y-1.5">
-                        <div className="flex items-center gap-1.5">
-                          {r.approval.decision === 'approved' ? (
-                            <CheckCircleIcon className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-                          ) : (
-                            <XMarkIcon className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
-                          )}
-                          <span className={`text-xs font-semibold ${r.approval.decision === 'approved' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
-                            {r.approval.decision === 'approved' ? 'Approved' : 'Rejected'}
-                          </span>
-                          {r.approval.decided_at && (
-                            <span className="text-[10px] text-neutral-400 ml-auto">
-                              {new Date(r.approval.decided_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
-                        </div>
-                        {r.approval.reason && (
-                          <div className={`rounded-md px-2.5 py-2 text-xs ${r.approval.decision === 'approved' ? 'bg-green-100/70 text-green-800 dark:bg-green-900/20 dark:text-green-200' : 'bg-red-100/70 text-red-800 dark:bg-red-900/20 dark:text-red-200'}`}>
-                            {r.approval.reason}
-                          </div>
-                        )}
-                        {!r.approval.reason && (
-                          <p className="text-[11px] text-neutral-400 italic">No reason provided.</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {/* Expanded signature detail */}
-                  {isExpanded && r.signature?.signed_at && (
-                    <div className="px-3 pb-3 border-t border-indigo-100 dark:border-indigo-900/30 bg-indigo-50/50 dark:bg-indigo-950/10">
-                      <div className="pt-2.5 space-y-2">
-                        <div className="flex items-center gap-1.5">
-                          <svg className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                          <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                            Signed by {r.signature.signer_name}
-                          </span>
-                          {r.signature.signed_at && (
-                            <span className="text-[10px] text-neutral-400 ml-auto">
-                              {new Date(r.signature.signed_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-neutral-500">
-                          {r.signature.signature_type === 'draw' ? 'Hand-drawn signature' : 'Typed signature'}
-                        </p>
-                        {/* Signature image preview */}
-                        {r.signature.signature_data && (
-                          <div className="mt-2 pt-2 border-t border-neutral-200 dark:border-neutral-700">
-                            <img
-                              src={r.signature.signature_data}
-                              alt={`Signature of ${r.signature.signer_name}`}
-                              className="h-16 max-w-full object-contain bg-white dark:bg-neutral-900 rounded border border-neutral-200 dark:border-neutral-700 p-1.5"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
