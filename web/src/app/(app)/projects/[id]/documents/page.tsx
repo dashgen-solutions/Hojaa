@@ -162,8 +162,12 @@ export default function DocumentsPage() {
         const duplicated = await duplicateDocument(docId);
         await fetchDocuments();
         navigateToDoc(duplicated.id);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Failed to duplicate document:', err);
+        const message =
+          (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
+          'Failed to duplicate document. Please try again.';
+        window.alert(message);
       }
     },
     [fetchDocuments, navigateToDoc]
