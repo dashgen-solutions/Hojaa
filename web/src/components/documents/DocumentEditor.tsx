@@ -94,6 +94,7 @@ export default function DocumentEditor({
 
   // Check if document has any signatures (to lock editing)
   const hasSignatures = signatures.some(s => s.signed_at);
+  const isLocked = hasSignatures || !!doc.is_locked;
 
   // Keep editor title input in sync when parent replaces document (e.g. after save/refetch).
   useEffect(() => {
@@ -123,14 +124,14 @@ export default function DocumentEditor({
   // Dynamically update editor editability when signatures change
   useEffect(() => {
     if (editor) {
-      editor.isEditable = !hasSignatures;
+      editor.isEditable = !isLocked;
     }
-  }, [editor, hasSignatures]);
+  }, [editor, isLocked]);
 
   const { isSaving, lastSaved, error: saveError, saveNow } = useDocumentAutoSave({
     documentId: doc.id,
     content,
-    enabled: true,
+    enabled: !isLocked,
     debounceMs: 2000,
     skipRef: skipNextAutoSaveRef,
   });
@@ -138,12 +139,13 @@ export default function DocumentEditor({
   // Listen for editor changes
   useEffect(() => {
     const handleChange = () => {
+      if (isLocked) return;
       setContent(editor.document as unknown[]);
     };
 
     // BlockNote 0.47+ uses editor.onChange
     editor.onChange(handleChange);
-  }, [editor]);
+  }, [editor, isLocked]);
 
   // Close export menu on outside click
   useEffect(() => {
@@ -170,11 +172,12 @@ export default function DocumentEditor({
   }, [activePanel, doc.id]);
 
   const handleTitleBlur = useCallback(() => {
+    if (isLocked) return;
     const trimmed = title.trim();
     if (trimmed && trimmed !== doc.title) {
       onTitleChange(trimmed);
     }
-  }, [title, doc.title, onTitleChange]);
+  }, [title, doc.title, onTitleChange, isLocked]);
 
   const handleVariableInsert = useCallback(
     (variable: string) => {
@@ -464,18 +467,18 @@ export default function DocumentEditor({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onBlur={handleTitleBlur}
-          disabled={hasSignatures}
+          disabled={isLocked}
           onKeyDown={(e) => {
             if (e.key === 'Enter') titleInputRef.current?.blur();
           }}
           className={`flex-1 min-w-0 text-lg font-semibold text-neutral-900 dark:text-neutral-100 bg-transparent border-none outline-none focus:ring-0 placeholder:text-neutral-400 ${
-            hasSignatures ? 'cursor-not-allowed opacity-60' : ''
+            isLocked ? 'cursor-not-allowed opacity-60' : ''
           }`}
           placeholder="Untitled Document"
         />
 
         {/* Locked Badge */}
-        {hasSignatures && (
+        {isLocked && (
           <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
@@ -504,17 +507,54 @@ export default function DocumentEditor({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-1 ml-2">
-          <button
-            onClick={() => togglePanel('ai')}
-            className={`rounded-md p-2 transition-colors ${
-              activePanel === 'ai'
-                ? 'bg-brand-lime text-brand-dark'
-                : 'text-brand-dark dark:text-[#E4FF1A] hover:bg-brand-lime/20'
-            }`}
-            title="AI Assistant"
-          >
-            <SparklesIcon className="h-5 w-5" />
-          </button>
+          {!isLocked && (
+            <>
+              <button
+                onClick={() => togglePanel('ai')}
+                className={`rounded-md p-2 transition-colors ${
+                  activePanel === 'ai'
+                    ? 'bg-brand-lime text-brand-dark'
+                    : 'text-brand-dark dark:text-[#E4FF1A] hover:bg-brand-lime/20'
+                }`}
+                title="AI Assistant"
+              >
+                <SparklesIcon className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => togglePanel('variables')}
+                className={`rounded-md p-2 transition-colors ${
+                  activePanel === 'variables'
+                    ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                }`}
+                title="Variables"
+              >
+                <CodeBracketSquareIcon className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => togglePanel('pricing')}
+                className={`rounded-md p-2 transition-colors ${
+                  activePanel === 'pricing'
+                    ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                }`}
+                title="Pricing"
+              >
+                <CurrencyDollarIcon className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => togglePanel('versions')}
+                className={`rounded-md p-2 transition-colors ${
+                  activePanel === 'versions'
+                    ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                }`}
+                title="Version History"
+              >
+                <ClockIcon className="h-5 w-5" />
+              </button>
+            </>
+          )}
           <button
             onClick={() => togglePanel('preview')}
             className={`rounded-md p-2 transition-colors ${
@@ -525,39 +565,6 @@ export default function DocumentEditor({
             title="Live Preview"
           >
             <EyeIcon className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => togglePanel('variables')}
-            className={`rounded-md p-2 transition-colors ${
-              activePanel === 'variables'
-                ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
-                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-            }`}
-            title="Variables"
-          >
-            <CodeBracketSquareIcon className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => togglePanel('pricing')}
-            className={`rounded-md p-2 transition-colors ${
-              activePanel === 'pricing'
-                ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
-                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-            }`}
-            title="Pricing"
-          >
-            <CurrencyDollarIcon className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => togglePanel('versions')}
-            className={`rounded-md p-2 transition-colors ${
-              activePanel === 'versions'
-                ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
-                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-            }`}
-            title="Version History"
-          >
-            <ClockIcon className="h-5 w-5" />
           </button>
           <button
             onClick={() => togglePanel('share')}
@@ -628,7 +635,7 @@ export default function DocumentEditor({
         {/* Editor */}
         <div className="flex-1 overflow-auto dark:bg-neutral-900 dark:text-neutral-100">
           <div className="max-w-4xl mx-auto py-8 px-6">
-            <BlockNoteView editor={editor} theme={theme === 'dark' ? 'dark' : 'light'} />
+            <BlockNoteView editor={editor} editable={!isLocked} theme={theme === 'dark' ? 'dark' : 'light'} />
           </div>
         </div>
 

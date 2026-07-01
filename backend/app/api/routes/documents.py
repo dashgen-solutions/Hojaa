@@ -145,6 +145,25 @@ def _is_admin_or_creator(user: User, doc: Document) -> bool:
     return False
 
 
+def _document_is_signed(db: Session, document_id) -> bool:
+    """True when at least one signer has submitted a signature."""
+    return (
+        db.query(DocumentSignature.id)
+        .filter(DocumentSignature.document_id == document_id)
+        .first()
+        is not None
+    )
+
+
+def _assert_document_editable(db: Session, doc: Document) -> None:
+    """Reject mutations on signed documents — duplicate to create a new editable copy."""
+    if _document_is_signed(db, doc.id):
+        raise HTTPException(
+            409,
+            "This document has been signed and is locked. Duplicate it to create an editable copy.",
+        )
+
+
 def _serialize_document_summary(doc: Document) -> dict:
     return {
         "id": str(doc.id),
@@ -545,7 +564,7 @@ def get_document(
         if not (doc.organization_id and doc.organization_id == current_user.organization_id):
             raise HTTPException(403, "You do not have access to this document")
 
-    return _serialize_document_full(doc)
+    return {**_serialize_document_full(doc), "is_locked": _document_is_signed(db, doc.id)}
 
 
 @router.patch("/{document_id}")
@@ -557,6 +576,7 @@ def update_document(
 ):
     """Update document title or status."""
     doc = _verify_document_access(db, document_id, current_user)
+    _assert_document_editable(db, doc)
 
     if body.title is not None:
         doc.title = body.title
@@ -657,6 +677,7 @@ def save_content(
 ):
     """Auto-save document content (BlockNote JSON blocks)."""
     doc = _verify_document_access(db, document_id, current_user)
+    _assert_document_editable(db, doc)
 
     doc.content = body.content
     db.commit()
@@ -705,7 +726,8 @@ def rename_version(
     db: Session = Depends(get_db),
 ):
     """Rename a version (update its change_summary)."""
-    _verify_document_access(db, document_id, current_user)
+    doc = _verify_document_access(db, document_id, current_user)
+    _assert_document_editable(db, doc)
 
     version = (
         db.query(DocumentVersion)
@@ -747,6 +769,7 @@ def create_version(
     the document content (compares with previous version if one exists).
     """
     doc = _verify_document_access(db, document_id, current_user)
+    _assert_document_editable(db, doc)
 
     # Determine next version number
     max_version = (
@@ -826,6 +849,7 @@ def restore_version(
     Replaces the document content with the selected version's content.
     """
     doc = _verify_document_access(db, document_id, current_user)
+    _assert_document_editable(db, doc)
 
     version = (
         db.query(DocumentVersion)
@@ -958,7 +982,8 @@ def add_line_item(
     db: Session = Depends(get_db),
 ):
     """Add a pricing line item to a document."""
-    _verify_document_access(db, document_id, current_user)
+    doc = _verify_document_access(db, document_id, current_user)
+    _assert_document_editable(db, doc)
 
     item = PricingLineItem(
         document_id=UUID(document_id),
@@ -991,7 +1016,8 @@ def update_line_item(
         raise HTTPException(404, "Line item not found")
 
     # Verify access via parent document
-    _verify_document_access(db, str(item.document_id), current_user)
+    doc = _verify_document_access(db, str(item.document_id), current_user)
+    _assert_document_editable(db, doc)
 
     if body.name is not None:
         item.name = body.name
@@ -1029,7 +1055,8 @@ def delete_line_item(
     if not item:
         raise HTTPException(404, "Line item not found")
 
-    _verify_document_access(db, str(item.document_id), current_user)
+    doc = _verify_document_access(db, str(item.document_id), current_user)
+    _assert_document_editable(db, doc)
 
     db.delete(item)
     db.commit()
@@ -1044,6 +1071,7 @@ def pricing_from_cards(
 ):
     """Generate pricing line items from planning cards (estimated_hours as quantity)."""
     doc = _verify_document_access(db, document_id, current_user)
+    _assert_document_editable(db, doc)
 
     cards = (
         db.query(Card)
@@ -2567,6 +2595,9 @@ async def apply_ai_blocks_to_document(
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+
+    _verify_document_access(db, document_id, current_user)
+    _assert_document_editable(db, doc)
 
     try:
         result = await apply_blocks_to_document(

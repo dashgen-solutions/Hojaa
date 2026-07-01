@@ -69,6 +69,7 @@ from app.models.database import (
     Document,
     DocumentVersion,
     DocumentRecipient,
+    DocumentSignature,
     DocumentStatus,
     PricingLineItem,
 )
@@ -643,3 +644,160 @@ class TestVersionCreate:
         assert resp.status_code == 200
         versions = resp.json()
         assert len(versions) >= 2
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Test: Document Duplicate
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestDocumentDuplicate:
+    """Test document duplication endpoint."""
+
+    def test_duplicate_creates_copy_with_content(self):
+        sid = _create_session("Duplicate Test")
+        original_content = [
+            {"type": "paragraph", "props": {}, "content": [{"type": "text", "text": "Original"}], "children": []},
+        ]
+        doc_id = _create_document(sid, "Original Doc", original_content)
+
+        resp = client.post(f"/api/documents/{doc_id}/duplicate")
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["title"] == "Original Doc (Copy)"
+        assert data["status"] == "draft"
+
+        clone_id = data["id"]
+        get_resp = client.get(f"/api/documents/{clone_id}")
+        assert get_resp.status_code == 200
+        clone = get_resp.json()
+        assert clone["content"][0]["content"][0]["text"] == "Original"
+        assert clone["id"] != doc_id
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Test: Signed Document Locking
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _add_signature_to_document(doc_id: str, access_token: str = "signer-token-1") -> None:
+    """Attach a signer recipient and completed signature to a document."""
+    db = TestSessionLocal()
+    try:
+        recipient = DocumentRecipient(
+            id=uuid4(),
+            document_id=UUID(doc_id),
+            name="Jane Signer",
+            email="jane@test.com",
+            role="signer",
+            access_token=access_token,
+        )
+        db.add(recipient)
+        db.flush()
+        signature = DocumentSignature(
+            id=uuid4(),
+            document_id=UUID(doc_id),
+            recipient_id=recipient.id,
+            signature_data="data:image/png;base64,abc",
+            signature_type="draw",
+            signer_name="Jane Signer",
+            signer_email="jane@test.com",
+        )
+        db.add(signature)
+        db.commit()
+    finally:
+        db.close()
+
+
+class TestSignedDocumentLocking:
+    """Signed documents must reject content/title mutations."""
+
+    def test_get_document_reports_locked(self):
+        sid = _create_session("Lock Flag Test")
+        doc_id = _create_document(sid, "Locked Doc")
+        _add_signature_to_document(doc_id)
+
+        resp = client.get(f"/api/documents/{doc_id}")
+        assert resp.status_code == 200
+        assert resp.json()["is_locked"] is True
+
+    def test_save_content_blocked_when_signed(self):
+        sid = _create_session("Save Lock Test")
+        doc_id = _create_document(sid, "Signed Doc")
+        _add_signature_to_document(doc_id)
+
+        resp = client.put(
+            f"/api/documents/{doc_id}/content",
+            json={"content": [{"type": "paragraph", "props": {}, "content": [{"type": "text", "text": "Hacked"}], "children": []}]},
+        )
+        assert resp.status_code == 409
+
+    def test_update_title_blocked_when_signed(self):
+        sid = _create_session("Title Lock Test")
+        doc_id = _create_document(sid, "Signed Doc")
+        _add_signature_to_document(doc_id)
+
+        resp = client.patch(f"/api/documents/{doc_id}", json={"title": "Changed Title"})
+        assert resp.status_code == 409
+
+    def test_duplicate_allowed_when_signed(self):
+        sid = _create_session("Duplicate Signed Test")
+        doc_id = _create_document(sid, "Signed Doc")
+        _add_signature_to_document(doc_id)
+
+        resp = client.post(f"/api/documents/{doc_id}/duplicate")
+        assert resp.status_code == 201
+        assert resp.json()["title"] == "Signed Doc (Copy)"
+
+    def test_shared_view_includes_signatures_for_viewer(self):
+        sid = _create_session("Shared Signatures Test")
+        share_token = secrets.token_urlsafe(32)
+        access_token = "viewer-signer-token"
+
+        db = TestSessionLocal()
+        try:
+            doc = Document(
+                id=uuid4(),
+                session_id=UUID(sid),
+                organization_id=org_id,
+                created_by=user_id,
+                title="Signed Shared Doc",
+                status=DocumentStatus.SENT,
+                content=[],
+                share_token=share_token,
+            )
+            db.add(doc)
+            db.flush()
+
+            recipient = DocumentRecipient(
+                id=uuid4(),
+                document_id=doc.id,
+                name="Jane Signer",
+                email="jane@test.com",
+                role="signer",
+                access_token=access_token,
+            )
+            db.add(recipient)
+            db.flush()
+
+            signature = DocumentSignature(
+                id=uuid4(),
+                document_id=doc.id,
+                recipient_id=recipient.id,
+                signature_data="data:image/png;base64,abc",
+                signature_type="draw",
+                signer_name="Jane Signer",
+                signer_email="jane@test.com",
+            )
+            db.add(signature)
+            db.commit()
+            doc_id = str(doc.id)
+        finally:
+            db.close()
+
+        resp = client.get(f"/api/documents/view/{access_token}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["signatures"]) == 1
+        assert data["signatures"][0]["signed_at"] is not None
+        assert data["signatures"][0]["signature_data"] is not None

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { getSharedDocument, submitDocumentApproval, submitDocumentSignature, type SharedDocumentView, type PricingLineItemInfo } from '@/lib/api';
 import dynamic from 'next/dynamic';
@@ -357,10 +357,12 @@ function SigningPanel({
   token,
   recipientName,
   initialSignature,
+  onSigned,
 }: {
   token: string;
   recipientName: string;
   initialSignature: SharedDocumentView['my_signature'];
+  onSigned?: () => void;
 }) {
   const [signed, setSigned] = useState(!!initialSignature);
   const [signerName, setSignerName] = useState(initialSignature?.signer_name ?? '');
@@ -378,6 +380,7 @@ function SigningPanel({
       setSignerName(res.signer_name);
       setSignedAt(res.signed_at);
       setSignatureType(type);
+      onSigned?.();
     } catch (err: any) {
       if (err?.response?.status === 409) {
         setError('You have already signed this document.');
@@ -506,6 +509,11 @@ export default function SharedDocumentPage() {
         setError(msg);
       })
       .finally(() => setLoading(false));
+  }, [token]);
+
+  const refreshDocument = useCallback(() => {
+    if (!token) return;
+    getSharedDocument(token).then(setDoc).catch(() => {});
   }, [token]);
 
   if (loading) {
@@ -685,6 +693,7 @@ export default function SharedDocumentPage() {
               token={token}
               recipientName={doc.recipient?.name || ''}
               initialSignature={doc.my_signature}
+              onSigned={refreshDocument}
             />
           </div>
         )}

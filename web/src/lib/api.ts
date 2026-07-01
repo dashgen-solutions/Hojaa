@@ -1320,6 +1320,7 @@ export interface ScopeDocument {
   share_token: string | null;
   recipients_count: number;
   pricing_items_count: number;
+  is_locked?: boolean;
   created_at: string;
   updated_at: string;
 }
