@@ -1651,6 +1651,14 @@ export interface SharedDocumentView {
   pricing_items: PricingLineItemInfo[];
   my_approval: { decision: string; reason: string | null; decided_at: string | null } | null;
   my_signature: { signer_name: string; signature_type: string; signed_at: string | null } | null;
+  signatures?: Array<{
+    recipient_id: string;
+    signer_name: string;
+    signer_email: string;
+    signature_type: 'draw' | 'typed' | null;
+    signature_data: string | null;
+    signed_at: string | null;
+  }>;
 }
 
 export const getSharedDocument = async (token: string): Promise<SharedDocumentView> => {

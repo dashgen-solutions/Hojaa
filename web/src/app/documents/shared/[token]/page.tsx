@@ -596,6 +596,81 @@ export default function SharedDocumentPage() {
           </div>
         )}
 
+        {/* Signatures Section - Show all signatures regardless of recipient role */}
+        {doc.signatures && doc.signatures.length > 0 && (
+          <div className="mt-12 pt-8 border-t-2 border-neutral-300 dark:border-neutral-600">
+            <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-6">
+              Signatures
+            </h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-8">
+              This document has been electronically signed by {doc.signatures.filter((s: any) => s.signed_at).length} of {doc.signatures.length} part{doc.signatures.length === 1 ? 'y' : 'ies'}.
+            </p>
+
+            <div className="space-y-6">
+              {doc.signatures.map((sig: any) => {
+                const hasSigned = !!sig.signed_at;
+                return (
+                  <div
+                    key={sig.recipient_id}
+                    className={`rounded-lg border-2 p-6 ${
+                      hasSigned
+                        ? 'border-indigo-300 bg-indigo-50/50 dark:border-indigo-700 dark:bg-indigo-950/30'
+                        : 'border-neutral-300 bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="min-w-0">
+                        <p className="text-base font-bold text-neutral-900 dark:text-neutral-100">
+                          {sig.signer_name}
+                        </p>
+                        <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">
+                          {sig.signer_email}
+                        </p>
+                      </div>
+                      <span
+                        className={`shrink-0 inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ${
+                          hasSigned
+                            ? 'bg-indigo-500 text-white'
+                            : 'bg-neutral-300 text-neutral-700 dark:bg-neutral-600 dark:text-neutral-300'
+                        }`}
+                      >
+                        {hasSigned ? '✓ Signed' : 'Pending'}
+                      </span>
+                    </div>
+
+                    {hasSigned && sig.signature_data && (
+                      <div className="mt-4 bg-white dark:bg-neutral-900 rounded-lg border-2 border-neutral-300 dark:border-neutral-700 p-4">
+                        <img
+                          src={sig.signature_data}
+                          alt={`Signature of ${sig.signer_name}`}
+                          className="max-h-24 mx-auto"
+                        />
+                      </div>
+                    )}
+
+                    {hasSigned && (
+                      <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {sig.signature_type === 'draw' ? 'Hand-drawn signature' : 'Typed signature'}
+                          {' • '}
+                          {new Date(sig.signed_at).toLocaleString(undefined, { 
+                            month: 'long', 
+                            day: 'numeric', 
+                            year: 'numeric',
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            timeZoneName: 'short'
+                          })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Approval Panel — only shown to approver recipients */}
         {isApprover && (
           <div className="mt-6">
