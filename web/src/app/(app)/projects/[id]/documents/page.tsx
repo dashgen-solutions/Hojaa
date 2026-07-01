@@ -15,6 +15,7 @@ import {
   createDocument,
   getDocument,
   updateDocument,
+  duplicateDocument,
   type ScopeDocument,
 } from "@/lib/api";
 import DocumentList from "@/components/documents/DocumentList";
