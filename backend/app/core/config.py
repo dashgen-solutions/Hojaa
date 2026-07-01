@@ -108,9 +108,9 @@ class Settings(BaseSettings):
     cache_prefix: str = Field(default="hojaa:", alias="CACHE_PREFIX")
 
     # ── Timeout enforcement (PERF-1.2 / 1.3) ──
-    ai_timeout_seconds: float = Field(default=30.0, alias="AI_TIMEOUT_SECONDS")
-    pdf_timeout_seconds: float = Field(default=15.0, alias="PDF_TIMEOUT_SECONDS")
-    default_request_timeout_seconds: float = Field(default=60.0, alias="DEFAULT_REQUEST_TIMEOUT_SECONDS")
+    ai_timeout_seconds: float = Field(default=120.0, alias="AI_TIMEOUT_SECONDS")
+    pdf_timeout_seconds: float = Field(default=30.0, alias="PDF_TIMEOUT_SECONDS")
+    default_request_timeout_seconds: float = Field(default=120.0, alias="DEFAULT_REQUEST_TIMEOUT_SECONDS")
 
     # ── Free-tier AI usage limit (per user) ──
     # Users without their own API key get this much platform-funded AI usage.
