@@ -442,25 +442,25 @@ export default function DocumentShareModal({
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="space-y-2">
             <select
               value={newRole}
               onChange={(e) => setNewRole(e.target.value as 'viewer' | 'approver' | 'signer')}
-              className="flex-1 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1.5 px-2.5 text-sm text-neutral-700 dark:text-neutral-300 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+              className="w-full rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-1.5 px-2.5 text-sm text-neutral-700 dark:text-neutral-300 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
             >
               {ROLE_OPTIONS.map((role) => (
                 <option key={role.value} value={role.value}>
-                  {role.label} — {role.description}
+                  {role.label}
                 </option>
               ))}
             </select>
             <button
               onClick={handleAddRecipient}
               disabled={adding || !newName.trim() || !newEmail.trim()}
-              className="inline-flex items-center gap-1 rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 transition-colors disabled:opacity-50 whitespace-nowrap"
+              className="w-full inline-flex items-center justify-center gap-1 rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 transition-colors disabled:opacity-50"
             >
               <PlusIcon className="h-3.5 w-3.5" />
-              {adding ? 'Adding...' : 'Add'}
+              {adding ? 'Adding...' : 'Add Recipient'}
             </button>
           </div>
         </div>
