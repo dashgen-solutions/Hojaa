@@ -775,97 +775,74 @@ export default function DocumentEditor({
                       </p>
                     </div>
                   ) : (
-                    <>
-                      {/* Document Preview with Signatures */}
-                      <div className="flex-1 overflow-y-auto p-6 bg-neutral-50 dark:bg-neutral-900">
-                        <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-12">
-                          {/* Document Title */}
-                          <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-8 pb-4 border-b-2 border-neutral-200 dark:border-neutral-700">
-                            {title || 'Untitled Document'}
-                          </h1>
-                          
-                          {/* Document Content Preview */}
-                          <DocumentPreview
-                            title=""
-                            content={content || []}
-                            className="mb-12"
-                          />
+                    <div className="flex-1 overflow-y-auto p-4">
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
+                        {signatures.filter((s) => s.signed_at).length} of {signatures.length} signed
+                      </p>
+                      <div className="space-y-3">
+                        {signatures.map((s) => {
+                          const hasSigned = !!s.signed_at;
+                          return (
+                            <div
+                              key={s.recipient_id}
+                              className={`rounded-lg border p-4 ${
+                                hasSigned
+                                  ? 'border-indigo-200 bg-indigo-50/50 dark:border-indigo-800 dark:bg-indigo-950/20'
+                                  : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                                    {s.signer_name}
+                                  </p>
+                                  <p className="text-xs text-neutral-500 truncate">{s.signer_email}</p>
+                                </div>
+                                <span
+                                  className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                    hasSigned
+                                      ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300'
+                                      : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
+                                  }`}
+                                >
+                                  {hasSigned ? 'Signed' : 'Pending'}
+                                </span>
+                              </div>
 
-                          {/* Signatures Section */}
-                          <div className="mt-16 pt-8 border-t-2 border-neutral-300 dark:border-neutral-600">
-                            <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-6">
-                              Signatures
-                            </h2>
-                            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-8">
-                              This document has been electronically signed by {signatures.filter(s => s.signed_at).length} of {signatures.length} part{signatures.length === 1 ? 'y' : 'ies'}.
-                            </p>
+                              {hasSigned && s.signature_data && (
+                                <div className="mt-3 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 p-3">
+                                  <img
+                                    src={s.signature_data}
+                                    alt={`Signature of ${s.signer_name}`}
+                                    className="max-h-20 mx-auto object-contain"
+                                  />
+                                </div>
+                              )}
 
-                            <div className="space-y-8">
-                              {signatures.map((s) => {
-                                const hasSigned = !!s.signed_at;
-                                return (
-                                  <div
-                                    key={s.recipient_id}
-                                    className={`rounded-lg border-2 p-6 ${
-                                      hasSigned
-                                        ? 'border-indigo-300 bg-indigo-50/50 dark:border-indigo-700 dark:bg-indigo-950/30'
-                                        : 'border-neutral-300 bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800'
-                                    }`}
-                                  >
-                                    <div className="flex items-start justify-between gap-3 mb-4">
-                                      <div className="min-w-0">
-                                        <p className="text-base font-bold text-neutral-900 dark:text-neutral-100">
-                                          {s.signer_name}
-                                        </p>
-                                        <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5">
-                                          {s.signer_email}
-                                        </p>
-                                      </div>
-                                      <span
-                                        className={`shrink-0 inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ${
-                                          hasSigned
-                                            ? 'bg-indigo-500 text-white'
-                                            : 'bg-neutral-300 text-neutral-700 dark:bg-neutral-600 dark:text-neutral-300'
-                                        }`}
-                                      >
-                                        {hasSigned ? '✓ Signed' : 'Pending'}
-                                      </span>
-                                    </div>
+                              {hasSigned && s.signed_at && (
+                                <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                                  Signed by {s.signer_name}
+                                  {' · '}
+                                  {s.signature_type === 'draw' ? 'Hand-drawn' : 'Typed'}
+                                  {' · '}
+                                  {new Date(s.signed_at).toLocaleString(undefined, {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </p>
+                              )}
 
-                                    {hasSigned && s.signature_data && (
-                                      <div className="mt-4 bg-white dark:bg-neutral-900 rounded-lg border-2 border-neutral-300 dark:border-neutral-700 p-4">
-                                        <img
-                                          src={s.signature_data}
-                                          alt={`Signature of ${s.signer_name}`}
-                                          className="max-h-24 mx-auto"
-                                        />
-                                      </div>
-                                    )}
-
-                                    {hasSigned && (
-                                      <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                          {s.signature_type === 'draw' ? 'Hand-drawn signature' : 'Typed signature'}
-                                          {' • '}
-                                          {new Date(s.signed_at!).toLocaleString(undefined, { 
-                                            month: 'long', 
-                                            day: 'numeric', 
-                                            year: 'numeric',
-                                            hour: '2-digit', 
-                                            minute: '2-digit',
-                                            timeZoneName: 'short'
-                                          })}
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                              {!hasSigned && (
+                                <p className="mt-1 text-xs text-neutral-400 italic">Awaiting signature</p>
+                              )}
                             </div>
-                          </div>
-                        </div>
+                          );
+                        })}
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               )}

@@ -18,9 +18,9 @@ export default function MarketingNav() {
   }, []);
 
   const navLinks = [
-    { label: 'Features', href: '#features' },
-    { label: 'Open Source', href: '#open-source' },
-    { label: 'Pricing', href: '#pricing' },
+    { label: 'Features', href: '/#features' },
+    { label: 'Open Source', href: '/#open-source' },
+    { label: 'Pricing', href: '/#pricing' },
     { label: 'Roadmap', href: '/roadmap' },
   ];
 

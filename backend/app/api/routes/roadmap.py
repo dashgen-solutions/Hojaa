@@ -210,6 +210,11 @@ def list_roadmap_items(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
+    # Auto-seed public roadmap items on first access (empty DB after migration)
+    if db.query(RoadmapItem).filter(RoadmapItem.is_public == True).count() == 0:
+        from app.services.roadmap_service import seed_roadmap_items
+        seed_roadmap_items(db)
+
     query = db.query(RoadmapItem).filter(RoadmapItem.is_public == True)
 
     if category:

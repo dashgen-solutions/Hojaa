@@ -5,9 +5,9 @@ import HojaaLogo from '@/components/brand/HojaaLogo';
 
 const footerLinks = {
   Product: [
-    { label: 'Features', href: '#features' },
-    { label: 'Pricing', href: '#pricing' },
-    { label: 'Open Source', href: '#open-source' },
+    { label: 'Features', href: '/#features' },
+    { label: 'Pricing', href: '/#pricing' },
+    { label: 'Open Source', href: '/#open-source' },
     { label: 'Roadmap', href: '/roadmap' },
   ],
   Company: [
